@@ -1,0 +1,8 @@
+services:
+  register-ui:
+    build: 
+      context: ..
+      dockerfile: deployment/Dockerfile
+    ports:
+      - "8011:80"
+    env_file: "../.env"
