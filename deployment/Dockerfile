@@ -8,6 +8,10 @@ RUN npm install
 
 COPY . .
 
+# Set mock environment variables for build
+ENV REGISTRY_URL=https://registry-1.docker.io
+ENV REGISTRY_AUTH=ZHVtbXk6ZHVtbXk=
+
 RUN npm run build
 
 FROM nginx:alpine
