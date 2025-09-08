@@ -190,7 +190,7 @@ export default function Layout({ children }: LayoutProps) {
 								<StyledInputBase
 									name="search"
 									placeholder="Search repositories..."
-									inputProps={{ "aria-label": "search" }}
+									inputProps={{ "aria-label": "search", autoComplete: "off" }}
 									inputRef={searchInputRef}
 									value={searchValue}
 									onChange={handleSearchChange}
