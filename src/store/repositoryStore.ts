@@ -1,301 +1,28 @@
 import { del as idbDel, get as idbGet, set as idbSet } from "idb-keyval";
+import { produce } from "immer";
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
-
-const storage = createJSONStorage(() => ({
-	getItem: async (name: string) => {
-		const value = await idbGet(name);
-		return value ? JSON.stringify(value) : null;
-	},
-	setItem: async (name: string, value: string) => {
-		await idbSet(name, JSON.parse(value));
-	},
-	removeItem: async (name: string) => {
-		await idbDel(name);
-	},
-}));
-
-const formatBytes = (bytes: number): string => {
-	if (bytes === 0) return "0 Bytes";
-	const k = 1024;
-	const sizes = ["Bytes", "KB", "MB", "GB", "TB"];
-	const i = Math.floor(Math.log(bytes) / Math.log(k));
-	return `${parseFloat((bytes / k ** i).toFixed(2))} ${sizes[i]}`;
-};
-
-const generateRealisticSize = (tagName: string, arch: string): number => {
-	const baseSize = tagName.includes("alpine")
-		? 5 * 1024 * 1024
-		: tagName.includes("latest")
-			? 50 * 1024 * 1024
-			: tagName.includes("slim")
-				? 25 * 1024 * 1024
-				: 40 * 1024 * 1024;
-
-	const archMultiplier = arch === "arm64" ? 1.1 : arch === "arm" ? 0.9 : 1.0;
-	const randomVariation = 0.8 + Math.random() * 0.4; // ±20% variation
-	return Math.floor(baseSize * archMultiplier * randomVariation);
-};
-
-const extractTimestampFromConfig = async (
-	repoName: string,
-	configDigest: string,
-	sourcePath: string,
-): Promise<string | null> => {
-	try {
-		const encodedRepoName = encodeURIComponent(repoName);
-		const configUrl = `${sourcePath}/v2/${encodedRepoName}/blobs/${configDigest}`;
-		console.log("[FETCH] extractTimestampFromConfig:", configUrl);
-		const configResponse = await fetch(configUrl, {
-			method: "GET",
-			headers: {
-				Accept: "application/json, application/octet-stream",
-			},
-		});
-
-		if (configResponse.ok) {
-			const configData = await configResponse.json();
-			if (configData.created) {
-				return configData.created;
-			}
-			if (configData.history?.[0]?.created) {
-				return configData.history[0].created;
-			}
-		} else if (configResponse.status === 502 || configResponse.status === 404) {
-			return null;
-		}
-	} catch (error) {
-		if (
-			error instanceof TypeError &&
-			error.message.includes("Failed to fetch")
-		) {
-			return null;
-		}
-		if (!(error instanceof TypeError)) {
-			console.warn(
-				`Failed to extract timestamp from config ${configDigest}:`,
-				error,
-			);
-		}
-	}
-	return null;
-};
-
-const processManifestV2Single = async (
-	repoName: string,
-	_tagName: string,
-	manifest: {
-		config?: { digest: string; size?: number };
-		layers?: Array<{ size?: number }>;
-	},
-	digest: string,
-	sourcePath: string,
-): Promise<{
-	architectures: ArchitectureInfo[];
-	totalSize: number;
-	timestamp: string;
-}> => {
-	let architectures: ArchitectureInfo[] = [];
-	let totalSize = 0;
-	let timestamp = new Date().toISOString();
-
-	if (manifest.config && manifest.layers) {
-		const actualTimestamp = await extractTimestampFromConfig(
-			repoName,
-			manifest.config.digest,
-			sourcePath,
-		);
-		if (actualTimestamp) {
-			timestamp = actualTimestamp;
-		}
-
-		const configSize = manifest.config.size || 0;
-		const layersSize = manifest.layers.reduce(
-			(acc: number, layer: { size?: number }) => acc + (layer.size || 0),
-			0,
-		);
-		const archSize = configSize + layersSize;
-		totalSize = archSize;
-
-		architectures = [
-			{
-				architecture: "amd64",
-				digest: digest,
-				size: formatBytes(archSize),
-				os: "linux",
-			},
-		];
-	}
-
-	return { architectures, totalSize, timestamp };
-};
-
-const processManifestList = async (
-	repoName: string,
-	tagName: string,
-	manifest: {
-		manifests?: Array<{
-			digest: string;
-			size?: number;
-			platform?: { architecture?: string; os?: string };
-		}>;
-	},
-	digest: string,
-	sourcePath: string,
-): Promise<{
-	architectures: ArchitectureInfo[];
-	totalSize: number;
-	timestamp: string;
-}> => {
-	let architectures: ArchitectureInfo[] = [];
-	let totalSize = 0;
-	let timestamp = new Date().toISOString();
-	let earliestTimestamp = new Date().toISOString();
-
-	if (manifest.manifests) {
-		const archPromises = manifest.manifests.map(
-			async (archManifest: {
-				digest: string;
-				size?: number;
-				platform?: { architecture?: string; os?: string };
-			}) => {
-				const arch = archManifest.platform?.architecture || "amd64";
-				const os = archManifest.platform?.os || "linux";
-				const archSize =
-					archManifest.size || generateRealisticSize(tagName, arch);
-				totalSize += archSize;
-
-				try {
-					const encodedRepoName = encodeURIComponent(repoName);
-					const individualManifestUrl = `${sourcePath}/v2/${encodedRepoName}/manifests/${archManifest.digest}`;
-					console.log(
-						"[FETCH] processManifestList individual manifest:",
-						individualManifestUrl,
-						"repoName:",
-						repoName,
-					);
-					const individualManifestResponse = await fetch(
-						individualManifestUrl,
-						{
-							headers: {
-								Accept:
-									"application/vnd.docker.distribution.manifest.list.v2+json, application/vnd.docker.distribution.manifest.v2+json, application/vnd.oci.image.index.v1+json, application/vnd.oci.image.manifest.v1+json",
-							},
-						},
-					);
-
-					if (individualManifestResponse.ok) {
-						const individualManifest = await individualManifestResponse.json();
-						if (individualManifest.config) {
-							const actualTimestamp = await extractTimestampFromConfig(
-								repoName,
-								individualManifest.config.digest,
-								sourcePath,
-							);
-							if (actualTimestamp) {
-								if (new Date(actualTimestamp) < new Date(earliestTimestamp)) {
-									earliestTimestamp = actualTimestamp;
-								}
-							}
-						}
-					}
-				} catch (error) {
-					console.warn(
-						`Failed to fetch individual manifest for ${arch}:`,
-						error,
-					);
-				}
-
-				return {
-					architecture: arch,
-					digest: digest,
-					size: formatBytes(archSize),
-					os: os,
-				};
-			},
-		);
-
-		architectures = await Promise.all(archPromises);
-		timestamp = earliestTimestamp;
-	}
-
-	return { architectures, totalSize, timestamp };
-};
-
-const aggregateTagData = async (
-	repoName: string,
-	tagName: string,
-	manifestResponse: Response,
-	sourcePath: string,
-): Promise<Tag | null> => {
-	try {
-		const manifest = await manifestResponse.json();
-		const digest = manifestResponse.headers.get("Docker-Content-Digest") || "";
-
-		let result: {
-			architectures: ArchitectureInfo[];
-			totalSize: number;
-			timestamp: string;
-		};
-
-		if (
-			manifest.mediaType ===
-				"application/vnd.docker.distribution.manifest.list.v2+json" ||
-			manifest.mediaType === "application/vnd.oci.image.index.v1+json"
-		) {
-			result = await processManifestList(
-				repoName,
-				tagName,
-				manifest,
-				digest,
-				sourcePath,
-			);
-		} else if (
-			manifest.mediaType ===
-				"application/vnd.docker.distribution.manifest.v2+json" ||
-			manifest.mediaType === "application/vnd.oci.image.manifest.v1+json"
-		) {
-			result = await processManifestV2Single(
-				repoName,
-				tagName,
-				manifest,
-				digest,
-				sourcePath,
-			);
-		} else {
-			const fallbackSize = generateRealisticSize(tagName, "amd64");
-			result = {
-				architectures: [
-					{
-						architecture: "amd64",
-						digest: digest,
-						size: formatBytes(fallbackSize),
-						os: "linux",
-					},
-				],
-				totalSize: fallbackSize,
-				timestamp: new Date().toISOString(),
-			};
-		}
-
-		return {
-			name: tagName,
-			digest: digest,
-			size: formatBytes(result.totalSize),
-			lastUpdated: result.timestamp,
-			architectures: result.architectures,
-		};
-	} catch (error) {
-		console.warn(`Failed to aggregate tag data for ${tagName}:`, error);
-		return null;
-	}
-};
 
 export interface ArchitectureInfo {
 	architecture: string;
 	digest: string;
 	size: string;
 	os: string;
+}
+
+interface ManifestReference {
+	digest: string;
+	annotations?: {
+		[key: string]: string;
+	};
+	platform?: {
+		architecture: string;
+		os: string;
+	};
+}
+
+interface HistoryEntry {
+	v1Compatibility?: string;
 }
 
 export interface Tag {
@@ -360,6 +87,383 @@ interface LoadingStage {
 	message: string;
 }
 
+const storage = createJSONStorage(() => ({
+	getItem: async (name: string) => {
+		const value = await idbGet(name);
+		return value ? JSON.stringify(value) : null;
+	},
+	setItem: async (name: string, value: string) => {
+		await idbSet(name, JSON.parse(value));
+	},
+	removeItem: async (name: string) => {
+		await idbDel(name);
+	},
+}));
+
+function formatBytes(bytes: number): string {
+	if (bytes === 0) return "0 Bytes";
+	const k = 1024;
+	const sizes = ["Bytes", "KB", "MB", "GB", "TB"];
+	const i = Math.floor(Math.log(bytes) / Math.log(k));
+	return `${parseFloat((bytes / k ** i).toFixed(2))} ${sizes[i]}`;
+}
+
+function generateRealisticSize(tagName: string, arch: string): number {
+	const baseSize = tagName.includes("alpine")
+		? 5 * 1024 * 1024
+		: tagName.includes("latest")
+			? 50 * 1024 * 1024
+			: tagName.includes("slim")
+				? 25 * 1024 * 1024
+				: 40 * 1024 * 1024;
+
+	const archMultiplier = arch === "arm64" ? 1.1 : arch === "arm" ? 0.9 : 1.0;
+	const randomVariation = 0.8 + Math.random() * 0.4;
+	return Math.floor(baseSize * archMultiplier * randomVariation);
+}
+
+function parseRepositoryName(repoName: string): {
+	name: string;
+	namespace?: string;
+} {
+	const parts = repoName.split("/");
+	const name = parts.length > 1 ? parts[parts.length - 1] : repoName;
+	const namespace = parts.length > 1 ? parts.slice(0, -1).join("/") : undefined;
+	return { name, namespace };
+}
+
+function calculateRepositorySize(tags: Tag[]): number {
+	return tags.reduce((sum, tag) => {
+		const sizeMatch = tag.size.match(/^([\d.]+)\s*(\w+)$/);
+		if (sizeMatch) {
+			const value = parseFloat(sizeMatch[1]);
+			const unit = sizeMatch[2];
+			const multipliers: { [key: string]: number } = {
+				Bytes: 1,
+				KB: 1024,
+				MB: 1024 * 1024,
+				GB: 1024 * 1024 * 1024,
+				TB: 1024 * 1024 * 1024 * 1024,
+			};
+			return sum + value * (multipliers[unit] || 1);
+		}
+		return sum;
+	}, 0);
+}
+
+async function fetchSources(): Promise<Record<string, SourceInfo>> {
+	try {
+		const response = await fetch("/sources.json");
+		if (response.ok) {
+			return await response.json();
+		}
+	} catch (error) {
+		console.warn("Failed to fetch sources:", error);
+	}
+	return {};
+}
+
+async function fetchCatalog(sourcePath: string): Promise<string[]> {
+	const url = `${sourcePath}/v2/_catalog`;
+	const response = await fetch(url);
+	if (!response.ok) {
+		throw new Error(`Failed to fetch catalog: ${response.statusText}`);
+	}
+	const data = await response.json();
+	return data.repositories || [];
+}
+
+async function fetchTags(
+	repoName: string,
+	sourcePath: string,
+): Promise<string[]> {
+	const url = `${sourcePath}/v2/${repoName}/tags/list`;
+	const response = await fetch(url);
+	if (!response.ok) {
+		if (response.status === 404) return [];
+		throw new Error(
+			`Failed to fetch tags for ${repoName}: ${response.statusText}`,
+		);
+	}
+	const data = await response.json();
+	return data.tags || [];
+}
+
+async function fetchManifest(
+	repoName: string,
+	tagName: string,
+	sourcePath: string,
+): Promise<Response> {
+	const url = `${sourcePath}/v2/${encodeURIComponent(repoName)}/manifests/${tagName}`;
+	const response = await fetch(url, {
+		headers: {
+			Accept:
+				"application/vnd.oci.image.index.v1+json, application/vnd.docker.distribution.manifest.list.v2+json, application/vnd.docker.distribution.manifest.v2+json, application/vnd.oci.image.manifest.v1+json",
+		},
+	});
+	if (!response.ok) {
+		throw new Error(
+			`Failed to fetch manifest for ${repoName}:${tagName}: ${response.statusText}`,
+		);
+	}
+	return response;
+}
+
+async function fetchConfig(
+	repoName: string,
+	configDigest: string,
+	sourcePath: string,
+): Promise<string | null> {
+	try {
+		const url = `${sourcePath}/v2/${repoName}/blobs/${configDigest}`;
+		const response = await fetch(url, {
+			headers: { Accept: "application/json, application/octet-stream" },
+		});
+
+		if (response.ok) {
+			const data = await response.json();
+			return data.created || data.history?.[0]?.created || null;
+		}
+		return null;
+	} catch (error) {
+		if (!(error instanceof TypeError)) {
+			console.warn(`Failed to fetch config ${configDigest}:`, error);
+		}
+		return null;
+	}
+}
+
+async function processManifest(
+	repoName: string,
+	tagName: string,
+	manifestResponse: Response,
+	sourcePath: string,
+): Promise<Tag | null> {
+	try {
+		const manifest = await manifestResponse.json();
+
+		// Extract digest based on manifest type
+		let digest = "";
+		if (
+			manifest.mediaType === "application/vnd.oci.image.manifest.v1+json" ||
+			manifest.mediaType ===
+				"application/vnd.docker.distribution.manifest.v2+json"
+		) {
+			// Single-arch manifests: get digest from config.digest
+			digest = manifest.config?.digest || "";
+		} else if (
+			manifest.mediaType ===
+			"application/vnd.docker.distribution.manifest.v1+json"
+		) {
+			// Docker legacy manifest: use header
+			digest = manifestResponse.headers.get("Docker-Content-Digest") || "";
+		} else {
+			// For multi-arch manifests, digest will be set per architecture in the loop below
+			digest = tagName; // fallback identifier for the tag
+		}
+
+		let architectures: ArchitectureInfo[] = [];
+		let totalSize = 0;
+		let timestamp = new Date().toISOString();
+
+		if (
+			manifest.mediaType ===
+				"application/vnd.docker.distribution.manifest.list.v2+json" ||
+			manifest.mediaType === "application/vnd.oci.image.index.v1+json"
+		) {
+			if (manifest.manifests) {
+				const imageManifests = manifest.manifests.filter(
+					(archManifest: ManifestReference) =>
+						archManifest.annotations?.["vnd.docker.reference.type"] !==
+						"attestation-manifest",
+				);
+
+				for (const archManifest of imageManifests.slice(0, 3)) {
+					// Limit to 3 for performance
+					const arch = archManifest.platform?.architecture || "amd64";
+					const os = archManifest.platform?.os || "linux";
+
+					let size = 0;
+					try {
+						// For multi-arch index, fetch each referenced manifest to get actual image size
+						const individualManifestResponse = await fetch(
+							`${sourcePath}/v2/${repoName}/manifests/${archManifest.digest}`,
+							{
+								headers: {
+									Accept:
+										"application/vnd.oci.image.manifest.v1+json, application/vnd.docker.distribution.manifest.v2+json",
+								},
+							},
+						);
+
+						if (individualManifestResponse.ok) {
+							const individualManifest =
+								await individualManifestResponse.json();
+							// Individual manifests have config.size and layers[].size directly
+							if (individualManifest.config && individualManifest.layers) {
+								const configSize = individualManifest.config.size || 0;
+								const layersSize = individualManifest.layers.reduce(
+									(acc: number, layer: { size?: number }) =>
+										acc + (layer.size || 0),
+									0,
+								);
+								size = configSize + layersSize;
+							} else {
+								size = generateRealisticSize(tagName, arch);
+							}
+						} else {
+							size = generateRealisticSize(tagName, arch);
+						}
+					} catch (error) {
+						console.warn(
+							`Failed to fetch individual manifest for ${arch}:`,
+							error,
+						);
+						size = generateRealisticSize(tagName, arch);
+					}
+
+					totalSize += size;
+
+					architectures.push({
+						architecture: arch,
+						digest: archManifest.digest,
+						size: formatBytes(size),
+						os: os,
+					});
+				}
+			}
+		} else if (
+			manifest.mediaType ===
+				"application/vnd.docker.distribution.manifest.v2+json" ||
+			manifest.mediaType === "application/vnd.oci.image.manifest.v1+json"
+		) {
+			if (manifest.config && manifest.layers) {
+				const configTimestamp = await fetchConfig(
+					repoName,
+					manifest.config.digest,
+					sourcePath,
+				);
+				if (configTimestamp) {
+					timestamp = configTimestamp;
+				}
+
+				const configSize = manifest.config.size || 0;
+				const layersSize = manifest.layers.reduce(
+					(acc: number, layer: { size?: number }) => acc + (layer.size || 0),
+					0,
+				);
+				totalSize = configSize + layersSize;
+
+				architectures = [
+					{
+						architecture: "amd64",
+						digest: digest,
+						size: formatBytes(totalSize),
+						os: "linux",
+					},
+				];
+			}
+		} else if (
+			manifest.mediaType ===
+			"application/vnd.docker.distribution.manifest.v1+json"
+		) {
+			// Docker legacy manifest (schema 1) - must fetch each layer size from /blobs/
+			if (manifest.fsLayers && manifest.history) {
+				try {
+					let layerSizes = 0;
+					// Fetch size of each layer blob using HEAD request
+					for (const layer of manifest.fsLayers.slice(0, 10)) {
+						try {
+							const blobResponse = await fetch(
+								`${sourcePath}/v2/${repoName}/blobs/${layer.blobSum}`,
+								{ method: "HEAD" },
+							);
+							if (blobResponse.ok) {
+								const contentLength =
+									blobResponse.headers.get("Content-Length");
+								if (contentLength) {
+									layerSizes += parseInt(contentLength, 10);
+								}
+							}
+						} catch (error) {
+							console.warn(
+								`Failed to fetch layer size for ${layer.blobSum}:`,
+								error,
+							);
+						}
+					}
+
+					const configSize =
+						manifest.history?.reduce((acc: number, entry: HistoryEntry) => {
+							if (entry.v1Compatibility) {
+								return acc + JSON.stringify(entry.v1Compatibility).length;
+							}
+							return acc;
+						}, 0) || 0;
+
+					totalSize = layerSizes + configSize;
+
+					architectures = [
+						{
+							architecture: manifest.architecture || "amd64",
+							digest: digest,
+							size: formatBytes(totalSize),
+							os: "linux",
+						},
+					];
+				} catch (error) {
+					console.warn("Failed to process Docker v1 manifest:", error);
+					const fallbackSize = generateRealisticSize(tagName, "amd64");
+					totalSize = fallbackSize;
+					architectures = [
+						{
+							architecture: "amd64",
+							digest: digest,
+							size: formatBytes(fallbackSize),
+							os: "linux",
+						},
+					];
+				}
+			} else {
+				const fallbackSize = generateRealisticSize(tagName, "amd64");
+				totalSize = fallbackSize;
+				architectures = [
+					{
+						architecture: "amd64",
+						digest: digest,
+						size: formatBytes(fallbackSize),
+						os: "linux",
+					},
+				];
+			}
+		}
+		// Fallback
+		else {
+			const fallbackSize = generateRealisticSize(tagName, "amd64");
+			totalSize = fallbackSize;
+			architectures = [
+				{
+					architecture: "amd64",
+					digest: digest,
+					size: formatBytes(fallbackSize),
+					os: "linux",
+				},
+			];
+		}
+
+		return {
+			name: tagName,
+			digest: digest,
+			size: formatBytes(totalSize),
+			lastUpdated: timestamp,
+			architectures: architectures,
+		};
+	} catch (error) {
+		console.warn(`Failed to process manifest for ${tagName}:`, error);
+		return null;
+	}
+}
+
 interface RepositoryStore {
 	repositoryMetas: RepositoryMeta[];
 	repositoryDetails: { [key: string]: RepositoryDetail };
@@ -379,16 +483,20 @@ interface RepositoryStore {
 		namespace?: string,
 		source?: string,
 	) => Promise<void>;
-
 	startPeriodicRefresh: () => void;
 	stopPeriodicRefresh: () => void;
 	clearError: () => void;
 	setHydrated: (hydrated: boolean) => void;
-	deleteRepository: (name: string, namespace?: string) => Promise<boolean>;
+	deleteRepository: (
+		name: string,
+		namespace?: string,
+		source?: string,
+	) => Promise<boolean>;
 	deleteTag: (
 		repositoryName: string,
 		tagName: string,
 		namespace?: string,
+		source?: string,
 	) => Promise<boolean>;
 }
 
@@ -401,7 +509,6 @@ export const useRepositoryStore = create<RepositoryStore>()(
 			repositoryMetas: [],
 			repositoryDetails: {},
 			sources: {},
-
 			loading: false,
 			loadingStage: { stage: "idle", progress: 0, message: "Ready" },
 			error: null,
@@ -410,32 +517,26 @@ export const useRepositoryStore = create<RepositoryStore>()(
 			hydrated: false,
 
 			fetchSources: async () => {
-				try {
-					const response = await fetch("/sources.json");
-					if (response.ok) {
-						const sourcesData = await response.json();
-						set({ sources: sourcesData });
-					}
-				} catch (error) {
-					console.warn("Failed to fetch sources:", error);
+				const sourcesData = await fetchSources();
+				if (Object.keys(sourcesData).length > 0) {
+					set({ sources: sourcesData });
 				}
 			},
 
 			fetchRepositoryMetas: async (force: boolean = false) => {
 				const state = get();
-				const now = Date.now();
 				const thirtySeconds = 30 * 1000;
 
 				if (
 					!force &&
 					state.lastFetch &&
-					now - state.lastFetch < thirtySeconds &&
+					Date.now() - state.lastFetch < thirtySeconds &&
 					state.repositoryMetas.length > 0
 				) {
 					return;
 				}
 
-				// Ensure sources are fetched
+				// Ensure sources are loaded
 				if (Object.keys(state.sources).length === 0) {
 					await get().fetchSources();
 				}
@@ -446,283 +547,79 @@ export const useRepositoryStore = create<RepositoryStore>()(
 					loadingStage: {
 						stage: "catalog",
 						progress: 5,
-						message: "Fetching repository catalog...",
+						message: "Fetching catalogs...",
 					},
 				});
 
 				try {
 					const updatedState = get();
-					const sources = Object.entries(updatedState.sources);
+					const sources = updatedState.sources;
 
-					if (sources.length === 0) {
+					if (Object.keys(sources).length === 0) {
 						throw new Error("No sources available");
 					}
 
-					set({
-						loadingStage: {
-							stage: "catalog",
-							progress: 5,
-							message: "Fetching catalogs from all sources...",
-						},
-					});
+					// Fetch catalogs from all sources
+					const allRepos: Array<{
+						sourceName: string;
+						sourceInfo: SourceInfo;
+						repoName: string;
+					}> = [];
 
-					const catalogPromises = sources.map(
-						async ([sourceName, sourceInfo]) => {
-							try {
-								const catalogUrl = `${sourceInfo.path}/v2/_catalog`;
-								const catalogResponse = await fetch(catalogUrl);
-
-								if (!catalogResponse.ok) {
-									console.warn(
-										`Failed to fetch from ${sourceName}: ${catalogResponse.status}`,
-									);
-									return { sourceName, sourceInfo, repositories: [] };
-								}
-
-								const catalogData = await catalogResponse.json();
-								const repositories = catalogData.repositories || [];
-
-								return { sourceName, sourceInfo, repositories };
-							} catch (error) {
-								console.warn(`Failed to process source ${sourceName}:`, error);
-								return { sourceName, sourceInfo, repositories: [] };
+					for (const [sourceName, sourceInfo] of Object.entries(sources)) {
+						try {
+							const repositories = await fetchCatalog(sourceInfo.path);
+							for (const repoName of repositories) {
+								allRepos.push({ sourceName, sourceInfo, repoName });
 							}
-						},
-					);
-
-					const allSourceData = await Promise.all(catalogPromises);
-					const totalRepositories = allSourceData.reduce(
-						(sum, source) => sum + source.repositories.length,
-						0,
-					);
-
-					set({
-						loadingStage: {
-							stage: "catalog",
-							progress: 25,
-							message: `Found ${totalRepositories} repositories across ${sources.length} sources`,
-						},
-					});
+						} catch (error) {
+							console.warn(`Failed to fetch from ${sourceName}:`, error);
+						}
+					}
 
 					set({
 						loadingStage: {
 							stage: "tags",
 							progress: 25,
-							message: "Fetching tags for all repositories...",
+							message: `Found ${allRepos.length} repositories`,
 						},
 					});
 
-					const allRepositoryData: Array<{
+					const reposWithTags: Array<{
 						sourceName: string;
 						sourceInfo: SourceInfo;
 						repoName: string;
 						tags: string[];
 					}> = [];
 
-					const tagPromises = allSourceData.flatMap(
-						({ sourceName, sourceInfo, repositories }) =>
-							repositories.map(async (repoName: string) => {
-								try {
-									const encodedRepoName = encodeURIComponent(repoName);
-									const tagsUrl = `${sourceInfo.path}/v2/${encodedRepoName}/tags/list`;
-
-									const tagsResponse = await fetch(tagsUrl);
-									if (!tagsResponse.ok) {
-										if (tagsResponse.status !== 404) {
-											console.warn(
-												`Failed to fetch tags for ${repoName}: HTTP ${tagsResponse.status}`,
-											);
-										}
-										return { sourceName, sourceInfo, repoName, tags: [] };
-									}
-
-									const tagsData = await tagsResponse.json();
-									const tags = tagsData.tags || [];
-
-									return { sourceName, sourceInfo, repoName, tags };
-								} catch (error) {
-									console.warn(`Failed to fetch tags for ${repoName}:`, error);
-									return { sourceName, sourceInfo, repoName, tags: [] };
-								}
-							}),
-					);
-
-					const tagResults = await Promise.all(tagPromises);
-					allRepositoryData.push(...tagResults);
-
-					set({
-						loadingStage: {
-							stage: "tags",
-							progress: 50,
-							message: `Fetched tags for ${allRepositoryData.length} repositories`,
-						},
-					});
-
-					set({
-						loadingStage: {
-							stage: "manifests",
-							progress: 50,
-							message: "Fetching manifests for all tags...",
-						},
-					});
-
-					const manifestPromises = allRepositoryData
-						.filter((repo) => repo.tags.length > 0)
-						.flatMap(({ sourceName, sourceInfo, repoName, tags }) => {
-							const sampleTags = tags.slice(0, 3);
-							return sampleTags.map(async (tagName: string) => {
-								try {
-									const encodedRepoName = encodeURIComponent(repoName);
-									const manifestUrl = `${sourceInfo.path}/v2/${encodedRepoName}/manifests/${tagName}`;
-
-									const manifestResponse = await fetch(manifestUrl, {
-										headers: {
-											Accept:
-												"application/vnd.docker.distribution.manifest.list.v2+json, application/vnd.docker.distribution.manifest.v2+json, application/vnd.oci.image.index.v1+json, application/vnd.oci.image.manifest.v1+json",
-										},
-									});
-
-									if (manifestResponse.ok) {
-										const tagData = await aggregateTagData(
-											repoName,
-											tagName,
-											manifestResponse,
-											sourceInfo.path,
-										);
-										return {
-											sourceName,
-											repoName,
-											tagData,
-											totalTags: tags.length,
-										};
-									}
-								} catch (error) {
-									console.warn(
-										`Failed to process manifest for ${repoName}:${tagName}:`,
-										error,
-									);
-								}
-								return null;
-							});
-						});
-
-					const manifestResults = await Promise.all(manifestPromises);
-					const validManifests = manifestResults.filter(Boolean);
-
-					set({
-						loadingStage: {
-							stage: "manifests",
-							progress: 85,
-							message: `Fetched ${validManifests.length} manifests`,
-						},
-					});
-
-					set({
-						loadingStage: {
-							stage: "complete",
-							progress: 85,
-							message: "Processing and aggregating data...",
-						},
-					});
-
-					const repositoryMap = new Map<
-						string,
-						{
-							sourceName: string;
-							repoName: string;
-							tags: Tag[];
-							totalTags: number;
+					for (const repo of allRepos) {
+						try {
+							const tags = await fetchTags(repo.repoName, repo.sourceInfo.path);
+							reposWithTags.push({ ...repo, tags });
+						} catch (error) {
+							console.warn(`Failed to fetch tags for ${repo.repoName}:`, error);
+							reposWithTags.push({ ...repo, tags: [] });
 						}
-					>();
-
-					for (const manifest of validManifests) {
-						if (!manifest?.tagData) continue;
-
-						const key = `${manifest.sourceName}:${manifest.repoName}`;
-						if (!repositoryMap.has(key)) {
-							repositoryMap.set(key, {
-								sourceName: manifest.sourceName,
-								repoName: manifest.repoName,
-								tags: [],
-								totalTags: manifest.totalTags,
-							});
-						}
-						repositoryMap.get(key)?.tags.push(manifest.tagData);
 					}
 
-					const allRepositoryMetas: RepositoryMeta[] = [];
+					set({
+						loadingStage: {
+							stage: "manifests",
+							progress: 50,
+							message: "Fetching sample manifests...",
+						},
+					});
+
+					const processedRepos: RepositoryMeta[] = [];
 					const allArchitectures = new Set<string>();
 
-					for (const {
-						sourceName,
-						repoName,
-						tags,
-						totalTags,
-					} of repositoryMap.values()) {
-						if (tags.length === 0) continue;
+					for (const repo of reposWithTags) {
+						const { sourceName, sourceInfo, repoName, tags } = repo;
+						const { name, namespace } = parseRepositoryName(repoName);
 
-						const parts = repoName.split("/");
-						const name = parts.length > 1 ? parts[parts.length - 1] : repoName;
-						const namespace =
-							parts.length > 1 ? parts.slice(0, -1).join("/") : undefined;
-
-						const totalSize = tags.reduce((sum, tag) => {
-							const sizeMatch = tag.size.match(/^([\d.]+)\s*(\w+)$/);
-							if (sizeMatch) {
-								const value = parseFloat(sizeMatch[1]);
-								const unit = sizeMatch[2];
-								const multipliers: { [key: string]: number } = {
-									Bytes: 1,
-									KB: 1024,
-									MB: 1024 * 1024,
-									GB: 1024 * 1024 * 1024,
-									TB: 1024 * 1024 * 1024 * 1024,
-								};
-								return sum + value * (multipliers[unit] || 1);
-							}
-							return sum;
-						}, 0);
-
-						const architectures = [
-							...new Set(
-								tags.flatMap((tag) =>
-									tag.architectures.map((arch) => arch.architecture),
-								),
-							),
-						];
-
-						for (const arch of architectures) {
-							allArchitectures.add(arch);
-						}
-
-						const latestTag = tags.reduce((latest, tag) =>
-							new Date(tag.lastUpdated) > new Date(latest.lastUpdated)
-								? tag
-								: latest,
-						);
-
-						allRepositoryMetas.push({
-							name,
-							namespace,
-							tagCount: totalTags,
-							totalSize,
-							totalSizeFormatted: formatBytes(totalSize),
-							architectures,
-							lastUpdated: latestTag.lastUpdated,
-							createdAt: new Date().toISOString(),
-							source: sourceName,
-						});
-					}
-
-					for (const { sourceName, repoName, tags } of allRepositoryData) {
 						if (tags.length === 0) {
-							const parts = repoName.split("/");
-							const name =
-								parts.length > 1 ? parts[parts.length - 1] : repoName;
-							const namespace =
-								parts.length > 1 ? parts.slice(0, -1).join("/") : undefined;
-
-							allRepositoryMetas.push({
+							// Empty repository
+							processedRepos.push({
 								name,
 								namespace,
 								tagCount: 0,
@@ -733,40 +630,78 @@ export const useRepositoryStore = create<RepositoryStore>()(
 								createdAt: new Date().toISOString(),
 								source: sourceName,
 							});
+							continue;
+						}
+
+						// Process a few sample tags to get repository info
+						const sampleTags = tags.slice(0, 3);
+						const processedTags: Tag[] = [];
+
+						for (const tagName of sampleTags) {
+							try {
+								const manifestResponse = await fetchManifest(
+									repoName,
+									tagName,
+									sourceInfo.path,
+								);
+								const tag = await processManifest(
+									repoName,
+									tagName,
+									manifestResponse,
+									sourceInfo.path,
+								);
+								if (tag) {
+									processedTags.push(tag);
+								}
+							} catch (error) {
+								console.warn(
+									`Failed to process ${repoName}:${tagName}:`,
+									error,
+								);
+							}
+						}
+
+						if (processedTags.length > 0) {
+							const totalSize = calculateRepositorySize(processedTags);
+							const architectures = [
+								...new Set(
+									processedTags.flatMap((tag) =>
+										tag.architectures.map((arch) => arch.architecture),
+									),
+								),
+							];
+							const latestTag = processedTags.reduce((latest, tag) =>
+								new Date(tag.lastUpdated) > new Date(latest.lastUpdated)
+									? tag
+									: latest,
+							);
+
+							for (const arch of architectures) {
+								allArchitectures.add(arch);
+							}
+
+							processedRepos.push({
+								name,
+								namespace,
+								tagCount: tags.length,
+								totalSize,
+								totalSizeFormatted: formatBytes(totalSize),
+								architectures,
+								lastUpdated: latestTag.lastUpdated,
+								createdAt: new Date().toISOString(),
+								source: sourceName,
+							});
 						}
 					}
 
-					if (allRepositoryMetas.length === 0) {
-						set({
-							repositoryMetas: [],
-							availableArchitectures: [],
-							loading: false,
-							loadingStage: {
-								stage: "complete",
-								progress: 100,
-								message: "No repositories found",
-							},
-							lastFetch: Date.now(),
-						});
-						return;
-					}
-
 					set({
-						loadingStage: {
-							stage: "complete",
-							progress: 95,
-							message: "Finalizing data...",
-						},
-					});
-
-					set({
-						repositoryMetas: allRepositoryMetas,
+						repositoryMetas: processedRepos,
 						availableArchitectures: [...allArchitectures].sort(),
 						loading: false,
 						loadingStage: {
 							stage: "complete",
 							progress: 100,
-							message: `Loaded ${allRepositoryMetas.length} repositories`,
+							message: `Loaded ${processedRepos.length} repositories`,
 						},
 						lastFetch: Date.now(),
 					});
@@ -792,11 +727,7 @@ export const useRepositoryStore = create<RepositoryStore>()(
 				const repoKey = namespace ? `${namespace}/${name}` : name;
 				const state = get();
 
-				// Ensure sources are fetched
-				if (Object.keys(state.sources).length === 0) {
-					await get().fetchSources();
-				}
-
+				// Check if we have fresh data
 				const existingDetail = state.repositoryDetails[repoKey];
 				if (
 					existingDetail &&
@@ -805,15 +736,17 @@ export const useRepositoryStore = create<RepositoryStore>()(
 					return;
 				}
 
+				// Ensure sources are loaded
+				if (Object.keys(state.sources).length === 0) {
+					await get().fetchSources();
+				}
+
 				try {
 					const updatedState = get();
-					let sourceInfo: SourceInfo;
 
-					if (source) {
+					let sourceInfo: SourceInfo;
+					if (source && updatedState.sources[source]) {
 						sourceInfo = updatedState.sources[source];
-						if (!sourceInfo) {
-							throw new Error(`Source ${source} not found`);
-						}
 					} else {
 						const existingRepo = updatedState.repositoryMetas.find((repo) => {
 							const existingKey = repo.namespace
@@ -828,76 +761,39 @@ export const useRepositoryStore = create<RepositoryStore>()(
 						) {
 							sourceInfo = updatedState.sources[existingRepo.source];
 						} else {
-							const firstSource = Object.values(updatedState.sources)[0];
-							if (!firstSource) {
-								throw new Error("No sources available");
-							}
-							sourceInfo = firstSource;
+							sourceInfo = Object.values(updatedState.sources)[0];
 						}
 					}
 
-					const encodedRepoName = encodeURIComponent(repoKey);
-					const tagsResponse = await fetch(
-						`${sourceInfo.path}/v2/${encodedRepoName}/tags/list`,
-					);
-
-					if (!tagsResponse.ok) {
-						throw new Error(`Failed to fetch tags for ${repoKey}`);
+					if (!sourceInfo) {
+						throw new Error("No sources available");
 					}
 
-					const tagsData = await tagsResponse.json();
-					const tagNames = tagsData.tags || [];
+					const tagNames = await fetchTags(repoKey, sourceInfo.path);
+					const tags: Tag[] = [];
 
-					const tagPromises = tagNames.map(async (tagName: string) => {
+					for (const tagName of tagNames) {
 						try {
-							const manifestResponse = await fetch(
-								`${sourceInfo.path}/v2/${encodedRepoName}/manifests/${tagName}`,
-								{
-									headers: {
-										Accept:
-											"application/vnd.docker.distribution.manifest.list.v2+json, application/vnd.docker.distribution.manifest.v2+json, application/vnd.oci.image.manifest.v1+json",
-									},
-								},
+							const manifestResponse = await fetchManifest(
+								repoKey,
+								tagName,
+								sourceInfo.path,
 							);
-
-							if (manifestResponse.ok) {
-								return await aggregateTagData(
-									repoKey,
-									tagName,
-									manifestResponse,
-									sourceInfo.path,
-								);
+							const tag = await processManifest(
+								repoKey,
+								tagName,
+								manifestResponse,
+								sourceInfo.path,
+							);
+							if (tag) {
+								tags.push(tag);
 							}
 						} catch (error) {
-							console.warn(
-								`Failed to process tag ${tagName} for ${repoKey}:`,
-								error,
-							);
+							console.warn(`Failed to process tag ${tagName}:`, error);
 						}
-						return null;
-					});
+					}
 
-					const tags = (await Promise.all(tagPromises)).filter(
-						Boolean,
-					) as Tag[];
-
-					const totalSize = tags.reduce((sum, tag) => {
-						const sizeMatch = tag.size.match(/^([\d.]+)\s*(\w+)$/);
-						if (sizeMatch) {
-							const value = parseFloat(sizeMatch[1]);
-							const unit = sizeMatch[2];
-							const multipliers: { [key: string]: number } = {
-								Bytes: 1,
-								KB: 1024,
-								MB: 1024 * 1024,
-								GB: 1024 * 1024 * 1024,
-								TB: 1024 * 1024 * 1024 * 1024,
-							};
-							return sum + value * (multipliers[unit] || 1);
-						}
-						return sum;
-					}, 0);
-
+					const totalSize = calculateRepositorySize(tags);
 					const architectures = [
 						...new Set(
 							tags.flatMap((tag) =>
@@ -905,14 +801,15 @@ export const useRepositoryStore = create<RepositoryStore>()(
 							),
 						),
 					];
+					const latestTag =
+						tags.length > 0
+							? tags.reduce((latest, tag) =>
+									new Date(tag.lastUpdated) > new Date(latest.lastUpdated)
+										? tag
+										: latest,
+								)
+							: null;
 
-					const latestTag = tags.reduce((latest, tag) =>
-						new Date(tag.lastUpdated) > new Date(latest.lastUpdated)
-							? tag
-							: latest,
-					);
-
-					// Determine which source was used
 					const usedSource =
 						source ||
 						Object.entries(updatedState.sources).find(
@@ -927,7 +824,7 @@ export const useRepositoryStore = create<RepositoryStore>()(
 						totalSize,
 						totalSizeFormatted: formatBytes(totalSize),
 						architectures,
-						lastUpdated: latestTag.lastUpdated,
+						lastUpdated: latestTag?.lastUpdated || new Date().toISOString(),
 						tags,
 						createdAt: new Date().toISOString(),
 						source: usedSource,
@@ -953,14 +850,12 @@ export const useRepositoryStore = create<RepositoryStore>()(
 			startPeriodicRefresh: () => {
 				if (refreshInterval) {
 					clearInterval(refreshInterval);
-					refreshInterval = null;
 				}
 				if (visibilityChangeListener) {
 					document.removeEventListener(
 						"visibilitychange",
 						visibilityChangeListener,
 					);
-					visibilityChangeListener = null;
 				}
 
 				refreshInterval = setInterval(() => {
@@ -993,7 +888,6 @@ export const useRepositoryStore = create<RepositoryStore>()(
 			},
 
 			clearError: () => set({ error: null }),
-
 			setHydrated: (hydrated: boolean) => set({ hydrated }),
 
 			deleteRepository: async (
@@ -1002,34 +896,30 @@ export const useRepositoryStore = create<RepositoryStore>()(
 				source?: string,
 			) => {
 				const repoKey = namespace ? `${namespace}/${name}` : name;
-				const encodedRepoName = encodeURIComponent(repoKey);
 				const sourcePath = source ? `/api/${source}` : "/api/default";
 
 				try {
-					const response = await fetch(`${sourcePath}/v2/${encodedRepoName}`, {
-						method: "DELETE",
-					});
+					const response = await fetch(
+						`${sourcePath}/v2/${encodeURIComponent(repoKey)}`,
+						{
+							method: "DELETE",
+						},
+					);
 
 					if (response.ok || response.status === 404) {
-						const state = get();
-						const updatedMetas = state.repositoryMetas.filter((repo) => {
-							const currentRepoKey = repo.namespace
-								? `${repo.namespace}/${repo.name}`
-								: repo.name;
-							return currentRepoKey !== repoKey;
-						});
-
-						const updatedDetails = { ...state.repositoryDetails };
-						delete updatedDetails[repoKey];
-
-						set({
-							repositoryMetas: updatedMetas,
-							repositoryDetails: updatedDetails,
-						});
-
+						set(
+							produce((state: RepositoryStore) => {
+								state.repositoryMetas = state.repositoryMetas.filter((repo) => {
+									const currentRepoKey = repo.namespace
+										? `${repo.namespace}/${repo.name}`
+										: repo.name;
+									return currentRepoKey !== repoKey;
+								});
+								delete state.repositoryDetails[repoKey];
+							}),
+						);
 						return true;
 					}
-
 					return false;
 				} catch (error) {
 					console.error("Failed to delete repository:", error);
@@ -1050,49 +940,35 @@ export const useRepositoryStore = create<RepositoryStore>()(
 				const sourcePath = source ? `/api/${source}` : "/api/default";
 
 				try {
+					// Get manifest to find digest
 					const manifestResponse = await fetch(
 						`${sourcePath}/v2/${encodedRepoName}/manifests/${tagName}`,
 					);
 
-					// If tag doesn't exist (404), treat as successful deletion
 					if (manifestResponse.status === 404) {
-						const state = get();
-						const repoDetail = state.repositoryDetails[repoKey];
+						// Tag doesn't exist, treat as successful deletion
+						set(
+							produce((state: RepositoryStore) => {
+								const repoDetail = state.repositoryDetails[repoKey];
+								if (repoDetail) {
+									repoDetail.tags = repoDetail.tags.filter(
+										(tag) => tag.name !== tagName,
+									);
+									repoDetail.tagCount = repoDetail.tags.length;
 
-						if (repoDetail) {
-							const updatedTags = repoDetail.tags.filter(
-								(tag) => tag.name !== tagName,
-							);
-
-							const updatedDetail: RepositoryDetail = {
-								...repoDetail,
-								tags: updatedTags,
-								tagCount: updatedTags.length,
-							};
-
-							// Also update repositoryMetas to keep tagCount in sync
-							const updatedMetas = state.repositoryMetas.map((repo) => {
-								const currentRepoKey = repo.namespace
-									? `${repo.namespace}/${repo.name}`
-									: repo.name;
-								if (currentRepoKey === repoKey) {
-									return {
-										...repo,
-										tagCount: updatedTags.length,
-									};
+									const repoIndex = state.repositoryMetas.findIndex((repo) => {
+										const currentRepoKey = repo.namespace
+											? `${repo.namespace}/${repo.name}`
+											: repo.name;
+										return currentRepoKey === repoKey;
+									});
+									if (repoIndex >= 0) {
+										state.repositoryMetas[repoIndex].tagCount =
+											repoDetail.tagCount;
+									}
 								}
-								return repo;
-							});
-
-							set({
-								repositoryDetails: {
-									...state.repositoryDetails,
-									[repoKey]: updatedDetail,
-								},
-								repositoryMetas: updatedMetas,
-							});
-						}
-
+							}),
+						);
 						return true;
 					}
 
@@ -1102,11 +978,38 @@ export const useRepositoryStore = create<RepositoryStore>()(
 						);
 					}
 
-					const digest = manifestResponse.headers.get("Docker-Content-Digest");
+					const manifest = await manifestResponse.json();
+					let digest = "";
+
+					if (
+						manifest.mediaType ===
+							"application/vnd.oci.image.manifest.v1+json" ||
+						manifest.mediaType ===
+							"application/vnd.docker.distribution.manifest.v2+json"
+					) {
+						// Single-arch manifests: get digest from config.digest
+						digest = manifest.config?.digest || "";
+					} else if (
+						manifest.mediaType === "application/vnd.oci.image.index.v1+json" ||
+						manifest.mediaType ===
+							"application/vnd.docker.distribution.manifest.list.v2+json"
+					) {
+						// Multi-arch manifests: need to delete the index itself, use tag name
+						digest = tagName;
+					} else if (
+						manifest.mediaType ===
+						"application/vnd.docker.distribution.manifest.v1+json"
+					) {
+						// Docker legacy manifest: use header
+						digest =
+							manifestResponse.headers.get("Docker-Content-Digest") || "";
+					}
+
 					if (!digest) {
 						throw new Error("No digest found in manifest response");
 					}
 
+					// Delete by digest
 					const deleteResponse = await fetch(
 						`${sourcePath}/v2/${encodedRepoName}/manifests/${digest}`,
 						{
@@ -1115,46 +1018,30 @@ export const useRepositoryStore = create<RepositoryStore>()(
 					);
 
 					if (deleteResponse.ok || deleteResponse.status === 404) {
-						const state = get();
-						const repoDetail = state.repositoryDetails[repoKey];
+						set(
+							produce((state: RepositoryStore) => {
+								const repoDetail = state.repositoryDetails[repoKey];
+								if (repoDetail) {
+									repoDetail.tags = repoDetail.tags.filter(
+										(tag) => tag.name !== tagName,
+									);
+									repoDetail.tagCount = repoDetail.tags.length;
 
-						if (repoDetail) {
-							const updatedTags = repoDetail.tags.filter(
-								(tag) => tag.name !== tagName,
-							);
-
-							const updatedDetail: RepositoryDetail = {
-								...repoDetail,
-								tags: updatedTags,
-								tagCount: updatedTags.length,
-							};
-
-							// Also update repositoryMetas to keep tagCount in sync
-							const updatedMetas = state.repositoryMetas.map((repo) => {
-								const currentRepoKey = repo.namespace
-									? `${repo.namespace}/${repo.name}`
-									: repo.name;
-								if (currentRepoKey === repoKey) {
-									return {
-										...repo,
-										tagCount: updatedTags.length,
-									};
+									const repoIndex = state.repositoryMetas.findIndex((repo) => {
+										const currentRepoKey = repo.namespace
+											? `${repo.namespace}/${repo.name}`
+											: repo.name;
+										return currentRepoKey === repoKey;
+									});
+									if (repoIndex >= 0) {
+										state.repositoryMetas[repoIndex].tagCount =
+											repoDetail.tagCount;
+									}
 								}
-								return repo;
-							});
-
-							set({
-								repositoryDetails: {
-									...state.repositoryDetails,
-									[repoKey]: updatedDetail,
-								},
-								repositoryMetas: updatedMetas,
-							});
-						}
-
+							}),
+						);
 						return true;
 					}
-
 					return false;
 				} catch (error) {
 					console.error("Failed to delete tag:", error);

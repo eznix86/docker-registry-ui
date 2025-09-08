@@ -79,7 +79,7 @@ function RepositoryPage() {
 			);
 		}
 
-		return filteredTags.sort((a, b) => {
+		return [...filteredTags].sort((a, b) => {
 			switch (sortBy) {
 				case "newest":
 					return (

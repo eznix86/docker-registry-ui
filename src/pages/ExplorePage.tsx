@@ -498,7 +498,7 @@ function ExplorePage() {
 					) : (
 						filteredRepos.map((repo) => (
 							<Card
-								key={`${repo.namespace || ""}/${repo.name}`}
+								key={`${repo.source || "default"}:${repo.namespace || ""}/${repo.name}`}
 								elevation={0}
 								variant="outlined"
 								sx={{
