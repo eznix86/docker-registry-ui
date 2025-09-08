@@ -1,9 +1,24 @@
 #!/bin/sh
 
-# Extract hostname from REGISTRY_URL (handles both http and https)
-REGISTRY_HOST=$(echo "${REGISTRY_URL}" | sed 's|https\?://||' | sed 's|/.*||')
-export REGISTRY_HOST
+set -e
 
-envsubst '${REGISTRY_URL} ${REGISTRY_AUTH} ${REGISTRY_HOST}' < /etc/nginx/conf.d/nginx.conf.template > /etc/nginx/conf.d/default.conf
+echo "Starting Docker Registry UI..."
+
+REGISTRY_COUNT=$(printenv | grep -c "^REGISTRY_URL" || echo "0")
+
+if [ "$REGISTRY_COUNT" -eq "0" ]; then
+    echo "❌ Error: No REGISTRY_URL environment variables found!"
+    echo "   Please set at least REGISTRY_URL and REGISTRY_AUTH"
+    echo "   For multiple sources, use REGISTRY_URL_SOURCENAME and REGISTRY_AUTH_SOURCENAME"
+    exit 1
+fi
+
+echo "Found $REGISTRY_COUNT registry source(s)"
+
+echo "🔧 Generating multi-source configuration..."
+/generate-sources.sh
+
+echo "✅ Multi-source configuration complete!"
+echo "🌐 Starting nginx..."
 
 exec nginx -g 'daemon off;'

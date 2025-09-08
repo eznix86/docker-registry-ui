@@ -2,6 +2,7 @@ import CssBaseline from "@mui/material/CssBaseline";
 import { createTheme, ThemeProvider } from "@mui/material/styles";
 import { Route, BrowserRouter as Router, Routes } from "react-router-dom";
 import Layout from "./components/Layout";
+import { SnackbarProvider } from "./components/SnackbarProvider";
 import ExplorePage from "./pages/ExplorePage";
 import RepositoryPage from "./pages/RepositoryPage";
 
@@ -41,6 +42,7 @@ function App() {
 						/>
 					</Routes>
 				</Layout>
+				<SnackbarProvider />
 			</Router>
 		</ThemeProvider>
 	);

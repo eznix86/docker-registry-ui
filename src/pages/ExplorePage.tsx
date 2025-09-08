@@ -22,7 +22,14 @@ import {
 	Typography,
 } from "@mui/material";
 import type { SelectChangeEvent } from "@mui/material/Select";
-import React, { useEffect, useId, useMemo, useRef, useState } from "react";
+import React, {
+	useCallback,
+	useEffect,
+	useId,
+	useMemo,
+	useRef,
+	useState,
+} from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import {
 	type RepositoryMeta,
@@ -39,6 +46,7 @@ function ExplorePage() {
 		loadingStage,
 		error,
 		availableArchitectures,
+		sources,
 		fetchRepositoryMetas,
 		startPeriodicRefresh,
 		stopPeriodicRefresh,
@@ -49,10 +57,14 @@ function ExplorePage() {
 	const searchQuery = searchParams.get("search");
 	const archQuery = searchParams.get("arch") || "all";
 	const showUntaggedQuery = searchParams.get("showUntagged") || "false";
+	const sourcesQuery = searchParams.get("sources") || "";
 	const [architectureFilter, setArchitectureFilter] = useState(archQuery);
 	const [showUntagged, setShowUntagged] = useState(
 		showUntaggedQuery === "true",
 	);
+	const [selectedSources, setSelectedSources] = useState<string[]>(() => {
+		return sourcesQuery ? sourcesQuery.split(",") : [];
+	});
 
 	const [untaggedDialog, setUntaggedDialog] = useState({
 		open: false,
@@ -73,6 +85,23 @@ function ExplorePage() {
 	const architectures = React.useMemo(() => {
 		return ["all", ...availableArchitectures];
 	}, [availableArchitectures]);
+
+	const availableSources = React.useMemo(() => {
+		return Object.entries(sources).map(([key, source]) => ({
+			key,
+			host: source.host,
+		}));
+	}, [sources]);
+
+	const getSourceHost = useCallback(
+		(sourceName?: string) => {
+			if (!sourceName || !sources[sourceName]) {
+				return "Unknown";
+			}
+			return sources[sourceName].host;
+		},
+		[sources],
+	);
 
 	useEffect(() => {
 		if (
@@ -132,6 +161,13 @@ function ExplorePage() {
 			);
 		}
 
+		if (selectedSources.length > 0) {
+			filtered = filtered.filter((repo) => {
+				const sourceHost = getSourceHost(repo.source);
+				return selectedSources.includes(sourceHost);
+			});
+		}
+
 		if (!showUntagged) {
 			filtered = filtered.filter((repo) => {
 				return repo.tagCount > 0;
@@ -143,8 +179,10 @@ function ExplorePage() {
 		repositoryMetas,
 		searchQuery,
 		architectureFilter,
+		selectedSources,
 		showUntagged,
 		hydrated,
+		getSourceHost,
 	]);
 
 	const handleArchitectureChange = (event: SelectChangeEvent) => {
@@ -156,6 +194,24 @@ function ExplorePage() {
 			newSearchParams.delete("arch");
 		} else {
 			newSearchParams.set("arch", newArch);
+		}
+		setSearchParams(newSearchParams);
+	};
+
+	const handleSourceChange = (sourceHost: string, checked: boolean) => {
+		let newSelectedSources: string[];
+		if (checked) {
+			newSelectedSources = [...selectedSources, sourceHost];
+		} else {
+			newSelectedSources = selectedSources.filter((s) => s !== sourceHost);
+		}
+		setSelectedSources(newSelectedSources);
+
+		const newSearchParams = new URLSearchParams(searchParams);
+		if (newSelectedSources.length === 0) {
+			newSearchParams.delete("sources");
+		} else {
+			newSearchParams.set("sources", newSelectedSources.join(","));
 		}
 		setSearchParams(newSearchParams);
 	};
@@ -193,9 +249,12 @@ function ExplorePage() {
 	};
 
 	const getRepositoryPath = (repo: RepositoryMeta) => {
-		return repo.namespace
+		const basePath = repo.namespace
 			? `/repository/${repo.namespace}/${repo.name}`
 			: `/repository/${repo.name}`;
+		return repo.source
+			? `${basePath}?source=${encodeURIComponent(repo.source)}`
+			: basePath;
 	};
 
 	const getDisplayName = (repo: RepositoryMeta) => {
@@ -212,7 +271,6 @@ function ExplorePage() {
 				overflow: "hidden",
 			}}
 		>
-			{/* Sidebar Filters */}
 			<Box
 				sx={{
 					width: { xs: "100%", md: 320 },
@@ -236,6 +294,48 @@ function ExplorePage() {
 				>
 					Filter by
 				</Typography>
+
+				<Box sx={{ mb: 3 }}>
+					<Typography
+						variant="h6"
+						sx={{
+							fontSize: "0.875rem",
+							fontWeight: 600,
+							mb: 1,
+							color: "text.primary",
+						}}
+					>
+						Sources
+					</Typography>
+					{availableSources.map((source) => (
+						<FormControlLabel
+							key={source.key}
+							control={
+								<Checkbox
+									checked={selectedSources.includes(source.host)}
+									onChange={(e) =>
+										handleSourceChange(source.host, e.target.checked)
+									}
+									size="small"
+									sx={{
+										color: "primary.main",
+										"&.Mui-checked": {
+											color: "primary.main",
+										},
+									}}
+								/>
+							}
+							label={source.host}
+							sx={{
+								mb: 0.5,
+								"& .MuiFormControlLabel-label": {
+									fontSize: "0.875rem",
+									color: "text.primary",
+								},
+							}}
+						/>
+					))}
+				</Box>
 
 				<Box sx={{ mb: 3 }}>
 					<Typography
@@ -300,7 +400,6 @@ function ExplorePage() {
 				</Box>
 			</Box>
 
-			{/* Main Content */}
 			<Box
 				sx={{
 					flexGrow: 1,
@@ -337,12 +436,22 @@ function ExplorePage() {
 								<LinearProgress
 									variant="determinate"
 									value={loadingStage.progress}
-									sx={{ mb: 1 }}
+									sx={{
+										mb: 1,
+										width: "100%",
+										minWidth: "300px",
+									}}
 								/>
 								<Typography
 									variant="body2"
 									color="text.secondary"
-									sx={{ fontSize: "0.75rem" }}
+									sx={{
+										fontSize: "0.75rem",
+										whiteSpace: "nowrap",
+										overflow: "hidden",
+										textOverflow: "ellipsis",
+										width: "100%",
+									}}
 								>
 									{loadingStage.message}
 								</Typography>
@@ -438,7 +547,6 @@ function ExplorePage() {
 												width: "100%",
 											}}
 										>
-											{/* Content for untagged repositories */}
 											<Box sx={{ mb: 1 }}>
 												<Typography
 													variant="h6"
@@ -531,6 +639,16 @@ function ExplorePage() {
 														0 B
 													</Typography>
 												</Box>
+												<Typography
+													variant="body2"
+													sx={{
+														fontSize: "0.75rem",
+														color: "text.disabled",
+														fontStyle: "italic",
+													}}
+												>
+													{getSourceHost(repo.source)}
+												</Typography>
 											</Box>
 										</CardContent>
 									</CardActionArea>
@@ -557,7 +675,6 @@ function ExplorePage() {
 												width: "100%",
 											}}
 										>
-											{/* Top section - Title */}
 											<Box sx={{ mb: 1 }}>
 												<Typography
 													variant="h6"
@@ -572,7 +689,6 @@ function ExplorePage() {
 												</Typography>
 											</Box>
 
-											{/* Middle section - Architecture chips with guaranteed 2-row space */}
 											<Box
 												sx={{
 													flexGrow: 1,
@@ -591,7 +707,6 @@ function ExplorePage() {
 													},
 												}}
 											>
-												{/* Always render the architecture container to maintain consistent spacing */}
 												<Box
 													sx={{
 														display: "flex",
@@ -665,7 +780,6 @@ function ExplorePage() {
 												</Box>
 											</Box>
 
-											{/* Bottom section - Size info */}
 											<Box
 												sx={{
 													display: "flex",
@@ -693,6 +807,16 @@ function ExplorePage() {
 														{repo.totalSizeFormatted || "Unknown"}
 													</Typography>
 												</Box>
+												<Typography
+													variant="body2"
+													sx={{
+														fontSize: "0.75rem",
+														color: "text.disabled",
+														fontStyle: "italic",
+													}}
+												>
+													{getSourceHost(repo.source)}
+												</Typography>
 											</Box>
 										</CardContent>
 									</CardActionArea>
@@ -703,7 +827,6 @@ function ExplorePage() {
 				</Box>
 			</Box>
 
-			{/* Dialog for untagged repositories */}
 			<Dialog
 				open={untaggedDialog.open}
 				onClose={handleCloseUntaggedDialog}

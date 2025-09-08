@@ -30,19 +30,24 @@ import {
 } from "@mui/material";
 import type { SelectChangeEvent } from "@mui/material/Select";
 import { useEffect, useMemo, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useParams, useSearchParams } from "react-router-dom";
 import { SelectiveDeleteDialog } from "../components/SelectiveDeleteDialog";
 import { useRepositoryStore } from "../store/repositoryStore";
+import { useSnackbarStore } from "../store/snackbarStore";
 
 function RepositoryPage() {
 	const { name, namespace } = useParams<{ name: string; namespace?: string }>();
+	const [searchParams] = useSearchParams();
+	const source = searchParams.get("source") || undefined;
 	const {
 		repositoryDetails,
 		fetchRepositoryDetail,
 		error,
 		clearError,
 		deleteTag,
+		sources,
 	} = useRepositoryStore();
+	const { showSnackbar } = useSnackbarStore();
 	const [loading, setLoading] = useState(false);
 	const [sortBy, setSortBy] = useState("newest");
 	const [filterQuery, setFilterQuery] = useState("");
@@ -55,6 +60,13 @@ function RepositoryPage() {
 		[name, namespace],
 	);
 	const repository = repositoryDetails[repoKey];
+
+	const getSourceHost = () => {
+		if (!source || !sources[source]) {
+			return null;
+		}
+		return sources[source].host;
+	};
 
 	const filteredAndSortedTags = useMemo(() => {
 		if (!repository?.tags) return [];
@@ -120,7 +132,7 @@ function RepositoryPage() {
 		let isMounted = true;
 		setLoading(true);
 
-		fetchRepositoryDetail(name, namespace).finally(() => {
+		fetchRepositoryDetail(name, namespace, source).finally(() => {
 			if (isMounted) {
 				setLoading(false);
 			}
@@ -129,7 +141,7 @@ function RepositoryPage() {
 		return () => {
 			isMounted = false;
 		};
-	}, [name, namespace, repository, fetchRepositoryDetail]);
+	}, [name, namespace, source, repository, fetchRepositoryDetail]);
 
 	const copyToClipboard = (text: string) => {
 		navigator.clipboard.writeText(text);
@@ -149,9 +161,14 @@ function RepositoryPage() {
 		if (window.confirm(confirmMessage)) {
 			const success = await deleteTag(name || "", tagName, namespace);
 			if (success) {
-				fetchRepositoryDetail(name || "", namespace);
+				showSnackbar(
+					`Tag "${tagName}" deleted successfully. To reclaim storage, run registry garbage collection: "registry garbage-collect <config>"`,
+					"success",
+					8000,
+				);
+				fetchRepositoryDetail(name || "", namespace, source);
 			} else {
-				alert("Failed to delete tag. Please try again.");
+				showSnackbar("Failed to delete tag. Please try again.", "error");
 			}
 		}
 	};
@@ -242,6 +259,11 @@ function RepositoryPage() {
 					<MuiLink component={Link} to="/" color="primary">
 						Explore
 					</MuiLink>
+					{getSourceHost() && (
+						<Typography color="text.secondary" variant="body2">
+							{getSourceHost()}
+						</Typography>
+					)}
 					{(repository?.namespace || namespace) && (
 						<Typography color="text.primary">
 							{repository?.namespace || namespace}

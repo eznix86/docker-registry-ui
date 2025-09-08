@@ -16,6 +16,7 @@ import {
 import { useState } from "react";
 import type { ArchitectureInfo, Tag } from "../store/repositoryStore";
 import { useRepositoryStore } from "../store/repositoryStore";
+import { useSnackbarStore } from "../store/snackbarStore";
 
 interface SelectiveDeleteDialogProps {
 	open: boolean;
@@ -36,6 +37,7 @@ export function SelectiveDeleteDialog({
 	const [isDeleting, setIsDeleting] = useState(false);
 
 	const { deleteRepository, deleteTag } = useRepositoryStore();
+	const { showSnackbar } = useSnackbarStore();
 
 	const allImages = tags.flatMap((tag) =>
 		tag.architectures.map((arch) => `${tag.name}:${arch.digest}`),
@@ -66,17 +68,24 @@ export function SelectiveDeleteDialog({
 
 		try {
 			if (selectedImages.size === allImages.length) {
-				// Delete entire repository if all images are selected
 				const [namespace, name] = repositoryKey.includes("/")
 					? repositoryKey.split("/", 2)
 					: [undefined, repositoryKey];
 
 				const success = await deleteRepository(name, namespace);
-				if (!success) {
-					alert("Failed to delete repository. Please try again.");
+				if (success) {
+					showSnackbar(
+						`Repository "${repositoryName}" deleted successfully. To reclaim storage, run registry garbage collection: "registry garbage-collect <config>"`,
+						"success",
+						8000,
+					);
+				} else {
+					showSnackbar(
+						"Failed to delete repository. Please try again.",
+						"error",
+					);
 				}
 			} else {
-				// Delete selected tags
 				const imagesToDelete = [...selectedImages].map((imageId) => {
 					const [tagName] = imageId.split(":");
 					return tagName;
@@ -87,7 +96,6 @@ export function SelectiveDeleteDialog({
 					? repositoryKey.split("/", 2)
 					: [undefined, repositoryKey];
 
-				// Delete all tags concurrently but wait for all to complete
 				const deletePromises = uniqueTags.map((tagName) =>
 					deleteTag(name, tagName, namespace),
 				);
@@ -97,10 +105,23 @@ export function SelectiveDeleteDialog({
 					(result) => result.status === "fulfilled" && result.value === true,
 				).length;
 
-				if (successCount !== uniqueTags.length) {
+				if (successCount === uniqueTags.length) {
+					showSnackbar(
+						`${successCount} tag${successCount !== 1 ? "s" : ""} deleted successfully. To reclaim storage, run registry garbage collection: "registry garbage-collect <config>"`,
+						"success",
+						8000,
+					);
+				} else if (successCount > 0) {
 					const failedCount = uniqueTags.length - successCount;
-					alert(
-						`Successfully deleted ${successCount} of ${uniqueTags.length} tags. ${failedCount} deletion${failedCount !== 1 ? "s" : ""} failed or ${failedCount !== 1 ? "were" : "was"} already completed.`,
+					showSnackbar(
+						`${successCount} of ${uniqueTags.length} tags deleted successfully. ${failedCount} deletion${failedCount !== 1 ? "s" : ""} failed. To reclaim storage, run registry garbage collection: "registry garbage-collect <config>"`,
+						"warning",
+						8000,
+					);
+				} else {
+					showSnackbar(
+						"Failed to delete selected tags. Please try again.",
+						"error",
 					);
 				}
 			}

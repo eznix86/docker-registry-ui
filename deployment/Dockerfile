@@ -4,24 +4,26 @@ WORKDIR /app
 
 COPY package*.json ./
 
-RUN npm install
+RUN npm ci
 
 COPY . .
-
-# Set mock environment variables for build
-ENV REGISTRY_URL=https://registry-1.docker.io
-ENV REGISTRY_AUTH=ZHVtbXk6ZHVtbXk=
 
 RUN npm run build
 
 FROM nginx:alpine
 
+RUN apk add --no-cache bash
+
 COPY --from=builder /app/dist /usr/share/nginx/html
 
 COPY deployment/nginx.conf.template /etc/nginx/conf.d/nginx.conf.template
+
+COPY deployment/generate-sources.sh /generate-sources.sh
 COPY deployment/entrypoint.sh /entrypoint.sh
 
-RUN chmod +x /entrypoint.sh
+RUN chmod +x /generate-sources.sh /entrypoint.sh
+
+RUN rm /etc/nginx/conf.d/default.conf
 
 EXPOSE 80
 
