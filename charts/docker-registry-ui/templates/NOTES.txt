@@ -24,7 +24,7 @@
 2. Don't forget to create your secret with
 
   kubectl create secret generic registry-ui-secret \
-    -n {{ .Release.Namespace }}
+    -n {{ .Release.Namespace }} \
     --from-literal=url="http://your-registry.com:5000" \
     --from-literal=auth="$(echo -n 'username:password' | base64)"
 
