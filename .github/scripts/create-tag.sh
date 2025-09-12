@@ -6,6 +6,8 @@ git config user.email "github-actions[bot]@users.noreply.github.com"
 
 if [[ -n "${REPO_TOKEN:-}" ]]; then
     git remote set-url origin "https://x-access-token:${REPO_TOKEN}@github.com/${GITHUB_REPOSITORY}"
+    
+    echo "::notice::Setting PAT to origin"
 fi
 
 get_latest_tag() {
@@ -88,7 +90,7 @@ main() {
     
     git tag "$new_tag"
 
-    git push "$new_tag"
+    git push origin "$new_tag"
 
     echo "::notice::Pushed tag $new_tag"
     
