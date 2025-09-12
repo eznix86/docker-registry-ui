@@ -3,6 +3,16 @@ entries:
   docker-registry-ui:
   - apiVersion: v2
     appVersion: latest
+    created: "2025-09-12T07:05:14.539468203Z"
+    description: A Helm chart for Kubernetes for Docker Registry UI
+    digest: 987457cf0a61e67a1083d1c1c67bc169bf41a91b759798c0a2dce102d87d804b
+    name: docker-registry-ui
+    type: application
+    urls:
+    - https://github.com/eznix86/docker-registry-ui/releases/download/docker-registry-ui-0.2.0/docker-registry-ui-0.2.0.tgz
+    version: 0.2.0
+  - apiVersion: v2
+    appVersion: latest
     created: "2025-09-09T12:28:31.819275113Z"
     description: A Helm chart for Kubernetes for Docker Registry UI
     digest: 448dba949c06ccf57408e6972d857b012d10b17a2067f2929b7fcd7adf88fc6d
@@ -21,4 +31,4 @@ entries:
     urls:
     - https://github.com/eznix86/docker-registry-ui/releases/download/docker-registry-ui-0.1.0/docker-registry-ui-0.1.0.tgz
     version: 0.1.0
-generated: "2025-09-09T12:28:31.819283349Z"
+generated: "2025-09-12T07:05:14.539485776Z"
