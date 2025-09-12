@@ -1,6 +1,7 @@
 import react from "@vitejs/plugin-react";
 import { defineConfig, loadEnv } from "vite";
 import type {ProxyOptions} from 'vite';
+import million from "million/compiler";
 
 interface RegistryConfig {
 	url: string;
@@ -98,6 +99,7 @@ export default defineConfig(({ mode }) => {
 
 	return {
 		plugins: [
+			million.vite({ auto: true }),
 			react(),
 			{
 				name: 'sources-endpoint',
