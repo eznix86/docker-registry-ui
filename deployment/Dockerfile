@@ -1,3 +1,6 @@
+LABEL org.opencontainers.image.source=https://github.com/eznix86/docker-registry-ui
+LABEL org.opencontainers.image.description="Container for Docker Registry UI"
+
 FROM node:24-alpine AS builder
 
 WORKDIR /app
