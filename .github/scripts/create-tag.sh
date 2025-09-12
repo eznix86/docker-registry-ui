@@ -4,6 +4,10 @@ set -euo pipefail
 git config user.name "github-actions[bot]"
 git config user.email "github-actions[bot]@users.noreply.github.com"
 
+if [[ -n "${REPO_TOKEN:-}" ]]; then
+    git remote set-url origin "https://x-access-token:${REPO_TOKEN}@github.com/${GITHUB_REPOSITORY}"
+fi
+
 get_latest_tag() {
     git tag --list 'v*' | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -n 1 || echo "v0.2.2"
 }
@@ -84,7 +88,7 @@ main() {
     
     git tag "$new_tag"
 
-    git push "https://$REPO_TOKEN@github.com/${GITHUB_REPOSITORY}.git" "$new_tag"
+    git push "$new_tag"
 
     echo "::notice::Pushed tag $new_tag"
     

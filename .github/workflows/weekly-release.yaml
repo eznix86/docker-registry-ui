@@ -18,6 +18,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          token: ${{ secrets.REPO_TOKEN }}
 
       - name: Create tag
         run: bash .github/scripts/create-tag.sh
