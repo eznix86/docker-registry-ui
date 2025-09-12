@@ -1,0 +1,92 @@
+{
+  "0": {
+    "code": 0,
+    "message": "Network Error",
+    "description": "Cannot connect to the registry. Check if the registry is running and accessible."
+  },
+  "400": {
+    "code": 400,
+    "message": "Bad Request",
+    "description": "The registry couldn't understand the request. This might be a configuration issue."
+  },
+  "401": {
+    "code": 401,
+    "message": "Authentication Required",
+    "description": "The registry requires valid credentials. Check your username and password configuration."
+  },
+  "403": {
+    "code": 403,
+    "message": "Access Denied",
+    "description": "Your credentials are valid but you don't have permission to access this registry."
+  },
+  "404": {
+    "code": 404,
+    "message": "Registry Not Found",
+    "description": "The registry endpoint was not found. Check the registry URL configuration."
+  },
+  "408": {
+    "code": 408,
+    "message": "Connection Timeout",
+    "description": "The registry is taking too long to respond. It might be slow or overloaded."
+  },
+  "429": {
+    "code": 429,
+    "message": "Rate Limited",
+    "description": "Too many requests sent to the registry. Please wait before trying again."
+  },
+  "500": {
+    "code": 500,
+    "message": "Registry Error",
+    "description": "The registry encountered an internal error. Contact the registry administrator."
+  },
+  "502": {
+    "code": 502,
+    "message": "Bad Gateway",
+    "description": "There's an issue with the proxy or gateway to the registry."
+  },
+  "503": {
+    "code": 503,
+    "message": "Registry Unavailable",
+    "description": "The registry is temporarily unavailable. It might be under maintenance."
+  },
+  "504": {
+    "code": 504,
+    "message": "Gateway Timeout",
+    "description": "The gateway timed out waiting for the registry to respond."
+  },
+  "520": {
+    "code": 520,
+    "message": "Unknown Error",
+    "description": "An unexpected error occurred while connecting to the registry."
+  },
+  "521": {
+    "code": 521,
+    "message": "Registry Down",
+    "description": "The registry server is down and refusing connections."
+  },
+  "522": {
+    "code": 522,
+    "message": "Connection Failed",
+    "description": "Could not establish a connection to the registry server."
+  },
+  "523": {
+    "code": 523,
+    "message": "Registry Unreachable",
+    "description": "The registry server cannot be reached. Check the network connection and URL."
+  },
+  "524": {
+    "code": 524,
+    "message": "Connection Timeout",
+    "description": "Connected to the registry but it didn't respond in time."
+  },
+  "525": {
+    "code": 525,
+    "message": "SSL/TLS Error",
+    "description": "Failed to establish a secure connection to the registry."
+  },
+  "526": {
+    "code": 526,
+    "message": "Invalid SSL Certificate",
+    "description": "The registry's SSL certificate is invalid or expired."
+  }
+}

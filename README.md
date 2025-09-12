@@ -108,10 +108,10 @@ For Kubernetes, extend the `env` configuration in your Helm values.
 # Example: echo -n "USERNAME:PASSWORD" | base64
 cp .env.example .env
 
-npm install
-npm run dev         # start development
-npm run lint        # lint code
-npm run lint:fix    # auto-fix lint issues where possible
+bun install
+bun run dev         # start development
+bun run lint        # lint code
+bun run lint:fix    # auto-fix lint issues where possible
 ```
 
 ---
@@ -122,6 +122,16 @@ In Docker Registry **v2/v3**, deleting an image through the UI only *marks* it a
 
 To free disk space, you must run the registry’s built-in **garbage collection** or other cleanup processes.
 
+```sh
+# Do this inside of your registry container.
+bin/registry garbage-collect [--dry-run] [--delete-untagged] [--quiet] /path/to/config.yml
+# Example:
+# To run the garbage collector. 
+# bin/registry garbage-collect --delete-untagged /etc/docker/registry/config.yml
+# To delete the repository itself.
+# rm -rf /var/lib/registry/docker/registry/v2/repositories/<registry_name>
+```
+
 Useful references:
 
 * [Docker Distribution: Garbage Collection](https://distribution.github.io/distribution/about/garbage-collection/)
@@ -129,4 +139,3 @@ Useful references:
 * [DigitalOcean: Clean Up Container Registry](https://docs.digitalocean.com/products/container-registry/how-to/clean-up-container-registry/)
 * [Community Guide: Reclaiming Disk Space](https://dev.to/limal/reclaiming-free-disk-space-from-a-private-docker-repository-30f5)
 * [GitHub Issue: Registry Garbage Collection](https://github.com/distribution/distribution/issues/3178)
-

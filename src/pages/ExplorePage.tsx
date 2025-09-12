@@ -1,4 +1,5 @@
 import { autoAnimate } from "@formkit/auto-animate";
+import { SearchOff as SearchOffIcon } from "@mui/icons-material";
 import {
 	Alert,
 	Box,
@@ -19,6 +20,7 @@ import {
 	LinearProgress,
 	MenuItem,
 	Select,
+	Tooltip,
 	Typography,
 } from "@mui/material";
 import type { SelectChangeEvent } from "@mui/material/Select";
@@ -48,6 +50,8 @@ function ExplorePage() {
 		availableArchitectures,
 		sources,
 		fetchRepositoryMetas,
+		fetchStatusCodes,
+		getStatusCodeInfo,
 		startPeriodicRefresh,
 		stopPeriodicRefresh,
 		clearError,
@@ -103,6 +107,28 @@ function ExplorePage() {
 		[sources],
 	);
 
+	const getStatusChipColor = useCallback((status?: number) => {
+		if (!status) return "default";
+		if (status >= 200 && status < 300) return "success";
+		if (status >= 300 && status < 400) return "info";
+		if (status >= 400 && status < 500) return "warning";
+		if (status >= 500) return "error";
+		return "default";
+	}, []);
+
+	const getStatusTooltip = useCallback(
+		(status?: number) => {
+			const statusInfo = status ? getStatusCodeInfo(status) : null;
+
+			if (statusInfo) {
+				return `${status}: ${statusInfo.message}${statusInfo.description ? ` - ${statusInfo.description}` : ""}`;
+			}
+
+			return status ? `Status: ${status}` : "No status available";
+		},
+		[getStatusCodeInfo],
+	);
+
 	useEffect(() => {
 		if (
 			hydrated &&
@@ -125,6 +151,8 @@ function ExplorePage() {
 	useEffect(() => {
 		if (!hydrated) return;
 
+		fetchStatusCodes();
+
 		startPeriodicRefresh();
 
 		if (repositoryMetas.length === 0) {
@@ -136,6 +164,7 @@ function ExplorePage() {
 		hydrated,
 		repositoryMetas.length,
 		fetchRepositoryMetas,
+		fetchStatusCodes,
 		startPeriodicRefresh,
 		stopPeriodicRefresh,
 	]);
@@ -307,34 +336,67 @@ function ExplorePage() {
 					>
 						Sources
 					</Typography>
-					{availableSources.map((source) => (
-						<FormControlLabel
-							key={source.key}
-							control={
-								<Checkbox
-									checked={selectedSources.includes(source.host)}
-									onChange={(e) =>
-										handleSourceChange(source.host, e.target.checked)
+					{availableSources.map((source) => {
+						const sourceInfo = sources[source.key];
+						const hasError =
+							sourceInfo?.status &&
+							(sourceInfo.status >= 400 || sourceInfo.status === 0);
+
+						return (
+							<Box
+								key={source.key}
+								sx={{ display: "flex", alignItems: "center", mb: 0.5 }}
+							>
+								<FormControlLabel
+									control={
+										<Checkbox
+											checked={selectedSources.includes(source.host)}
+											onChange={(e) =>
+												handleSourceChange(source.host, e.target.checked)
+											}
+											size="small"
+											sx={{
+												color: "primary.main",
+												"&.Mui-checked": {
+													color: "primary.main",
+												},
+											}}
+										/>
 									}
-									size="small"
-									sx={{
-										color: "primary.main",
-										"&.Mui-checked": {
-											color: "primary.main",
-										},
-									}}
+									label={
+										<Typography
+											sx={{
+												fontSize: "0.875rem",
+												color: "text.primary",
+												textDecoration: hasError ? "line-through" : "none",
+												opacity: hasError ? 0.7 : 1,
+											}}
+										>
+											{source.host}
+										</Typography>
+									}
+									sx={{ flexGrow: 1, mr: 1 }}
 								/>
-							}
-							label={source.host}
-							sx={{
-								mb: 0.5,
-								"& .MuiFormControlLabel-label": {
-									fontSize: "0.875rem",
-									color: "text.primary",
-								},
-							}}
-						/>
-					))}
+								{sourceInfo?.status && sourceInfo.status !== 200 && (
+									<Tooltip title={getStatusTooltip(sourceInfo.status)} arrow>
+										<Chip
+											label={sourceInfo.status}
+											size="small"
+											color={getStatusChipColor(sourceInfo.status)}
+											sx={{
+												height: 16,
+												fontSize: "0.65rem",
+												minWidth: 32,
+												"& .MuiChip-label": {
+													px: 0.5,
+												},
+											}}
+										/>
+									</Tooltip>
+								)}
+							</Box>
+						);
+					})}
 				</Box>
 
 				<Box sx={{ mb: 3 }}>
@@ -479,20 +541,35 @@ function ExplorePage() {
 						gap: 2,
 					}}
 				>
-					{loading && repositoryMetas.length === 0 ? (
-						<Box sx={{ textAlign: "center", py: 8 }}>
-							<CircularProgress />
-							<Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
-								Loading repositories...
-							</Typography>
-						</Box>
-					) : filteredRepos.length === 0 ? (
-						<Box sx={{ textAlign: "center", py: 8 }}>
-							<Typography variant="h6" color="text.secondary" gutterBottom>
+					{filteredRepos.length === 0 ? (
+						<Box
+							sx={{
+								display: "flex",
+								flexDirection: "column",
+								alignItems: "center",
+								justifyContent: "center",
+								height: "400px",
+								textAlign: "center",
+								gridColumn: "1 / -1",
+							}}
+						>
+							<SearchOffIcon
+								sx={{
+									fontSize: 80,
+									color: "text.disabled",
+									mb: 2,
+								}}
+							/>
+							<Typography variant="h5" color="text.secondary" gutterBottom>
 								No repositories found
 							</Typography>
-							<Typography variant="body2" color="text.secondary">
-								Try adjusting your search or filters
+							<Typography
+								variant="body1"
+								color="text.secondary"
+								sx={{ maxWidth: 400 }}
+							>
+								Try adjusting your search or filters, or check if your registry
+								sources are properly configured.
 							</Typography>
 						</Box>
 					) : (
@@ -503,12 +580,12 @@ function ExplorePage() {
 								variant="outlined"
 								sx={{
 									height: {
-										xs: "auto", // Mobile: flexible height for readability
-										sm: "190px", // Small screens: increased height for 2-row chips
-										md: "170px", // Medium screens: increased height for 2-row chips
+										xs: "auto",
+										sm: "190px",
+										md: "170px",
 									},
 									minHeight: {
-										xs: "140px", // Minimum height for mobile
+										xs: "140px",
 									},
 									display: "flex",
 									flexDirection: "column",
@@ -567,13 +644,13 @@ function ExplorePage() {
 													flexDirection: "column",
 													justifyContent: "flex-start",
 													minHeight: {
-														xs: "52px", // Mobile: 2 rows minimum with padding
-														sm: "48px", // Small screens: 2 rows minimum with padding
-														md: "44px", // Medium screens: 2 rows minimum with padding
+														xs: "52px",
+														sm: "48px",
+														md: "44px",
 													},
 													maxHeight: {
-														xs: "auto", // Mobile: flexible for readability
-														sm: "48px", // Small+ screens: max 2 rows with padding
+														xs: "auto",
+														sm: "48px",
 														md: "44px",
 													},
 												}}
@@ -584,12 +661,12 @@ function ExplorePage() {
 														gap: 0.5,
 														flexWrap: "wrap",
 														minHeight: {
-															xs: "40px", // Mobile: space for 2 rows with padding
-															sm: "40px", // Small+ screens: space for 2 rows with padding
+															xs: "40px",
+															sm: "40px",
 														},
 														maxHeight: {
-															xs: "auto", // Mobile: flexible for readability
-															sm: "40px", // Small+ screens: max 2 rows with padding
+															xs: "auto",
+															sm: "40px",
 														},
 														overflow: "hidden",
 														mb: 1,
@@ -696,14 +773,14 @@ function ExplorePage() {
 													flexDirection: "column",
 													justifyContent: "flex-start",
 													minHeight: {
-														xs: "52px", // Mobile: 2 rows minimum with padding
-														sm: "48px", // Small screens: 2 rows minimum with padding
-														md: "44px", // Medium screens: 2 rows minimum with padding
+														xs: "52px",
+														sm: "48px",
+														md: "44px",
 													},
 													maxHeight: {
-														xs: "auto", // Mobile: no height limit for readability
-														sm: "48px", // Small screens: exactly 2 rows with padding
-														md: "44px", // Medium screens: exactly 2 rows with padding
+														xs: "auto",
+														sm: "48px",
+														md: "44px",
 													},
 												}}
 											>
@@ -713,12 +790,12 @@ function ExplorePage() {
 														gap: 0.5,
 														flexWrap: "wrap",
 														minHeight: {
-															xs: "40px", // Mobile: space for 2 rows with padding
-															sm: "40px", // Small+ screens: space for 2 rows with padding
+															xs: "40px",
+															sm: "40px",
 														},
 														maxHeight: {
-															xs: "auto", // Mobile: flexible for readability
-															sm: "40px", // Small+ screens: max 2 rows with padding
+															xs: "auto",
+															sm: "40px",
 														},
 														overflow: "hidden",
 														mb: 1,

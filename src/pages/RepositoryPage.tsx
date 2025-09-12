@@ -143,6 +143,20 @@ function RepositoryPage() {
 		};
 	}, [name, namespace, source, repository, fetchRepositoryDetail]);
 
+	useEffect(() => {
+		if (!name) return;
+
+		const interval = setInterval(() => {
+			if (!document.hidden) {
+				fetchRepositoryDetail(name, namespace, source);
+			}
+		}, 15000);
+
+		return () => {
+			clearInterval(interval);
+		};
+	}, [name, namespace, source, fetchRepositoryDetail]);
+
 	const copyToClipboard = (text: string) => {
 		navigator.clipboard.writeText(text);
 	};

@@ -55,6 +55,8 @@ for var in $(printenv | grep "^REGISTRY_URL" | cut -d= -f1); do
         # Remove /api/$SOURCE_KEY from the path when proxying
         rewrite ^/api/$SOURCE_KEY/(.*)$ /\$1 break;
 
+        proxy_hide_header WWW-Authenticate;
+
         proxy_pass $URL;
         proxy_set_header Host $HOST;
         proxy_set_header Authorization \"Basic $AUTH\";

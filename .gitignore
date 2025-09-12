@@ -30,3 +30,7 @@ dist-ssr
 *.sln
 *.sw?
 .playwright*
+charts*
+docs*
+*docker-compose*
+*Dockerfile

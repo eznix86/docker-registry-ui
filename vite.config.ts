@@ -51,13 +51,21 @@ function createProxyConfig(config: RegistryConfig): ProxyOptions {
 			target: config.url,
 			changeOrigin: true,
 			rewrite: (path: string) => path.replace(new RegExp(`^${apiPath}`), ""),
-			configure: (proxy: { on: (arg0: string, arg1: (proxyReq: { setHeader: (arg0: string, arg1: string) => void; }) => void) => void; }) => {
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any
+			configure: (proxy: { on: (arg0: string, arg1: any) => void; }) => {
 				proxy.on("proxyReq", (proxyReq: { setHeader: (arg0: string, arg1: string) => void; }) => {
 					proxyReq.setHeader("Host", config.host());
 					proxyReq.setHeader(
 						"Authorization",
 						config.basicAuth(),
 					);
+				});
+				// eslint-disable-next-line @typescript-eslint/no-explicit-any
+				proxy.on("proxyRes", (proxyRes: { statusCode: number; headers: any; }) => {
+					// Remove WWW-Authenticate header on 401 responses to prevent browser auth popup
+					if (proxyRes.statusCode === 401 && proxyRes.headers['www-authenticate']) {
+						delete proxyRes.headers['www-authenticate'];
+					}
 				});
 			},
 		},

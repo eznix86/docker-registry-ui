@@ -1,24 +1,22 @@
-FROM node:24-alpine AS builder
+FROM oven/bun:1.2.21-alpine AS builder
 
 LABEL org.opencontainers.image.source=https://github.com/eznix86/docker-registry-ui
 LABEL org.opencontainers.image.description="Container for Docker Registry UI"
-
 
 WORKDIR /app
 
-COPY package*.json ./
+COPY package.json bun.lock* ./
 
-RUN npm ci
+RUN bun install --frozen-lockfile
 
 COPY . .
 
-RUN npm run build
+RUN bun run build
 
-FROM nginx:alpine
+FROM nginx:1.29.1-alpine-slim
 
 LABEL org.opencontainers.image.source=https://github.com/eznix86/docker-registry-ui
 LABEL org.opencontainers.image.description="Container for Docker Registry UI"
-
 
 RUN apk add --no-cache bash
 

@@ -31,11 +31,14 @@ export interface Tag {
 	size: string;
 	lastUpdated: string;
 	architectures: ArchitectureInfo[];
+	mediaType: string;
 }
 
 export interface SourceInfo {
 	path: string;
 	host: string;
+	status?: number;
+	lastChecked?: number;
 }
 
 export interface RepositoryMeta {
@@ -108,20 +111,6 @@ function formatBytes(bytes: number): string {
 	return `${parseFloat((bytes / k ** i).toFixed(2))} ${sizes[i]}`;
 }
 
-function generateRealisticSize(tagName: string, arch: string): number {
-	const baseSize = tagName.includes("alpine")
-		? 5 * 1024 * 1024
-		: tagName.includes("latest")
-			? 50 * 1024 * 1024
-			: tagName.includes("slim")
-				? 25 * 1024 * 1024
-				: 40 * 1024 * 1024;
-
-	const archMultiplier = arch === "arm64" ? 1.1 : arch === "arm" ? 0.9 : 1.0;
-	const randomVariation = 0.8 + Math.random() * 0.4;
-	return Math.floor(baseSize * archMultiplier * randomVariation);
-}
-
 function parseRepositoryName(repoName: string): {
 	name: string;
 	namespace?: string;
@@ -151,9 +140,39 @@ function calculateRepositorySize(tags: Tag[]): number {
 	}, 0);
 }
 
+function fetchWithTimeout(
+	url: string,
+	options: RequestInit = {},
+	timeoutMs: number = 3000,
+): Promise<Response> {
+	const controller = new AbortController();
+	const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+	return fetch(url, {
+		...options,
+		signal: controller.signal,
+	}).finally(() => {
+		clearTimeout(timeoutId);
+	});
+}
+
+async function fetchStatusCodes(): Promise<
+	Record<string, StatusCodeDefinition>
+> {
+	try {
+		const response = await fetchWithTimeout("/errors.json");
+		if (response.ok) {
+			return await response.json();
+		}
+	} catch (error) {
+		console.warn("Failed to fetch status codes:", error);
+	}
+	return {};
+}
+
 async function fetchSources(): Promise<Record<string, SourceInfo>> {
 	try {
-		const response = await fetch("/sources.json");
+		const response = await fetchWithTimeout("/sources.json");
 		if (response.ok) {
 			return await response.json();
 		}
@@ -163,14 +182,16 @@ async function fetchSources(): Promise<Record<string, SourceInfo>> {
 	return {};
 }
 
-async function fetchCatalog(sourcePath: string): Promise<string[]> {
+async function fetchCatalog(
+	sourcePath: string,
+): Promise<{ repositories: string[]; status: number }> {
 	const url = `${sourcePath}/v2/_catalog`;
-	const response = await fetch(url);
+	const response = await fetchWithTimeout(url);
 	if (!response.ok) {
-		throw new Error(`Failed to fetch catalog: ${response.statusText}`);
+		return { repositories: [], status: response.status };
 	}
 	const data = await response.json();
-	return data.repositories || [];
+	return { repositories: data.repositories || [], status: response.status };
 }
 
 async function fetchTags(
@@ -178,7 +199,7 @@ async function fetchTags(
 	sourcePath: string,
 ): Promise<string[]> {
 	const url = `${sourcePath}/v2/${repoName}/tags/list`;
-	const response = await fetch(url);
+	const response = await fetchWithTimeout(url);
 	if (!response.ok) {
 		if (response.status === 404) return [];
 		throw new Error(
@@ -195,10 +216,10 @@ async function fetchManifest(
 	sourcePath: string,
 ): Promise<Response> {
 	const url = `${sourcePath}/v2/${encodeURIComponent(repoName)}/manifests/${tagName}`;
-	const response = await fetch(url, {
+	const response = await fetchWithTimeout(url, {
 		headers: {
 			Accept:
-				"application/vnd.oci.image.index.v1+json, application/vnd.docker.distribution.manifest.list.v2+json, application/vnd.docker.distribution.manifest.v2+json, application/vnd.oci.image.manifest.v1+json",
+				"application/vnd.oci.image.index.v1+json, application/vnd.docker.distribution.manifest.list.v2+json, application/vnd.docker.distribution.manifest.v2+json, application/vnd.oci.image.manifest.v1+json, application/vnd.docker.distribution.manifest.v1+json",
 		},
 	});
 	if (!response.ok) {
@@ -213,16 +234,24 @@ async function fetchConfig(
 	repoName: string,
 	configDigest: string,
 	sourcePath: string,
-): Promise<string | null> {
+): Promise<{
+	created: string | null;
+	architecture: string;
+	os: string;
+} | null> {
 	try {
 		const url = `${sourcePath}/v2/${repoName}/blobs/${configDigest}`;
-		const response = await fetch(url, {
+		const response = await fetchWithTimeout(url, {
 			headers: { Accept: "application/json, application/octet-stream" },
 		});
 
 		if (response.ok) {
 			const data = await response.json();
-			return data.created || data.history?.[0]?.created || null;
+			return {
+				created: data.created || data.history?.[0]?.created || null,
+				architecture: data.architecture || "amd64",
+				os: data.os || "linux",
+			};
 		}
 		return null;
 	} catch (error) {
@@ -242,25 +271,10 @@ async function processManifest(
 	try {
 		const manifest = await manifestResponse.json();
 
-		// Extract digest based on manifest type
-		let digest = "";
-		if (
-			manifest.mediaType === "application/vnd.oci.image.manifest.v1+json" ||
-			manifest.mediaType ===
-				"application/vnd.docker.distribution.manifest.v2+json"
-		) {
-			// Single-arch manifests: get digest from config.digest
-			digest = manifest.config?.digest || "";
-		} else if (
-			manifest.mediaType ===
-			"application/vnd.docker.distribution.manifest.v1+json"
-		) {
-			// Docker legacy manifest: use header
-			digest = manifestResponse.headers.get("Docker-Content-Digest") || "";
-		} else {
-			// For multi-arch manifests, digest will be set per architecture in the loop below
-			digest = tagName; // fallback identifier for the tag
-		}
+		const manifestDigest =
+			manifestResponse.headers.get("Docker-Content-Digest") || "";
+
+		const digest = manifestDigest || tagName;
 
 		let architectures: ArchitectureInfo[] = [];
 		let totalSize = 0;
@@ -278,58 +292,81 @@ async function processManifest(
 						"attestation-manifest",
 				);
 
-				for (const archManifest of imageManifests.slice(0, 3)) {
-					// Limit to 3 for performance
-					const arch = archManifest.platform?.architecture || "amd64";
-					const os = archManifest.platform?.os || "linux";
+				const archPromises = imageManifests.map(
+					async (archManifest: ManifestReference) => {
+						const arch = archManifest.platform?.architecture || "amd64";
+						const os = archManifest.platform?.os || "linux";
 
-					let size = 0;
-					try {
-						// For multi-arch index, fetch each referenced manifest to get actual image size
-						const individualManifestResponse = await fetch(
-							`${sourcePath}/v2/${repoName}/manifests/${archManifest.digest}`,
-							{
-								headers: {
-									Accept:
-										"application/vnd.oci.image.manifest.v1+json, application/vnd.docker.distribution.manifest.v2+json",
-								},
-							},
-						);
-
-						if (individualManifestResponse.ok) {
-							const individualManifest =
-								await individualManifestResponse.json();
-							// Individual manifests have config.size and layers[].size directly
-							if (individualManifest.config && individualManifest.layers) {
-								const configSize = individualManifest.config.size || 0;
-								const layersSize = individualManifest.layers.reduce(
-									(acc: number, layer: { size?: number }) =>
-										acc + (layer.size || 0),
-									0,
-								);
-								size = configSize + layersSize;
+						try {
+							let acceptHeader = "";
+							if (
+								manifest.mediaType === "application/vnd.oci.image.index.v1+json"
+							) {
+								acceptHeader = "application/vnd.oci.image.manifest.v1+json";
+							} else if (
+								manifest.mediaType ===
+								"application/vnd.docker.distribution.manifest.list.v2+json"
+							) {
+								acceptHeader =
+									"application/vnd.docker.distribution.manifest.v2+json";
 							} else {
-								size = generateRealisticSize(tagName, arch);
+								acceptHeader =
+									"application/vnd.oci.image.manifest.v1+json, application/vnd.docker.distribution.manifest.v2+json";
 							}
-						} else {
-							size = generateRealisticSize(tagName, arch);
+
+							const individualManifestResponse = await fetchWithTimeout(
+								`${sourcePath}/v2/${repoName}/manifests/${archManifest.digest}`,
+								{
+									headers: {
+										Accept: acceptHeader,
+									},
+								},
+							);
+
+							if (individualManifestResponse.ok) {
+								const individualManifest =
+									await individualManifestResponse.json();
+
+								if (individualManifest.config && individualManifest.layers) {
+									const configSize = individualManifest.config.size || 0;
+									const layersSize = individualManifest.layers.reduce(
+										(acc: number, layer: { size?: number }) =>
+											acc + (layer.size || 0),
+										0,
+									);
+									const size = configSize + layersSize;
+
+									return {
+										architecture: arch,
+										digest: archManifest.digest,
+										size: formatBytes(size),
+										os: os,
+										sizeBytes: size,
+									};
+								}
+							}
+						} catch (error) {
+							console.warn(
+								`Failed to fetch individual manifest for ${arch}:`,
+								error,
+							);
 						}
-					} catch (error) {
-						console.warn(
-							`Failed to fetch individual manifest for ${arch}:`,
-							error,
-						);
-						size = generateRealisticSize(tagName, arch);
+						return null;
+					},
+				);
+
+				const archResults = await Promise.all(archPromises);
+
+				for (const result of archResults) {
+					if (result) {
+						architectures.push({
+							architecture: result.architecture,
+							digest: result.digest,
+							size: result.size,
+							os: result.os,
+						});
+						totalSize += result.sizeBytes;
 					}
-
-					totalSize += size;
-
-					architectures.push({
-						architecture: arch,
-						digest: archManifest.digest,
-						size: formatBytes(size),
-						os: os,
-					});
 				}
 			}
 		} else if (
@@ -338,13 +375,14 @@ async function processManifest(
 			manifest.mediaType === "application/vnd.oci.image.manifest.v1+json"
 		) {
 			if (manifest.config && manifest.layers) {
-				const configTimestamp = await fetchConfig(
+				const configInfo = await fetchConfig(
 					repoName,
 					manifest.config.digest,
 					sourcePath,
 				);
-				if (configTimestamp) {
-					timestamp = configTimestamp;
+
+				if (configInfo?.created) {
+					timestamp = configInfo.created;
 				}
 
 				const configSize = manifest.config.size || 0;
@@ -356,10 +394,10 @@ async function processManifest(
 
 				architectures = [
 					{
-						architecture: "amd64",
+						architecture: configInfo?.architecture || "amd64",
 						digest: digest,
 						size: formatBytes(totalSize),
-						os: "linux",
+						os: configInfo?.os || "linux",
 					},
 				];
 			}
@@ -367,31 +405,37 @@ async function processManifest(
 			manifest.mediaType ===
 			"application/vnd.docker.distribution.manifest.v1+json"
 		) {
-			// Docker legacy manifest (schema 1) - must fetch each layer size from /blobs/
 			if (manifest.fsLayers && manifest.history) {
 				try {
-					let layerSizes = 0;
-					// Fetch size of each layer blob using HEAD request
-					for (const layer of manifest.fsLayers.slice(0, 10)) {
-						try {
-							const blobResponse = await fetch(
-								`${sourcePath}/v2/${repoName}/blobs/${layer.blobSum}`,
-								{ method: "HEAD" },
-							);
-							if (blobResponse.ok) {
-								const contentLength =
-									blobResponse.headers.get("Content-Length");
-								if (contentLength) {
-									layerSizes += parseInt(contentLength, 10);
+					const layerPromises = manifest.fsLayers.map(
+						async (layer: { blobSum: string }) => {
+							try {
+								const blobResponse = await fetchWithTimeout(
+									`${sourcePath}/v2/${repoName}/blobs/${layer.blobSum}`,
+									{ method: "HEAD" },
+								);
+								if (blobResponse.ok) {
+									const contentLength =
+										blobResponse.headers.get("Content-Length");
+									if (contentLength) {
+										return parseInt(contentLength, 10);
+									}
 								}
+							} catch (error) {
+								console.warn(
+									`Failed to fetch layer size for ${layer.blobSum}:`,
+									error,
+								);
 							}
-						} catch (error) {
-							console.warn(
-								`Failed to fetch layer size for ${layer.blobSum}:`,
-								error,
-							);
-						}
-					}
+							return 0;
+						},
+					);
+
+					const layerSizes = await Promise.all(layerPromises);
+					const totalLayerSize = layerSizes.reduce(
+						(sum, size) => sum + size,
+						0,
+					);
 
 					const configSize =
 						manifest.history?.reduce((acc: number, entry: HistoryEntry) => {
@@ -401,51 +445,71 @@ async function processManifest(
 							return acc;
 						}, 0) || 0;
 
-					totalSize = layerSizes + configSize;
+					totalSize = totalLayerSize + configSize;
+
+					let detectedArch = "amd64";
+					let detectedOs = "linux";
+
+					try {
+						if (manifest.history && manifest.history.length > 0) {
+							const latestHistory = manifest.history[0];
+							if (latestHistory.v1Compatibility) {
+								const v1Compat = JSON.parse(latestHistory.v1Compatibility);
+								if (v1Compat.architecture) {
+									detectedArch = v1Compat.architecture;
+								}
+								if (v1Compat.os) {
+									detectedOs = v1Compat.os;
+								}
+							}
+						}
+					} catch (error) {
+						console.warn(
+							"Failed to parse v1Compatibility for architecture:",
+							error,
+						);
+					}
 
 					architectures = [
 						{
-							architecture: manifest.architecture || "amd64",
+							architecture: manifest.architecture || detectedArch,
 							digest: digest,
 							size: formatBytes(totalSize),
-							os: "linux",
+							os: detectedOs,
 						},
 					];
 				} catch (error) {
 					console.warn("Failed to process Docker v1 manifest:", error);
-					const fallbackSize = generateRealisticSize(tagName, "amd64");
-					totalSize = fallbackSize;
+
+					totalSize = 0;
 					architectures = [
 						{
-							architecture: "amd64",
+							architecture: manifest.architecture || "amd64",
 							digest: digest,
-							size: formatBytes(fallbackSize),
+							size: "Unknown",
 							os: "linux",
 						},
 					];
 				}
 			} else {
-				const fallbackSize = generateRealisticSize(tagName, "amd64");
-				totalSize = fallbackSize;
+				totalSize = 0;
 				architectures = [
 					{
-						architecture: "amd64",
+						architecture: manifest.architecture || "amd64",
 						digest: digest,
-						size: formatBytes(fallbackSize),
+						size: "Unknown",
 						os: "linux",
 					},
 				];
 			}
-		}
-		// Fallback
-		else {
-			const fallbackSize = generateRealisticSize(tagName, "amd64");
-			totalSize = fallbackSize;
+		} else {
+			console.warn(`Unknown manifest type for ${tagName}:`, manifest.mediaType);
+			totalSize = 0;
 			architectures = [
 				{
 					architecture: "amd64",
 					digest: digest,
-					size: formatBytes(fallbackSize),
+					size: "Unknown",
 					os: "linux",
 				},
 			];
@@ -457,6 +521,9 @@ async function processManifest(
 			size: formatBytes(totalSize),
 			lastUpdated: timestamp,
 			architectures: architectures,
+			mediaType:
+				manifest.mediaType ||
+				"application/vnd.docker.distribution.manifest.v2+json",
 		};
 	} catch (error) {
 		console.warn(`Failed to process manifest for ${tagName}:`, error);
@@ -464,10 +531,17 @@ async function processManifest(
 	}
 }
 
+interface StatusCodeDefinition {
+	code: number;
+	message: string;
+	description?: string;
+}
+
 interface RepositoryStore {
 	repositoryMetas: RepositoryMeta[];
 	repositoryDetails: { [key: string]: RepositoryDetail };
 	sources: Record<string, SourceInfo>;
+	statusCodes: Record<string, StatusCodeDefinition>;
 
 	loading: boolean;
 	loadingStage: LoadingStage;
@@ -477,7 +551,9 @@ interface RepositoryStore {
 	hydrated: boolean;
 
 	fetchSources: () => Promise<void>;
+	fetchStatusCodes: () => Promise<void>;
 	fetchRepositoryMetas: (force?: boolean) => Promise<void>;
+	fetchRepositoryMetasLight: (force?: boolean) => Promise<void>;
 	fetchRepositoryDetail: (
 		name: string,
 		namespace?: string,
@@ -487,6 +563,7 @@ interface RepositoryStore {
 	stopPeriodicRefresh: () => void;
 	clearError: () => void;
 	setHydrated: (hydrated: boolean) => void;
+	getStatusCodeInfo: (code: number) => StatusCodeDefinition | undefined;
 	deleteRepository: (
 		name: string,
 		namespace?: string,
@@ -501,6 +578,7 @@ interface RepositoryStore {
 }
 
 let refreshInterval: NodeJS.Timeout | null = null;
+let manifestRefreshInterval: NodeJS.Timeout | null = null;
 let visibilityChangeListener: (() => void) | null = null;
 
 export const useRepositoryStore = create<RepositoryStore>()(
@@ -509,6 +587,7 @@ export const useRepositoryStore = create<RepositoryStore>()(
 			repositoryMetas: [],
 			repositoryDetails: {},
 			sources: {},
+			statusCodes: {},
 			loading: false,
 			loadingStage: { stage: "idle", progress: 0, message: "Ready" },
 			error: null,
@@ -521,6 +600,19 @@ export const useRepositoryStore = create<RepositoryStore>()(
 				if (Object.keys(sourcesData).length > 0) {
 					set({ sources: sourcesData });
 				}
+			},
+
+			fetchStatusCodes: async () => {
+				const state = get();
+				if (Object.keys(state.statusCodes).length === 0) {
+					const statusCodes = await fetchStatusCodes();
+					set({ statusCodes });
+				}
+			},
+
+			getStatusCodeInfo: (code: number) => {
+				const state = get();
+				return state.statusCodes[code.toString()];
 			},
 
 			fetchRepositoryMetas: async (force: boolean = false) => {
@@ -536,7 +628,6 @@ export const useRepositoryStore = create<RepositoryStore>()(
 					return;
 				}
 
-				// Ensure sources are loaded
 				if (Object.keys(state.sources).length === 0) {
 					await get().fetchSources();
 				}
@@ -547,7 +638,7 @@ export const useRepositoryStore = create<RepositoryStore>()(
 					loadingStage: {
 						stage: "catalog",
 						progress: 5,
-						message: "Fetching catalogs...",
+						message: "Fetching repositories...",
 					},
 				});
 
@@ -559,21 +650,71 @@ export const useRepositoryStore = create<RepositoryStore>()(
 						throw new Error("No sources available");
 					}
 
-					// Fetch catalogs from all sources
+					const sourcePromises = Object.entries(sources).map(
+						async ([sourceName, sourceInfo]) => {
+							try {
+								const { repositories, status } = await fetchCatalog(
+									sourceInfo.path,
+								);
+								const updatedSourceInfo = {
+									...sourceInfo,
+									status,
+									lastChecked: Date.now(),
+								};
+								return {
+									sourceName,
+									sourceInfo: updatedSourceInfo,
+									repositories,
+								};
+							} catch (error) {
+								console.warn(`Failed to fetch from ${sourceName}:`, error);
+								let status = 0;
+								if (error instanceof Error) {
+									if (error.name === "AbortError") {
+										status = 408;
+									} else if (
+										error.message.includes("Failed to fetch catalog:")
+									) {
+										status = 500;
+									} else {
+										status = 0;
+									}
+								}
+								const updatedSourceInfo = {
+									...sourceInfo,
+									status,
+									lastChecked: Date.now(),
+								};
+								return {
+									sourceName,
+									sourceInfo: updatedSourceInfo,
+									repositories: [],
+								};
+							}
+						},
+					);
+
+					const sourceResults = await Promise.all(sourcePromises);
+
+					const updatedSources = { ...sources };
+					for (const { sourceName, sourceInfo } of sourceResults) {
+						updatedSources[sourceName] = sourceInfo;
+					}
+					set({ sources: updatedSources });
+
 					const allRepos: Array<{
 						sourceName: string;
 						sourceInfo: SourceInfo;
 						repoName: string;
 					}> = [];
 
-					for (const [sourceName, sourceInfo] of Object.entries(sources)) {
-						try {
-							const repositories = await fetchCatalog(sourceInfo.path);
-							for (const repoName of repositories) {
-								allRepos.push({ sourceName, sourceInfo, repoName });
-							}
-						} catch (error) {
-							console.warn(`Failed to fetch from ${sourceName}:`, error);
+					for (const {
+						sourceName,
+						sourceInfo,
+						repositories,
+					} of sourceResults) {
+						for (const repoName of repositories) {
+							allRepos.push({ sourceName, sourceInfo, repoName });
 						}
 					}
 
@@ -581,26 +722,62 @@ export const useRepositoryStore = create<RepositoryStore>()(
 						loadingStage: {
 							stage: "tags",
 							progress: 25,
-							message: `Found ${allRepos.length} repositories`,
+							message: `Found ${allRepos.length} repositories from ${sourceResults.length} sources`,
 						},
 					});
 
-					const reposWithTags: Array<{
-						sourceName: string;
-						sourceInfo: SourceInfo;
-						repoName: string;
-						tags: string[];
-					}> = [];
+					let totalReposProcessed = 0;
+					const totalRepos = allRepos.length;
 
-					for (const repo of allRepos) {
-						try {
-							const tags = await fetchTags(repo.repoName, repo.sourceInfo.path);
-							reposWithTags.push({ ...repo, tags });
-						} catch (error) {
-							console.warn(`Failed to fetch tags for ${repo.repoName}:`, error);
-							reposWithTags.push({ ...repo, tags: [] });
-						}
-					}
+					const sourceTagPromises = sourceResults.map(
+						async ({ sourceName, sourceInfo, repositories }) => {
+							const reposWithTags: Array<{
+								sourceName: string;
+								sourceInfo: SourceInfo;
+								repoName: string;
+								tags: string[];
+							}> = [];
+
+							for (let i = 0; i < repositories.length; i++) {
+								const repoName = repositories[i];
+								try {
+									const tags = await fetchTags(repoName, sourceInfo.path);
+									reposWithTags.push({
+										sourceName,
+										sourceInfo,
+										repoName,
+										tags,
+									});
+								} catch (error) {
+									console.warn(`Failed to fetch tags for ${repoName}:`, error);
+									reposWithTags.push({
+										sourceName,
+										sourceInfo,
+										repoName,
+										tags: [],
+									});
+								}
+
+								totalReposProcessed++;
+								const globalProgress =
+									25 + (totalReposProcessed / totalRepos) * 25;
+
+								set({
+									loadingStage: {
+										stage: "tags",
+										progress: Math.min(globalProgress, 50),
+										message: `Processing tags: ${totalReposProcessed}/${totalRepos} repositories (${sourceName})`,
+									},
+								});
+							}
+
+							return reposWithTags;
+						},
+					);
+
+					const sourceTagResults = await Promise.all(sourceTagPromises);
+
+					const reposWithTags = sourceTagResults.flat();
 
 					set({
 						loadingStage: {
@@ -618,7 +795,6 @@ export const useRepositoryStore = create<RepositoryStore>()(
 						const { name, namespace } = parseRepositoryName(repoName);
 
 						if (tags.length === 0) {
-							// Empty repository
 							processedRepos.push({
 								name,
 								namespace,
@@ -633,7 +809,6 @@ export const useRepositoryStore = create<RepositoryStore>()(
 							continue;
 						}
 
-						// Process a few sample tags to get repository info
 						const sampleTags = tags.slice(0, 3);
 						const processedTags: Tag[] = [];
 
@@ -719,6 +894,149 @@ export const useRepositoryStore = create<RepositoryStore>()(
 				}
 			},
 
+			fetchRepositoryMetasLight: async (force: boolean = false) => {
+				const state = get();
+				const thirtySeconds = 30 * 1000;
+
+				if (
+					!force &&
+					state.lastFetch &&
+					Date.now() - state.lastFetch < thirtySeconds &&
+					state.repositoryMetas.length > 0
+				) {
+					return;
+				}
+
+				if (Object.keys(state.sources).length === 0) {
+					await get().fetchSources();
+				}
+
+				try {
+					const updatedState = get();
+					const sources = updatedState.sources;
+
+					if (Object.keys(sources).length === 0) {
+						throw new Error("No sources available");
+					}
+
+					const sourcePromises = Object.entries(sources).map(
+						async ([sourceName, sourceInfo]) => {
+							try {
+								const { repositories, status } = await fetchCatalog(
+									sourceInfo.path,
+								);
+								const updatedSourceInfo = {
+									...sourceInfo,
+									status,
+									lastChecked: Date.now(),
+								};
+
+								const reposWithTags = [];
+								for (const repoName of repositories) {
+									try {
+										const tags = await fetchTags(repoName, sourceInfo.path);
+										reposWithTags.push({
+											sourceName,
+											sourceInfo: updatedSourceInfo,
+											repoName,
+											tags,
+										});
+									} catch (error) {
+										console.warn(
+											`Failed to fetch tags for ${repoName}:`,
+											error,
+										);
+										reposWithTags.push({
+											sourceName,
+											sourceInfo: updatedSourceInfo,
+											repoName,
+											tags: [],
+										});
+									}
+								}
+
+								return {
+									sourceName,
+									sourceInfo: updatedSourceInfo,
+									reposWithTags,
+								};
+							} catch (error) {
+								console.warn(`Failed to fetch from ${sourceName}:`, error);
+								let status = 500;
+								if (error instanceof Error && error.name === "AbortError") {
+									status = 408;
+								}
+								const updatedSourceInfo = {
+									...sourceInfo,
+									status,
+									lastChecked: Date.now(),
+								};
+								return {
+									sourceName,
+									sourceInfo: updatedSourceInfo,
+									reposWithTags: [],
+								};
+							}
+						},
+					);
+
+					const sourceResults = await Promise.all(sourcePromises);
+
+					const updatedSources = { ...sources };
+					for (const { sourceName, sourceInfo } of sourceResults) {
+						updatedSources[sourceName] = sourceInfo;
+					}
+
+					const processedRepos: RepositoryMeta[] = [];
+					const allArchitectures = new Set<string>();
+
+					for (const { sourceName, reposWithTags } of sourceResults) {
+						for (const { repoName, tags } of reposWithTags) {
+							const { name, namespace } = parseRepositoryName(repoName);
+
+							const existingRepo = state.repositoryMetas.find((repo) => {
+								const existingKey = repo.namespace
+									? `${repo.namespace}/${repo.name}`
+									: repo.name;
+								const currentKey = namespace ? `${namespace}/${name}` : name;
+								return existingKey === currentKey && repo.source === sourceName;
+							});
+
+							processedRepos.push({
+								name,
+								namespace,
+								tagCount: tags.length,
+								totalSize: existingRepo?.totalSize || 0,
+								totalSizeFormatted:
+									existingRepo?.totalSizeFormatted || "Unknown",
+								architectures: existingRepo?.architectures || [],
+								lastUpdated: new Date().toISOString(),
+								createdAt: existingRepo?.createdAt || new Date().toISOString(),
+								source: sourceName,
+							});
+
+							if (existingRepo?.architectures) {
+								for (const arch of existingRepo.architectures) {
+									allArchitectures.add(arch);
+								}
+							}
+						}
+					}
+
+					set({
+						repositoryMetas: processedRepos,
+						sources: updatedSources,
+						availableArchitectures: [...allArchitectures].sort(),
+						lastFetch: Date.now(),
+					});
+				} catch (error) {
+					console.error("Failed to fetch repository metas (light):", error);
+					set({
+						error: `Failed to load repositories: ${error instanceof Error ? error.message : "Unknown error"}`,
+					});
+				}
+			},
+
 			fetchRepositoryDetail: async (
 				name: string,
 				namespace?: string,
@@ -727,7 +1045,6 @@ export const useRepositoryStore = create<RepositoryStore>()(
 				const repoKey = namespace ? `${namespace}/${name}` : name;
 				const state = get();
 
-				// Check if we have fresh data
 				const existingDetail = state.repositoryDetails[repoKey];
 				if (
 					existingDetail &&
@@ -736,7 +1053,6 @@ export const useRepositoryStore = create<RepositoryStore>()(
 					return;
 				}
 
-				// Ensure sources are loaded
 				if (Object.keys(state.sources).length === 0) {
 					await get().fetchSources();
 				}
@@ -851,6 +1167,9 @@ export const useRepositoryStore = create<RepositoryStore>()(
 				if (refreshInterval) {
 					clearInterval(refreshInterval);
 				}
+				if (manifestRefreshInterval) {
+					clearInterval(manifestRefreshInterval);
+				}
 				if (visibilityChangeListener) {
 					document.removeEventListener(
 						"visibilitychange",
@@ -860,13 +1179,19 @@ export const useRepositoryStore = create<RepositoryStore>()(
 
 				refreshInterval = setInterval(() => {
 					if (!document.hidden) {
-						get().fetchRepositoryMetas();
+						get().fetchRepositoryMetasLight();
 					}
 				}, 30000);
 
-				visibilityChangeListener = () => {
+				manifestRefreshInterval = setInterval(() => {
 					if (!document.hidden) {
 						get().fetchRepositoryMetas();
+					}
+				}, 120000);
+
+				visibilityChangeListener = () => {
+					if (!document.hidden) {
+						get().fetchRepositoryMetasLight();
 					}
 				};
 
@@ -877,6 +1202,10 @@ export const useRepositoryStore = create<RepositoryStore>()(
 				if (refreshInterval) {
 					clearInterval(refreshInterval);
 					refreshInterval = null;
+				}
+				if (manifestRefreshInterval) {
+					clearInterval(manifestRefreshInterval);
+					manifestRefreshInterval = null;
 				}
 				if (visibilityChangeListener) {
 					document.removeEventListener(
@@ -899,7 +1228,7 @@ export const useRepositoryStore = create<RepositoryStore>()(
 				const sourcePath = source ? `/api/${source}` : "/api/default";
 
 				try {
-					const response = await fetch(
+					const response = await fetchWithTimeout(
 						`${sourcePath}/v2/${encodeURIComponent(repoKey)}`,
 						{
 							method: "DELETE",
@@ -940,80 +1269,25 @@ export const useRepositoryStore = create<RepositoryStore>()(
 				const sourcePath = source ? `/api/${source}` : "/api/default";
 
 				try {
-					// Get manifest to find digest
-					const manifestResponse = await fetch(
-						`${sourcePath}/v2/${encodedRepoName}/manifests/${tagName}`,
-					);
+					const state = get();
+					const repoDetail = state.repositoryDetails[repoKey];
 
-					if (manifestResponse.status === 404) {
-						// Tag doesn't exist, treat as successful deletion
-						set(
-							produce((state: RepositoryStore) => {
-								const repoDetail = state.repositoryDetails[repoKey];
-								if (repoDetail) {
-									repoDetail.tags = repoDetail.tags.filter(
-										(tag) => tag.name !== tagName,
-									);
-									repoDetail.tagCount = repoDetail.tags.length;
+					if (!repoDetail) {
+						throw new Error("Repository not found in local cache");
+					}
 
-									const repoIndex = state.repositoryMetas.findIndex((repo) => {
-										const currentRepoKey = repo.namespace
-											? `${repo.namespace}/${repo.name}`
-											: repo.name;
-										return currentRepoKey === repoKey;
-									});
-									if (repoIndex >= 0) {
-										state.repositoryMetas[repoIndex].tagCount =
-											repoDetail.tagCount;
-									}
-								}
-							}),
-						);
+					const tag = repoDetail.tags.find((t) => t.name === tagName);
+					if (!tag) {
 						return true;
 					}
 
-					if (!manifestResponse.ok) {
-						throw new Error(
-							`Failed to get tag digest: ${manifestResponse.status}`,
-						);
-					}
-
-					const manifest = await manifestResponse.json();
-					let digest = "";
-
-					if (
-						manifest.mediaType ===
-							"application/vnd.oci.image.manifest.v1+json" ||
-						manifest.mediaType ===
-							"application/vnd.docker.distribution.manifest.v2+json"
-					) {
-						// Single-arch manifests: get digest from config.digest
-						digest = manifest.config?.digest || "";
-					} else if (
-						manifest.mediaType === "application/vnd.oci.image.index.v1+json" ||
-						manifest.mediaType ===
-							"application/vnd.docker.distribution.manifest.list.v2+json"
-					) {
-						// Multi-arch manifests: need to delete the index itself, use tag name
-						digest = tagName;
-					} else if (
-						manifest.mediaType ===
-						"application/vnd.docker.distribution.manifest.v1+json"
-					) {
-						// Docker legacy manifest: use header
-						digest =
-							manifestResponse.headers.get("Docker-Content-Digest") || "";
-					}
-
-					if (!digest) {
-						throw new Error("No digest found in manifest response");
-					}
-
-					// Delete by digest
-					const deleteResponse = await fetch(
-						`${sourcePath}/v2/${encodedRepoName}/manifests/${digest}`,
+					const deleteResponse = await fetchWithTimeout(
+						`${sourcePath}/v2/${encodedRepoName}/manifests/${tag.digest}`,
 						{
 							method: "DELETE",
+							headers: {
+								Accept: tag.mediaType,
+							},
 						},
 					);
 
@@ -1056,6 +1330,7 @@ export const useRepositoryStore = create<RepositoryStore>()(
 				repositoryMetas: state.repositoryMetas,
 				repositoryDetails: state.repositoryDetails,
 				sources: state.sources,
+				statusCodes: state.statusCodes,
 				lastFetch: state.lastFetch,
 				availableArchitectures: state.availableArchitectures,
 			}),
