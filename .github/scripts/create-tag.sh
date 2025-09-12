@@ -83,8 +83,9 @@ main() {
     fi
     
     git tag "$new_tag"
-    git push origin "$new_tag"
-    
+
+    git push "https://$REPO_TOKEN@github.com/${GITHUB_REPOSITORY}.git" "$new_tag"
+
     echo "::notice::Pushed tag $new_tag"
     
     if [[ -n "${GITHUB_OUTPUT:-}" ]]; then
