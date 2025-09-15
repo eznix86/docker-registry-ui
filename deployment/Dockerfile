@@ -23,6 +23,7 @@ RUN apk add --no-cache bash
 COPY --from=builder /app/dist /usr/share/nginx/html
 
 COPY deployment/nginx.conf.template /etc/nginx/conf.d/nginx.conf.template
+COPY deployment/nginx-location.template /etc/nginx/conf.d/nginx-location.template
 
 COPY deployment/generate-sources.sh /generate-sources.sh
 COPY deployment/entrypoint.sh /entrypoint.sh

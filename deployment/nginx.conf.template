@@ -13,7 +13,7 @@ server {
         application/xml+rss
         application/json;
 
-    # Registry proxy locations will be inserted here by generate-sources.sh
+${NGINX_PROXY_LOCATIONS}
 
     location = /sources.json {
         expires 5m;
