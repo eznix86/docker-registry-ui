@@ -34,6 +34,7 @@ import { Link, useParams, useSearchParams } from "react-router-dom";
 import { SelectiveDeleteDialog } from "../components/SelectiveDeleteDialog";
 import { useRepositoryStore } from "../store/repositoryStore";
 import { useSnackbarStore } from "../store/snackbarStore";
+import { useSimpleClipboard } from "../utils/useClipboard";
 
 function RepositoryPage() {
 	const { name, namespace } = useParams<{ name: string; namespace?: string }>();
@@ -157,9 +158,26 @@ function RepositoryPage() {
 		};
 	}, [name, namespace, source, fetchRepositoryDetail]);
 
-	const copyToClipboard = (text: string) => {
-		navigator.clipboard.writeText(text);
-	};
+	const copyToClipboard = useSimpleClipboard(
+		(method) => {
+			const methodMessages: {
+				[key: string]: string;
+			} = {
+				modern: "Docker pull command copied to clipboard!",
+				fallback: "Docker pull command copied to clipboard!",
+				manual: "Please copy the command from the dialog.",
+			};
+
+			showSnackbar(methodMessages[method], "success");
+		},
+		(error) => {
+			console.error("Copy failed:", error);
+			showSnackbar(
+				"Failed to copy to clipboard. Please copy manually.",
+				"error",
+			);
+		},
+	);
 
 	const handleSortChange = (event: SelectChangeEvent) => {
 		setSortBy(event.target.value);
@@ -199,6 +217,16 @@ function RepositoryPage() {
 				: repository.name;
 		}
 		return namespace ? `${namespace}/${name}` : name || "";
+	};
+
+	const getDockerPullCommand = (tagName: string) => {
+		const host = getSourceHost();
+		const repoName = getRepositoryDisplayName();
+
+		if (host) {
+			return `docker pull ${host}/${repoName}:${tagName}`;
+		}
+		return `docker pull ${repoName}:${tagName}`;
 	};
 
 	const getRelativeTimeString = (dateString: string) => {
@@ -531,11 +559,9 @@ function RepositoryPage() {
 									</Box>
 									<Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
 										<ButtonBase
-											onClick={(e) => {
+											onClick={async (e) => {
 												e.preventDefault();
-												copyToClipboard(
-													`docker pull ${getRepositoryDisplayName()}:${tag.name}`,
-												);
+												await copyToClipboard(getDockerPullCommand(tag.name));
 											}}
 											sx={{
 												bgcolor: "#1a1e23",
@@ -553,17 +579,24 @@ function RepositoryPage() {
 														opacity: 0.95,
 													},
 												},
+												"&:active": {
+													transform: "scale(0.98)",
+												},
+												transition: "all 0.2s ease-in-out",
 											}}
+											aria-label={`Copy docker pull command for ${tag.name}`}
+											title={`Click to copy: ${getDockerPullCommand(tag.name)}`}
 										>
 											<Typography
 												variant="body2"
 												sx={{
 													fontFamily: "monospace",
-													fontSize: "0.875rem",
+													fontSize: "0.75rem",
 													color: "text.primary",
+													whiteSpace: "nowrap",
 												}}
 											>
-												docker pull {getRepositoryDisplayName()}:{tag.name}
+												{getDockerPullCommand(tag.name)}
 											</Typography>
 											<Typography
 												variant="body2"
