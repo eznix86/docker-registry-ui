@@ -79,7 +79,7 @@ env:
 
 ## Multiple Registry Support
 
-You can connect to multiple registries by adding **postfixed environment variables**:
+You can connect to multiple registries by adding **suffix environment variables**:
 
 ```env
 # Default
@@ -98,6 +98,8 @@ REGISTRY_AUTH_CUSTOM=...
 ```
 
 For Kubernetes, extend the `env` configuration in your Helm values.
+
+As of `v0.3.2`, the env `REGISTRY_AUTH` or `REGISTRY_AUTH_<SUFFIX>` can be omitted for no auth registries
 
 ---
 
