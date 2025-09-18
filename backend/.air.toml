@@ -1,0 +1,34 @@
+root = "."
+
+[build]
+cmd = "CGO_ENABLED=1 go build -tags fts5 -o tmp/ main.go"
+bin = "tmp/main"
+full_bin = "env $(grep -v '^#' .env | xargs) tmp/main"
+include_ext = ["go", "html", "js", "json", "tsx", "ts"]
+exclude_dir = ["tmp", "node_modules"]
+include_dir = ["resources/views", "resources/public", "internal", "pkg"]
+include_file = ["resources/public/hot", "main.go"]
+exclude_file = []
+exclude_regex = ["_test.go"]
+exclude_unchanged = false
+follow_symlink = true
+log = "air.log"
+poll = false
+poll_interval = 500
+delay = 100
+stop_on_root = true
+send_interrupt = false
+kill_delay = 500
+
+[log]
+time = true
+main_only = false
+
+[color]
+main = "magenta"
+watcher = "cyan"
+build = "yellow"
+runner = "green"
+
+[misc]
+clean_on_exit = true
