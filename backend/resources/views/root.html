@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/x-icon" href="/public/container-hub.svg">
+    <title>ContainerHub</title>
+    {{ .inertiaHead }}
+
+    {{ if .hmr }}
+    <script type="module">
+        import RefreshRuntime from '{{ vite "@react-refresh" }}'
+        RefreshRuntime.injectIntoGlobalHook(window)
+        window.$RefreshReg$ = () => { }
+        window.$RefreshSig$ = () => (type) => type
+        window.__vite_plugin_react_preamble_installed__ = true
+    </script>
+    {{ end }}
+</head>
+
+<body>
+    {{ .inertia }}
+    {{ if .hmr }}
+        <script type="module" src="{{ vite "resources/js/app.jsx" }}"></script>
+    {{ else }}
+        <script type="module" src="/build/assets/app.js"></script>
+    {{ end }}
+</body>
+
+</html>

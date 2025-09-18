@@ -1,0 +1,67 @@
+{
+  "-1": {
+    "code": -1,
+    "message": "Pending",
+    "description": "The request is pending"
+  },
+  "200": {
+    "code": 200,
+    "message": "OK",
+    "description": "The request has succeeded"
+  },
+  "400": {
+    "code": 400,
+    "message": "Bad Request",
+    "description": "The server could not understand the request due to invalid syntax"
+  },
+  "401": {
+    "code": 401,
+    "message": "Unauthorized",
+    "description": "The request must authenticate itself to get the requested response"
+  },
+  "403": {
+    "code": 403,
+    "message": "Forbidden",
+    "description": "The server does not have access rights to the content"
+  },
+  "404": {
+    "code": 404,
+    "message": "Not Found",
+    "description": "The server can not find the requested resource"
+  },
+  "408": {
+    "code": 408,
+    "message": "Request Timeout",
+    "description": "The request took too long to complete"
+  },
+  "500": {
+    "code": 500,
+    "message": "Internal Server Error",
+    "description": "The server has encountered a situation it doesn't know how to handle"
+  },
+  "502": {
+    "code": 502,
+    "message": "Bad Gateway",
+    "description": "The server received an invalid response from the upstream server"
+  },
+  "503": {
+    "code": 503,
+    "message": "Service Unavailable",
+    "description": "The server is not ready to handle the request"
+  },
+  "504": {
+    "code": 504,
+    "message": "Gateway Timeout",
+    "description": "The server did not receive a timely response from the upstream server"
+  },
+  "521": {
+    "code": 521,
+    "message": "Web Server Is Down",
+    "description": "The origin web server refused connections"
+  },
+  "522": {
+    "code": 522,
+    "message": "Connection Timed Out",
+    "description": "Server timed out, failed to contact the origin web server"
+  }
+}
