@@ -108,8 +108,11 @@ export default defineConfig(({ mode }) => {
 		plugins: [
 			react({
 				babel: {
-					plugins: ['babel-plugin-react-compiler'],
+					plugins: [
+						['babel-plugin-react-compiler']
+					]
 				},
+				include: /\.(ts|tsx)$/
 			}),
 			{
 				name: 'sources-endpoint',
