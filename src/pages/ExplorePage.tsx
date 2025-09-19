@@ -32,6 +32,53 @@ import React, {
 	useRef,
 	useState,
 } from "react";
+
+const sidebarSx = {
+	width: { xs: "100%", md: 320 },
+	minWidth: { xs: "100%", md: 320 },
+	maxWidth: { xs: "100%", md: 320 },
+	height: { xs: "auto", md: "100%" },
+	maxHeight: { xs: "200px", md: "none" },
+	flexShrink: 0,
+	p: { xs: 2, md: 4 },
+	borderRight: 0,
+	borderBottom: { xs: 1, md: 0 },
+	borderColor: "divider",
+	bgcolor: "background.paper",
+	overflowY: "auto",
+};
+
+const mainContentSx = {
+	flexGrow: 1,
+	p: { xs: 2, md: 4 },
+	overflowY: "auto",
+	height: { xs: "calc(100vh - 64px - 200px)", md: "100%" },
+};
+
+const containerSx = {
+	bgcolor: "background.default",
+	height: "calc(100vh - 64px)",
+	display: "flex",
+	flexDirection: { xs: "column", md: "row" },
+	overflow: "hidden",
+};
+
+const gridSx = {
+	display: "grid",
+	gridTemplateColumns: {
+		xs: "1fr",
+		sm: "repeat(2, 1fr)",
+		md: "repeat(2, 1fr)",
+		lg: "repeat(3, 1fr)",
+	},
+	gap: 2,
+};
+
+const filterTitleSx = {
+	color: "text.primary",
+	mb: 3,
+};
+
 import { Link, useSearchParams } from "react-router-dom";
 import {
 	type RepositoryMeta,
@@ -177,10 +224,11 @@ function ExplorePage() {
 		let filtered = repositoryMetas;
 
 		if (searchQuery) {
+			const lowerSearchQuery = searchQuery.toLowerCase();
 			filtered = filtered.filter(
 				(repo: RepositoryMeta) =>
-					repo.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-					repo.namespace?.toLowerCase().includes(searchQuery.toLowerCase()),
+					repo.name.toLowerCase().includes(lowerSearchQuery) ||
+					repo.namespace?.toLowerCase().includes(lowerSearchQuery),
 			);
 		}
 
@@ -277,50 +325,23 @@ function ExplorePage() {
 		});
 	};
 
-	const getRepositoryPath = (repo: RepositoryMeta) => {
+	const getRepositoryPath = useCallback((repo: RepositoryMeta) => {
 		const basePath = repo.namespace
 			? `/repository/${repo.namespace}/${repo.name}`
 			: `/repository/${repo.name}`;
 		return repo.source
 			? `${basePath}?source=${encodeURIComponent(repo.source)}`
 			: basePath;
-	};
+	}, []);
 
-	const getDisplayName = (repo: RepositoryMeta) => {
+	const getDisplayName = useCallback((repo: RepositoryMeta) => {
 		return repo.namespace ? `${repo.namespace}/${repo.name}` : repo.name;
-	};
+	}, []);
 
 	return (
-		<Box
-			sx={{
-				bgcolor: "background.default",
-				height: "calc(100vh - 64px)",
-				display: "flex",
-				flexDirection: { xs: "column", md: "row" },
-				overflow: "hidden",
-			}}
-		>
-			<Box
-				sx={{
-					width: { xs: "100%", md: 320 },
-					minWidth: { xs: "100%", md: 320 },
-					maxWidth: { xs: "100%", md: 320 },
-					height: { xs: "auto", md: "100%" },
-					maxHeight: { xs: "200px", md: "none" },
-					flexShrink: 0,
-					p: { xs: 2, md: 4 },
-					borderRight: 0,
-					borderBottom: { xs: 1, md: 0 },
-					borderColor: "divider",
-					bgcolor: "background.paper",
-					overflowY: "auto",
-				}}
-			>
-				<Typography
-					variant="h6"
-					gutterBottom
-					sx={{ color: "text.primary", mb: 3 }}
-				>
+		<Box sx={containerSx}>
+			<Box sx={sidebarSx}>
+				<Typography variant="h6" gutterBottom sx={filterTitleSx}>
 					Filter by
 				</Typography>
 
@@ -462,14 +483,7 @@ function ExplorePage() {
 				</Box>
 			</Box>
 
-			<Box
-				sx={{
-					flexGrow: 1,
-					p: { xs: 2, md: 4 },
-					overflowY: "auto",
-					height: { xs: "calc(100vh - 64px - 200px)", md: "100%" },
-				}}
-			>
+			<Box sx={mainContentSx}>
 				<Box
 					sx={{
 						mb: 3,
@@ -528,19 +542,7 @@ function ExplorePage() {
 					</Alert>
 				)}
 
-				<Box
-					ref={cardsGridRef}
-					sx={{
-						display: "grid",
-						gridTemplateColumns: {
-							xs: "1fr",
-							sm: "repeat(2, 1fr)",
-							md: "repeat(2, 1fr)",
-							lg: "repeat(3, 1fr)",
-						},
-						gap: 2,
-					}}
-				>
+				<Box ref={cardsGridRef} sx={gridSx}>
 					{filteredRepos.length === 0 ? (
 						<Box
 							sx={{

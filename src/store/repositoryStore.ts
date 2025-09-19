@@ -775,9 +775,22 @@ export const useRepositoryStore = create<RepositoryStore>()(
 						},
 					);
 
-					const sourceTagResults = await Promise.all(sourceTagPromises);
+					const sourceTagResults = await Promise.allSettled(sourceTagPromises);
 
-					const reposWithTags = sourceTagResults.flat();
+					const reposWithTags = sourceTagResults
+						.filter((result): result is PromiseFulfilledResult<Array<{
+							sourceName: string;
+							sourceInfo: SourceInfo;
+							repoName: string;
+							tags: string[];
+						}>> => result.status === 'fulfilled')
+						.flatMap(result => result.value);
+
+					// Log any source failures
+					const failedSources = sourceTagResults.filter(result => result.status === 'rejected');
+					if (failedSources.length > 0) {
+						console.warn(`${failedSources.length} registry sources failed during tag fetching`);
+					}
 
 					set({
 						loadingStage: {
@@ -790,30 +803,34 @@ export const useRepositoryStore = create<RepositoryStore>()(
 					const processedRepos: RepositoryMeta[] = [];
 					const allArchitectures = new Set<string>();
 
-					for (const repo of reposWithTags) {
-						const { sourceName, sourceInfo, repoName, tags } = repo;
-						const { name, namespace } = parseRepositoryName(repoName);
+					// Process repositories in batches for better performance
+					const BATCH_SIZE = 10; // Process 10 repos at a time
+					for (let i = 0; i < reposWithTags.length; i += BATCH_SIZE) {
+						const batch = reposWithTags.slice(i, i + BATCH_SIZE);
 
-						if (tags.length === 0) {
-							processedRepos.push({
-								name,
-								namespace,
-								tagCount: 0,
-								totalSize: 0,
-								totalSizeFormatted: "0 B",
-								architectures: [],
-								lastUpdated: new Date().toISOString(),
-								createdAt: new Date().toISOString(),
-								source: sourceName,
-							});
-							continue;
-						}
+						const batchPromises = batch.map(async (repo) => {
+							const { sourceName, sourceInfo, repoName, tags } = repo;
+							const { name, namespace } = parseRepositoryName(repoName);
 
-						const sampleTags = tags.slice(0, 3);
-						const processedTags: Tag[] = [];
+							if (tags.length === 0) {
+								return {
+									name,
+									namespace,
+									tagCount: 0,
+									totalSize: 0,
+									totalSizeFormatted: "0 B",
+									architectures: [],
+									lastUpdated: new Date().toISOString(),
+									createdAt: new Date().toISOString(),
+									source: sourceName,
+								};
+							}
 
-						for (const tagName of sampleTags) {
-							try {
+							const sampleTags = tags.slice(0, 2); // Reduced from 3 to 2 for speed
+							const processedTags: Tag[] = [];
+
+							// Process tags concurrently instead of sequentially
+							const tagPromises = sampleTags.map(async (tagName) => {
 								const manifestResponse = await fetchManifest(
 									repoName,
 									tagName,
@@ -825,48 +842,86 @@ export const useRepositoryStore = create<RepositoryStore>()(
 									manifestResponse,
 									sourceInfo.path,
 								);
-								if (tag) {
-									processedTags.push(tag);
-								}
-							} catch (error) {
-								console.warn(
-									`Failed to process ${repoName}:${tagName}:`,
-									error,
+								return tag;
+							});
+
+							const tagResults = await Promise.allSettled(tagPromises);
+							const successfulTags = tagResults
+								.filter((result): result is PromiseFulfilledResult<Tag | null> =>
+									result.status === 'fulfilled' && result.value !== null
+								)
+								.map(result => result.value as Tag);
+
+							// Log rejected promises for debugging
+							tagResults
+								.filter((result): result is PromiseRejectedResult => result.status === 'rejected')
+								.forEach((result, index) => {
+									console.warn(`Failed to process ${repoName}:${sampleTags[index]}:`, result.reason);
+								});
+
+							processedTags.push(...successfulTags);
+
+
+							if (processedTags.length > 0) {
+								const totalSize = calculateRepositorySize(processedTags);
+								const architectures = [
+									...new Set(
+										processedTags.flatMap((tag) =>
+											tag.architectures.map((arch) => arch.architecture),
+										),
+									),
+								];
+								const latestTag = processedTags.reduce((latest, tag) =>
+									new Date(tag.lastUpdated) > new Date(latest.lastUpdated)
+										? tag
+										: latest,
 								);
+
+								return {
+									name,
+									namespace,
+									tagCount: tags.length,
+									totalSize,
+									totalSizeFormatted: formatBytes(totalSize),
+									architectures,
+									lastUpdated: latestTag.lastUpdated,
+									createdAt: new Date().toISOString(),
+									source: sourceName,
+								};
 							}
+							return null;
+						});
+
+						const batchResults = await Promise.allSettled(batchPromises);
+						const validRepos = batchResults
+							.filter((result): result is PromiseFulfilledResult<RepositoryMeta | null> =>
+								result.status === 'fulfilled' && result.value !== null
+							)
+							.map(result => result.value as RepositoryMeta);
+
+						// Log any batch processing failures
+						const rejectedCount = batchResults.filter(result => result.status === 'rejected').length;
+						if (rejectedCount > 0) {
+							console.warn(`Batch ${Math.floor(i / BATCH_SIZE) + 1}: ${rejectedCount} repositories failed to process`);
 						}
 
-						if (processedTags.length > 0) {
-							const totalSize = calculateRepositorySize(processedTags);
-							const architectures = [
-								...new Set(
-									processedTags.flatMap((tag) =>
-										tag.architectures.map((arch) => arch.architecture),
-									),
-								),
-							];
-							const latestTag = processedTags.reduce((latest, tag) =>
-								new Date(tag.lastUpdated) > new Date(latest.lastUpdated)
-									? tag
-									: latest,
-							);
-
-							for (const arch of architectures) {
+						for (const repo of validRepos) {
+							processedRepos.push(repo);
+							for (const arch of repo.architectures) {
 								allArchitectures.add(arch);
 							}
-
-							processedRepos.push({
-								name,
-								namespace,
-								tagCount: tags.length,
-								totalSize,
-								totalSizeFormatted: formatBytes(totalSize),
-								architectures,
-								lastUpdated: latestTag.lastUpdated,
-								createdAt: new Date().toISOString(),
-								source: sourceName,
-							});
 						}
+
+						// Update progress after each batch
+						const completedRepos = Math.min(i + BATCH_SIZE, reposWithTags.length);
+						const progress = 50 + (completedRepos / reposWithTags.length) * 40;
+						set({
+							loadingStage: {
+								stage: "manifests",
+								progress: Math.min(progress, 90),
+								message: `Processing manifests: ${completedRepos}/${reposWithTags.length} repositories`,
+							},
+						});
 					}
 
 					set({
