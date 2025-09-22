@@ -2,28 +2,13 @@ import { del as idbDel, get as idbGet, set as idbSet } from "idb-keyval";
 import { produce } from "immer";
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
-
-export interface ArchitectureInfo {
-	architecture: string;
-	digest: string;
-	size: string;
-	os: string;
-}
-
-interface ManifestReference {
-	digest: string;
-	annotations?: {
-		[key: string]: string;
-	};
-	platform?: {
-		architecture: string;
-		os: string;
-	};
-}
-
-interface HistoryEntry {
-	v1Compatibility?: string;
-}
+import {
+	type ArchitectureInfo,
+	ContainerRegistryClient,
+	type Repository as OOPRepository,
+	type Tag as OOPTag,
+	type SourceInfo,
+} from "../lib/container-registry";
 
 export interface Tag {
 	name: string;
@@ -32,13 +17,6 @@ export interface Tag {
 	lastUpdated: string;
 	architectures: ArchitectureInfo[];
 	mediaType: string;
-}
-
-export interface SourceInfo {
-	path: string;
-	host: string;
-	status?: number;
-	lastChecked?: number;
 }
 
 export interface RepositoryMeta {
@@ -210,7 +188,7 @@ async function fetchTags(
 	return data.tags || [];
 }
 
-async function fetchManifest(
+async function _fetchManifest(
 	repoName: string,
 	tagName: string,
 	sourcePath: string,
@@ -219,7 +197,7 @@ async function fetchManifest(
 	const response = await fetchWithTimeout(url, {
 		headers: {
 			Accept:
-				"application/vnd.oci.image.index.v1+json, application/vnd.docker.distribution.manifest.list.v2+json, application/vnd.docker.distribution.manifest.v2+json, application/vnd.oci.image.manifest.v1+json, application/vnd.docker.distribution.manifest.v1+json",
+				"application/vnd.oci.image.index.v1+json, application/vnd.docker.distribution.manifest.list.v2+json, application/vnd.docker.distribution.manifest.v2+json, application/vnd.oci.image.manifest.v1+json",
 		},
 	});
 	if (!response.ok) {
@@ -238,6 +216,7 @@ async function fetchConfig(
 	created: string | null;
 	architecture: string;
 	os: string;
+	variant?: string;
 } | null> {
 	try {
 		const url = `${sourcePath}/v2/${repoName}/blobs/${configDigest}`;
@@ -251,6 +230,7 @@ async function fetchConfig(
 				created: data.created || data.history?.[0]?.created || null,
 				architecture: data.architecture || "amd64",
 				os: data.os || "linux",
+				variant: data.variant,
 			};
 		}
 		return null;
@@ -262,7 +242,7 @@ async function fetchConfig(
 	}
 }
 
-async function processManifest(
+async function _processManifest(
 	repoName: string,
 	tagName: string,
 	manifestResponse: Response,
@@ -282,7 +262,7 @@ async function processManifest(
 
 		if (
 			manifest.mediaType ===
-				"application/vnd.docker.distribution.manifest.list.v2+json" ||
+			"application/vnd.docker.distribution.manifest.list.v2+json" ||
 			manifest.mediaType === "application/vnd.oci.image.index.v1+json"
 		) {
 			if (manifest.manifests) {
@@ -296,6 +276,7 @@ async function processManifest(
 					async (archManifest: ManifestReference) => {
 						const arch = archManifest.platform?.architecture || "amd64";
 						const os = archManifest.platform?.os || "linux";
+						const variant = archManifest.platform?.variant;
 
 						try {
 							let acceptHeader = "";
@@ -341,6 +322,7 @@ async function processManifest(
 										digest: archManifest.digest,
 										size: formatBytes(size),
 										os: os,
+										variant: variant,
 										sizeBytes: size,
 									};
 								}
@@ -364,6 +346,7 @@ async function processManifest(
 							digest: result.digest,
 							size: result.size,
 							os: result.os,
+							variant: result.variant,
 						});
 						totalSize += result.sizeBytes;
 					}
@@ -371,7 +354,7 @@ async function processManifest(
 			}
 		} else if (
 			manifest.mediaType ===
-				"application/vnd.docker.distribution.manifest.v2+json" ||
+			"application/vnd.docker.distribution.manifest.v2+json" ||
 			manifest.mediaType === "application/vnd.oci.image.manifest.v1+json"
 		) {
 			if (manifest.config && manifest.layers) {
@@ -398,107 +381,7 @@ async function processManifest(
 						digest: digest,
 						size: formatBytes(totalSize),
 						os: configInfo?.os || "linux",
-					},
-				];
-			}
-		} else if (
-			manifest.mediaType ===
-			"application/vnd.docker.distribution.manifest.v1+json"
-		) {
-			if (manifest.fsLayers && manifest.history) {
-				try {
-					const layerPromises = manifest.fsLayers.map(
-						async (layer: { blobSum: string }) => {
-							try {
-								const blobResponse = await fetchWithTimeout(
-									`${sourcePath}/v2/${repoName}/blobs/${layer.blobSum}`,
-									{ method: "HEAD" },
-								);
-								if (blobResponse.ok) {
-									const contentLength =
-										blobResponse.headers.get("Content-Length");
-									if (contentLength) {
-										return parseInt(contentLength, 10);
-									}
-								}
-							} catch (error) {
-								console.warn(
-									`Failed to fetch layer size for ${layer.blobSum}:`,
-									error,
-								);
-							}
-							return 0;
-						},
-					);
-
-					const layerSizes = await Promise.all(layerPromises);
-					const totalLayerSize = layerSizes.reduce(
-						(sum, size) => sum + size,
-						0,
-					);
-
-					const configSize =
-						manifest.history?.reduce((acc: number, entry: HistoryEntry) => {
-							if (entry.v1Compatibility) {
-								return acc + JSON.stringify(entry.v1Compatibility).length;
-							}
-							return acc;
-						}, 0) || 0;
-
-					totalSize = totalLayerSize + configSize;
-
-					let detectedArch = "amd64";
-					let detectedOs = "linux";
-
-					try {
-						if (manifest.history && manifest.history.length > 0) {
-							const latestHistory = manifest.history[0];
-							if (latestHistory.v1Compatibility) {
-								const v1Compat = JSON.parse(latestHistory.v1Compatibility);
-								if (v1Compat.architecture) {
-									detectedArch = v1Compat.architecture;
-								}
-								if (v1Compat.os) {
-									detectedOs = v1Compat.os;
-								}
-							}
-						}
-					} catch (error) {
-						console.warn(
-							"Failed to parse v1Compatibility for architecture:",
-							error,
-						);
-					}
-
-					architectures = [
-						{
-							architecture: manifest.architecture || detectedArch,
-							digest: digest,
-							size: formatBytes(totalSize),
-							os: detectedOs,
-						},
-					];
-				} catch (error) {
-					console.warn("Failed to process Docker v1 manifest:", error);
-
-					totalSize = 0;
-					architectures = [
-						{
-							architecture: manifest.architecture || "amd64",
-							digest: digest,
-							size: "Unknown",
-							os: "linux",
-						},
-					];
-				}
-			} else {
-				totalSize = 0;
-				architectures = [
-					{
-						architecture: manifest.architecture || "amd64",
-						digest: digest,
-						size: "Unknown",
-						os: "linux",
+						variant: configInfo?.variant,
 					},
 				];
 			}
@@ -511,6 +394,7 @@ async function processManifest(
 					digest: digest,
 					size: "Unknown",
 					os: "linux",
+					variant: undefined,
 				},
 			];
 		}
@@ -542,6 +426,7 @@ interface RepositoryStore {
 	repositoryDetails: { [key: string]: RepositoryDetail };
 	sources: Record<string, SourceInfo>;
 	statusCodes: Record<string, StatusCodeDefinition>;
+	clients: ContainerRegistryClient[];
 
 	loading: boolean;
 	loadingStage: LoadingStage;
@@ -581,6 +466,9 @@ let refreshInterval: NodeJS.Timeout | null = null;
 let manifestRefreshInterval: NodeJS.Timeout | null = null;
 let visibilityChangeListener: (() => void) | null = null;
 
+// Export useShallow for components to use
+export { useShallow } from "zustand/react/shallow";
+
 export const useRepositoryStore = create<RepositoryStore>()(
 	persist(
 		(set, get) => ({
@@ -588,6 +476,7 @@ export const useRepositoryStore = create<RepositoryStore>()(
 			repositoryDetails: {},
 			sources: {},
 			statusCodes: {},
+			clients: [],
 			loading: false,
 			loadingStage: { stage: "idle", progress: 0, message: "Ready" },
 			error: null,
@@ -596,9 +485,21 @@ export const useRepositoryStore = create<RepositoryStore>()(
 			hydrated: false,
 
 			fetchSources: async () => {
-				const sourcesData = await fetchSources();
-				if (Object.keys(sourcesData).length > 0) {
-					set({ sources: sourcesData });
+				try {
+					const sourcesData = await fetchSources();
+					if (Object.keys(sourcesData).length > 0) {
+						const clients =
+							await ContainerRegistryClient.fromSources(sourcesData);
+						set({ sources: sourcesData, clients });
+					} else {
+						console.warn(
+							"No sources found in sources.json. Please configure your registry sources.",
+						);
+						set({ sources: {}, clients: [] });
+					}
+				} catch (error) {
+					console.error("Failed to fetch sources:", error);
+					set({ sources: {}, clients: [] });
 				}
 			},
 
@@ -628,7 +529,11 @@ export const useRepositoryStore = create<RepositoryStore>()(
 					return;
 				}
 
-				if (Object.keys(state.sources).length === 0) {
+				// Ensure sources and clients are available
+				if (
+					Object.keys(state.sources).length === 0 ||
+					state.clients.length === 0
+				) {
 					await get().fetchSources();
 				}
 
@@ -643,153 +548,128 @@ export const useRepositoryStore = create<RepositoryStore>()(
 				});
 
 				try {
+					// Get the updated state after fetchSources
 					const updatedState = get();
-					const sources = updatedState.sources;
+					const clients = updatedState.clients;
 
-					if (Object.keys(sources).length === 0) {
-						throw new Error("No sources available");
+					if (clients.length === 0) {
+						throw new Error(
+							"No registry clients available. Please check your sources configuration.",
+						);
 					}
 
-					const sourcePromises = Object.entries(sources).map(
-						async ([sourceName, sourceInfo]) => {
-							try {
-								const { repositories, status } = await fetchCatalog(
-									sourceInfo.path,
-								);
-								const updatedSourceInfo = {
-									...sourceInfo,
-									status,
-									lastChecked: Date.now(),
-								};
-								return {
-									sourceName,
-									sourceInfo: updatedSourceInfo,
-									repositories,
-								};
-							} catch (error) {
-								console.warn(`Failed to fetch from ${sourceName}:`, error);
-								let status = 0;
-								if (error instanceof Error) {
-									if (error.name === "AbortError") {
-										status = 408;
-									} else if (
-										error.message.includes("Failed to fetch catalog:")
-									) {
-										status = 500;
-									} else {
-										status = 0;
-									}
+					// Fetch repositories from all clients concurrently
+					const clientPromises = clients.map(async (client) => {
+						try {
+							const repos = await client.repositories();
+							const pingResult = await client.ping();
+
+							// Update registry status
+							const updatedRegistry = client.registry.updateStatus(
+								pingResult.status,
+							);
+
+							return {
+								registryName: client.registry.name,
+								registry: updatedRegistry,
+								repositories: repos,
+								status: pingResult.status,
+							};
+						} catch (error) {
+							console.warn(
+								`Failed to fetch from ${client.registry.name}:`,
+								error,
+							);
+							let status = 0;
+							if (error instanceof Error) {
+								if (error.name === "AbortError") {
+									status = 408;
+								} else if (error.message.includes("Failed to fetch catalog")) {
+									status = 500;
+								} else {
+									status = 0;
 								}
-								const updatedSourceInfo = {
-									...sourceInfo,
-									status,
-									lastChecked: Date.now(),
-								};
-								return {
-									sourceName,
-									sourceInfo: updatedSourceInfo,
-									repositories: [],
-								};
 							}
-						},
-					);
 
-					const sourceResults = await Promise.all(sourcePromises);
+							const updatedRegistry = client.registry.updateStatus(status);
 
-					const updatedSources = { ...sources };
-					for (const { sourceName, sourceInfo } of sourceResults) {
-						updatedSources[sourceName] = sourceInfo;
+							return {
+								registryName: client.registry.name,
+								registry: updatedRegistry,
+								repositories: [],
+								status,
+							};
+						}
+					});
+
+					const clientResults = await Promise.all(clientPromises);
+
+					// Update sources with new status information
+					const updatedSources = { ...updatedState.sources };
+					for (const { registryName, registry } of clientResults) {
+						if (updatedSources[registryName]) {
+							updatedSources[registryName] = {
+								...updatedSources[registryName],
+								status: registry.status,
+								lastChecked: registry.lastChecked,
+							};
+						}
 					}
 					set({ sources: updatedSources });
 
-					const allRepos: Array<{
-						sourceName: string;
-						sourceInfo: SourceInfo;
-						repoName: string;
-					}> = [];
-
-					for (const {
-						sourceName,
-						sourceInfo,
-						repositories,
-					} of sourceResults) {
-						for (const repoName of repositories) {
-							allRepos.push({ sourceName, sourceInfo, repoName });
-						}
-					}
+					// Flatten all repositories
+					const allRepos = clientResults.flatMap(
+						({ registryName, repositories }) =>
+							repositories.map((repo) => ({ registryName, repository: repo })),
+					);
 
 					set({
 						loadingStage: {
 							stage: "tags",
 							progress: 25,
-							message: `Found ${allRepos.length} repositories from ${sourceResults.length} sources`,
+							message: `Found ${allRepos.length} repositories from ${clientResults.length} registries`,
 						},
 					});
 
-					let totalReposProcessed = 0;
-					const totalRepos = allRepos.length;
+					// Fetch tags for all repositories concurrently in batches
+					const BATCH_SIZE = 10;
+					const reposWithTags: Array<{
+						registryName: string;
+						repository: OOPRepository;
+						tags: OOPTag[];
+					}> = [];
 
-					const sourceTagPromises = sourceResults.map(
-						async ({ sourceName, sourceInfo, repositories }) => {
-							const reposWithTags: Array<{
-								sourceName: string;
-								sourceInfo: SourceInfo;
-								repoName: string;
-								tags: string[];
-							}> = [];
+					for (let i = 0; i < allRepos.length; i += BATCH_SIZE) {
+						const batch = allRepos.slice(i, i + BATCH_SIZE);
 
-							for (let i = 0; i < repositories.length; i++) {
-								const repoName = repositories[i];
+						const tagPromises = batch.map(
+							async ({ registryName, repository }) => {
 								try {
-									const tags = await fetchTags(repoName, sourceInfo.path);
-									reposWithTags.push({
-										sourceName,
-										sourceInfo,
-										repoName,
-										tags,
-									});
+									const tags = await repository.tags();
+									return { registryName, repository, tags };
 								} catch (error) {
-									console.warn(`Failed to fetch tags for ${repoName}:`, error);
-									reposWithTags.push({
-										sourceName,
-										sourceInfo,
-										repoName,
-										tags: [],
-									});
+									console.warn(
+										`Failed to fetch tags for ${repository.fullName}:`,
+										error,
+									);
+									return { registryName, repository, tags: [] };
 								}
+							},
+						);
 
-								totalReposProcessed++;
-								const globalProgress =
-									25 + (totalReposProcessed / totalRepos) * 25;
+						const batchResults = await Promise.all(tagPromises);
+						reposWithTags.push(...batchResults);
 
-								set({
-									loadingStage: {
-										stage: "tags",
-										progress: Math.min(globalProgress, 50),
-										message: `Processing tags: ${totalReposProcessed}/${totalRepos} repositories (${sourceName})`,
-									},
-								});
-							}
-
-							return reposWithTags;
-						},
-					);
-
-					const sourceTagResults = await Promise.allSettled(sourceTagPromises);
-
-					const reposWithTags = sourceTagResults
-						.filter((result): result is PromiseFulfilledResult<Array<{
-							sourceName: string;
-							sourceInfo: SourceInfo;
-							repoName: string;
-							tags: string[];
-						}>> => result.status === 'fulfilled')
-						.flatMap(result => result.value);
-
-					// Log any source failures
-					const failedSources = sourceTagResults.filter(result => result.status === 'rejected');
-					if (failedSources.length > 0) {
-						console.warn(`${failedSources.length} registry sources failed during tag fetching`);
+						// Update progress
+						const completedRepos = Math.min(i + BATCH_SIZE, allRepos.length);
+						const progress = 25 + (completedRepos / allRepos.length) * 25;
+						set({
+							loadingStage: {
+								stage: "tags",
+								progress: Math.min(progress, 50),
+								message: `Processing tags: ${completedRepos}/${allRepos.length} repositories`,
+							},
+						});
 					}
 
 					set({
@@ -804,105 +684,159 @@ export const useRepositoryStore = create<RepositoryStore>()(
 					const allArchitectures = new Set<string>();
 
 					// Process repositories in batches for better performance
-					const BATCH_SIZE = 10; // Process 10 repos at a time
 					for (let i = 0; i < reposWithTags.length; i += BATCH_SIZE) {
 						const batch = reposWithTags.slice(i, i + BATCH_SIZE);
 
-						const batchPromises = batch.map(async (repo) => {
-							const { sourceName, sourceInfo, repoName, tags } = repo;
-							const { name, namespace } = parseRepositoryName(repoName);
-
-							if (tags.length === 0) {
-								return {
-									name,
-									namespace,
-									tagCount: 0,
-									totalSize: 0,
-									totalSizeFormatted: "0 B",
-									architectures: [],
-									lastUpdated: new Date().toISOString(),
-									createdAt: new Date().toISOString(),
-									source: sourceName,
+						const batchPromises = batch.map(
+							async ({ registryName, repository, tags }) => {
+								const { name, namespace } = {
+									name: repository.name,
+									namespace: repository.namespace,
 								};
-							}
 
-							const sampleTags = tags.slice(0, 2); // Reduced from 3 to 2 for speed
-							const processedTags: Tag[] = [];
+								if (tags.length === 0) {
+									return {
+										name,
+										namespace,
+										tagCount: 0,
+										totalSize: 0,
+										totalSizeFormatted: "0 B",
+										architectures: [],
+										lastUpdated: new Date().toISOString(),
+										createdAt: new Date().toISOString(),
+										source: registryName,
+									};
+								}
 
-							// Process tags concurrently instead of sequentially
-							const tagPromises = sampleTags.map(async (tagName) => {
-								const manifestResponse = await fetchManifest(
-									repoName,
-									tagName,
-									sourceInfo.path,
-								);
-								const tag = await processManifest(
-									repoName,
-									tagName,
-									manifestResponse,
-									sourceInfo.path,
-								);
-								return tag;
-							});
+								// Sample first 2 tags for performance
+								const sampleTags = tags.slice(0, 2);
+								const processedTags: Tag[] = [];
 
-							const tagResults = await Promise.allSettled(tagPromises);
-							const successfulTags = tagResults
-								.filter((result): result is PromiseFulfilledResult<Tag | null> =>
-									result.status === 'fulfilled' && result.value !== null
-								)
-								.map(result => result.value as Tag);
+								// Process tags concurrently
+								const manifestPromises = sampleTags.map(async (tag) => {
+									try {
+										const manifest = await tag.manifest();
+										const images = await manifest.images();
 
-							// Log rejected promises for debugging
-							tagResults
-								.filter((result): result is PromiseRejectedResult => result.status === 'rejected')
-								.forEach((result, index) => {
-									console.warn(`Failed to process ${repoName}:${sampleTags[index]}:`, result.reason);
+										if (images.length === 0) return null;
+
+										// For architectures, get info from each image
+										const architectures: ArchitectureInfo[] = images.map(
+											(image) => image.architectureInfo,
+										);
+
+										// For size calculation:
+										// - Single arch: size is in the manifest (config + layers)
+										// - Multi arch: sum of all child manifest sizes
+										let totalSize = 0;
+										if (manifest.isMultiPlatform()) {
+											// Multi-arch: sum sizes from all images (child manifests already fetched)
+											totalSize = images.reduce(
+												(sum, image) => sum + image.size,
+												0,
+											);
+										} else {
+											// Single arch: use the image size (config + layers from manifest)
+											totalSize = images[0].size;
+										}
+
+										// For lastUpdated, get the created timestamp from image config blob
+										let lastUpdated = new Date().toISOString();
+										try {
+											// Try to get created timestamp from the first image's config
+											const configBlob = await images[0].config.blob();
+											if (configBlob.created) {
+												lastUpdated = configBlob.created;
+											}
+										} catch (error) {
+											// If config blob fetch fails, fall back to current timestamp
+											console.warn(
+												`Failed to fetch config blob for ${repository.fullName}:${tag.name}:`,
+												error,
+											);
+										}
+
+										return {
+											name: tag.name,
+											digest: manifest.digest,
+											size: formatBytes(totalSize),
+											lastUpdated,
+											architectures,
+											mediaType: manifest.mediaType,
+										};
+									} catch (error) {
+										console.warn(
+											`Failed to process ${repository.fullName}:${tag.name}:`,
+											error,
+										);
+										return null;
+									}
 								});
 
-							processedTags.push(...successfulTags);
+								const manifestResults =
+									await Promise.allSettled(manifestPromises);
+								const successfulTags = manifestResults
+									.filter(
+										(result): result is PromiseFulfilledResult<Tag | null> =>
+											result.status === "fulfilled" && result.value !== null,
+									)
+									.map((result) => result.value as Tag);
 
+								processedTags.push(...successfulTags);
 
-							if (processedTags.length > 0) {
-								const totalSize = calculateRepositorySize(processedTags);
-								const architectures = [
-									...new Set(
-										processedTags.flatMap((tag) =>
-											tag.architectures.map((arch) => arch.architecture),
+								if (processedTags.length > 0) {
+									const totalSize = calculateRepositorySize(processedTags);
+									const architectures = [
+										...new Set(
+											processedTags.flatMap((tag) =>
+												tag.architectures.map((arch) =>
+													arch.variant
+														? `${arch.architecture}/${arch.variant}`
+														: arch.architecture,
+												),
+											),
 										),
-									),
-								];
-								const latestTag = processedTags.reduce((latest, tag) =>
-									new Date(tag.lastUpdated) > new Date(latest.lastUpdated)
-										? tag
-										: latest,
-								);
+									];
+									const latestTag = processedTags.reduce((latest, tag) =>
+										new Date(tag.lastUpdated) > new Date(latest.lastUpdated)
+											? tag
+											: latest,
+									);
 
-								return {
-									name,
-									namespace,
-									tagCount: tags.length,
-									totalSize,
-									totalSizeFormatted: formatBytes(totalSize),
-									architectures,
-									lastUpdated: latestTag.lastUpdated,
-									createdAt: new Date().toISOString(),
-									source: sourceName,
-								};
-							}
-							return null;
-						});
+									return {
+										name,
+										namespace,
+										tagCount: tags.length,
+										totalSize,
+										totalSizeFormatted: formatBytes(totalSize),
+										architectures,
+										lastUpdated: latestTag.lastUpdated,
+										createdAt: new Date().toISOString(),
+										source: registryName,
+									};
+								}
+								return null;
+							},
+						);
 
 						const batchResults = await Promise.allSettled(batchPromises);
 						const validRepos = batchResults
-							.filter((result): result is PromiseFulfilledResult<RepositoryMeta | null> =>
-								result.status === 'fulfilled' && result.value !== null
+							.filter(
+								(
+									result,
+								): result is PromiseFulfilledResult<RepositoryMeta | null> =>
+									result.status === "fulfilled" && result.value !== null,
 							)
-							.map(result => result.value as RepositoryMeta);
+							.map((result) => result.value as RepositoryMeta);
 
 						// Log any batch processing failures
-						const rejectedCount = batchResults.filter(result => result.status === 'rejected').length;
+						const rejectedCount = batchResults.filter(
+							(result) => result.status === "rejected",
+						).length;
 						if (rejectedCount > 0) {
-							console.warn(`Batch ${Math.floor(i / BATCH_SIZE) + 1}: ${rejectedCount} repositories failed to process`);
+							console.warn(
+								`Batch ${Math.floor(i / BATCH_SIZE) + 1}: ${rejectedCount} repositories failed to process`,
+							);
 						}
 
 						for (const repo of validRepos) {
@@ -913,7 +847,10 @@ export const useRepositoryStore = create<RepositoryStore>()(
 						}
 
 						// Update progress after each batch
-						const completedRepos = Math.min(i + BATCH_SIZE, reposWithTags.length);
+						const completedRepos = Math.min(
+							i + BATCH_SIZE,
+							reposWithTags.length,
+						);
 						const progress = 50 + (completedRepos / reposWithTags.length) * 40;
 						set({
 							loadingStage: {
@@ -1108,17 +1045,40 @@ export const useRepositoryStore = create<RepositoryStore>()(
 					return;
 				}
 
-				if (Object.keys(state.sources).length === 0) {
+				if (
+					Object.keys(state.sources).length === 0 ||
+					state.clients.length === 0
+				) {
 					await get().fetchSources();
 				}
 
 				try {
+					// Get the updated state after fetchSources
 					const updatedState = get();
+					const clients = updatedState.clients;
 
-					let sourceInfo: SourceInfo;
-					if (source && updatedState.sources[source]) {
-						sourceInfo = updatedState.sources[source];
+					if (clients.length === 0) {
+						throw new Error(
+							"No registry clients available. Please check your sources configuration.",
+						);
+					}
+
+					// Find the appropriate client
+					let targetClient: ContainerRegistryClient;
+					let registryName: string;
+
+					if (source) {
+						// Use specific source if provided
+						const client = clients.find((c) => c.registry.name === source);
+						if (!client) {
+							throw new Error(
+								`Registry client not found for source: ${source}`,
+							);
+						}
+						targetClient = client;
+						registryName = source;
 					} else {
+						// Find client based on existing repository metadata
 						const existingRepo = updatedState.repositoryMetas.find((repo) => {
 							const existingKey = repo.namespace
 								? `${repo.namespace}/${repo.name}`
@@ -1126,79 +1086,134 @@ export const useRepositoryStore = create<RepositoryStore>()(
 							return existingKey === repoKey;
 						});
 
-						if (
-							existingRepo?.source &&
-							updatedState.sources[existingRepo.source]
-						) {
-							sourceInfo = updatedState.sources[existingRepo.source];
+						if (existingRepo?.source) {
+							const client = clients.find(
+								(c) => c.registry.name === existingRepo.source,
+							);
+							if (client) {
+								targetClient = client;
+								registryName = existingRepo.source;
+							} else {
+								targetClient = clients[0];
+								registryName = clients[0].registry.name;
+							}
 						} else {
-							sourceInfo = Object.values(updatedState.sources)[0];
+							targetClient = clients[0];
+							registryName = clients[0].registry.name;
 						}
 					}
 
-					if (!sourceInfo) {
-						throw new Error("No sources available");
+					// Find the repository using OOP client
+					const repository = await targetClient.repository(name, namespace);
+					if (!repository) {
+						throw new Error(`Repository ${repoKey} not found`);
 					}
 
-					const tagNames = await fetchTags(repoKey, sourceInfo.path);
+					// Get all tags using OOP approach
+					const oopTags = await repository.tags();
 					const tags: Tag[] = [];
 
-					for (const tagName of tagNames) {
-						try {
-							const manifestResponse = await fetchManifest(
-								repoKey,
-								tagName,
-								sourceInfo.path,
-							);
-							const tag = await processManifest(
-								repoKey,
-								tagName,
-								manifestResponse,
-								sourceInfo.path,
-							);
-							if (tag) {
-								tags.push(tag);
+					// Process tags concurrently for better performance
+					const BATCH_SIZE = 5; // Smaller batch size for detailed fetching
+					for (let i = 0; i < oopTags.length; i += BATCH_SIZE) {
+						const batch = oopTags.slice(i, i + BATCH_SIZE);
+
+						const batchPromises = batch.map(async (oopTag) => {
+							try {
+								const manifest = await oopTag.manifest();
+								const images = await manifest.images();
+
+								if (images.length === 0) return null;
+
+								// Get architecture info from each image
+								const architectures: ArchitectureInfo[] = images.map(
+									(image) => image.architectureInfo,
+								);
+
+								// Calculate total size properly
+								let totalSize = 0;
+								if (manifest.isMultiPlatform()) {
+									// Multi-arch: sum sizes from all images
+									totalSize = images.reduce(
+										(sum, image) => sum + image.size,
+										0,
+									);
+								} else {
+									// Single arch: use the image size
+									totalSize = images[0].size;
+								}
+
+								// Get lastUpdated from config blob
+								let lastUpdated = new Date().toISOString();
+								try {
+									const configBlob = await images[0].config.blob();
+									if (configBlob.created) {
+										lastUpdated = configBlob.created;
+									}
+								} catch (error) {
+									console.warn(
+										`Failed to fetch config blob for ${repository.fullName}:${oopTag.name}:`,
+										error,
+									);
+								}
+
+								return {
+									name: oopTag.name,
+									digest: manifest.digest,
+									size: formatBytes(totalSize),
+									lastUpdated,
+									architectures,
+									mediaType: manifest.mediaType,
+								};
+							} catch (error) {
+								console.warn(`Failed to process tag ${oopTag.name}:`, error);
+								return null;
 							}
-						} catch (error) {
-							console.warn(`Failed to process tag ${tagName}:`, error);
-						}
+						});
+
+						const batchResults = await Promise.allSettled(batchPromises);
+						const successfulTags = batchResults
+							.filter(
+								(result): result is PromiseFulfilledResult<Tag | null> =>
+									result.status === "fulfilled" && result.value !== null,
+							)
+							.map((result) => result.value as Tag);
+
+						tags.push(...successfulTags);
 					}
 
 					const totalSize = calculateRepositorySize(tags);
 					const architectures = [
 						...new Set(
 							tags.flatMap((tag) =>
-								tag.architectures.map((arch) => arch.architecture),
+								tag.architectures.map((arch) =>
+									arch.variant
+										? `${arch.architecture}/${arch.variant}`
+										: arch.architecture,
+								),
 							),
 						),
 					];
 					const latestTag =
 						tags.length > 0
 							? tags.reduce((latest, tag) =>
-									new Date(tag.lastUpdated) > new Date(latest.lastUpdated)
-										? tag
-										: latest,
-								)
+								new Date(tag.lastUpdated) > new Date(latest.lastUpdated)
+									? tag
+									: latest,
+							)
 							: null;
-
-					const usedSource =
-						source ||
-						Object.entries(updatedState.sources).find(
-							([, info]) => info === sourceInfo,
-						)?.[0] ||
-						"default";
 
 					const repositoryDetail: RepositoryDetail = {
 						name,
 						namespace,
-						tagCount: tagNames.length,
+						tagCount: oopTags.length,
 						totalSize,
 						totalSizeFormatted: formatBytes(totalSize),
 						architectures,
 						lastUpdated: latestTag?.lastUpdated || new Date().toISOString(),
 						tags,
 						createdAt: new Date().toISOString(),
-						source: usedSource,
+						source: registryName,
 					};
 
 					set({
@@ -1280,17 +1295,74 @@ export const useRepositoryStore = create<RepositoryStore>()(
 				source?: string,
 			) => {
 				const repoKey = namespace ? `${namespace}/${name}` : name;
-				const sourcePath = source ? `/api/${source}` : "/api/default";
+				const state = get();
 
 				try {
-					const response = await fetchWithTimeout(
-						`${sourcePath}/v2/${encodeURIComponent(repoKey)}`,
-						{
-							method: "DELETE",
-						},
-					);
+					// Find the appropriate client
+					let targetClient: ContainerRegistryClient;
 
-					if (response.ok || response.status === 404) {
+					if (source) {
+						const client = state.clients.find(
+							(c) => c.registry.name === source,
+						);
+						if (!client) {
+							throw new Error(
+								`Registry client not found for source: ${source}`,
+							);
+						}
+						targetClient = client;
+					} else {
+						// Find client based on existing repository metadata
+						const existingRepo = state.repositoryMetas.find((repo) => {
+							const existingKey = repo.namespace
+								? `${repo.namespace}/${repo.name}`
+								: repo.name;
+							return existingKey === repoKey;
+						});
+
+						if (existingRepo?.source) {
+							const client = state.clients.find(
+								(c) => c.registry.name === existingRepo.source,
+							);
+							if (client) {
+								targetClient = client;
+							} else {
+								targetClient = state.clients[0];
+							}
+						} else {
+							targetClient = state.clients[0];
+						}
+					}
+
+					if (!targetClient) {
+						throw new Error("No registry clients available");
+					}
+
+					// Find the repository and get all its tags
+					const repository = await targetClient.repository(name, namespace);
+					if (!repository) {
+						throw new Error(`Repository ${repoKey} not found`);
+					}
+
+					const tags = await repository.tags();
+					let allDeleted = true;
+
+					// Delete all tags in the repository
+					for (const tag of tags) {
+						try {
+							const success = await tag.delete();
+							if (!success) {
+								allDeleted = false;
+								console.warn(`Failed to delete tag ${tag.name}`);
+							}
+						} catch (error) {
+							console.error(`Failed to delete tag ${tag.name}:`, error);
+							allDeleted = false;
+						}
+					}
+
+					if (allDeleted) {
+						// Remove repository from local state since all tags are deleted
 						set(
 							produce((state: RepositoryStore) => {
 								state.repositoryMetas = state.repositoryMetas.filter((repo) => {
@@ -1302,9 +1374,9 @@ export const useRepositoryStore = create<RepositoryStore>()(
 								delete state.repositoryDetails[repoKey];
 							}),
 						);
-						return true;
 					}
-					return false;
+
+					return allDeleted;
 				} catch (error) {
 					console.error("Failed to delete repository:", error);
 					return false;
@@ -1320,33 +1392,70 @@ export const useRepositoryStore = create<RepositoryStore>()(
 				const repoKey = namespace
 					? `${namespace}/${repositoryName}`
 					: repositoryName;
-				const encodedRepoName = encodeURIComponent(repoKey);
-				const sourcePath = source ? `/api/${source}` : "/api/default";
+				const state = get();
 
 				try {
-					const state = get();
-					const repoDetail = state.repositoryDetails[repoKey];
+					// Find the appropriate client
+					let targetClient: ContainerRegistryClient;
 
-					if (!repoDetail) {
-						throw new Error("Repository not found in local cache");
+					if (source) {
+						const client = state.clients.find(
+							(c) => c.registry.name === source,
+						);
+						if (!client) {
+							throw new Error(
+								`Registry client not found for source: ${source}`,
+							);
+						}
+						targetClient = client;
+					} else {
+						// Find client based on existing repository metadata
+						const existingRepo = state.repositoryMetas.find((repo) => {
+							const existingKey = repo.namespace
+								? `${repo.namespace}/${repo.name}`
+								: repo.name;
+							return existingKey === repoKey;
+						});
+
+						if (existingRepo?.source) {
+							const client = state.clients.find(
+								(c) => c.registry.name === existingRepo.source,
+							);
+							if (client) {
+								targetClient = client;
+							} else {
+								targetClient = state.clients[0];
+							}
+						} else {
+							targetClient = state.clients[0];
+						}
 					}
 
-					const tag = repoDetail.tags.find((t) => t.name === tagName);
+					if (!targetClient) {
+						throw new Error("No registry clients available");
+					}
+
+					// Find the repository and tag using OOP approach
+					const repository = await targetClient.repository(
+						repositoryName,
+						namespace,
+					);
+					if (!repository) {
+						throw new Error(`Repository ${repoKey} not found`);
+					}
+
+					const tag = await repository.tag(tagName);
 					if (!tag) {
+						// Tag doesn't exist, consider it successfully "deleted"
 						return true;
 					}
 
-					const deleteResponse = await fetchWithTimeout(
-						`${sourcePath}/v2/${encodedRepoName}/manifests/${tag.digest}`,
-						{
-							method: "DELETE",
-							headers: {
-								Accept: tag.mediaType,
-							},
-						},
-					);
+					// Delete the tag using OOP method
+					// This will use DELETE /v2/<name>/manifests/<digest> with proper digest
+					const success = await tag.delete();
 
-					if (deleteResponse.ok || deleteResponse.status === 404) {
+					if (success) {
+						// Update local state to remove the deleted tag
 						set(
 							produce((state: RepositoryStore) => {
 								const repoDetail = state.repositoryDetails[repoKey];
@@ -1369,9 +1478,9 @@ export const useRepositoryStore = create<RepositoryStore>()(
 								}
 							}),
 						);
-						return true;
 					}
-					return false;
+
+					return success;
 				} catch (error) {
 					console.error("Failed to delete tag:", error);
 					return false;

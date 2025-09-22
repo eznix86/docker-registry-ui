@@ -32,7 +32,7 @@ import type { SelectChangeEvent } from "@mui/material/Select";
 import { useEffect, useMemo, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import { SelectiveDeleteDialog } from "../components/SelectiveDeleteDialog";
-import { useRepositoryStore } from "../store/repositoryStore";
+import { useRepositoryStore, useShallow } from "../store/repositoryStore";
 import { useSnackbarStore } from "../store/snackbarStore";
 import { useSimpleClipboard } from "../utils/useClipboard";
 
@@ -47,7 +47,16 @@ function RepositoryPage() {
 		clearError,
 		deleteTag,
 		sources,
-	} = useRepositoryStore();
+	} = useRepositoryStore(
+		useShallow((state) => ({
+			repositoryDetails: state.repositoryDetails,
+			fetchRepositoryDetail: state.fetchRepositoryDetail,
+			error: state.error,
+			clearError: state.clearError,
+			deleteTag: state.deleteTag,
+			sources: state.sources,
+		})),
+	);
 	const { showSnackbar } = useSnackbarStore();
 	const [loading, setLoading] = useState(false);
 	const [sortBy, setSortBy] = useState("newest");
@@ -698,6 +707,9 @@ function RepositoryPage() {
 																	sx={{ color: "text.primary" }}
 																>
 																	{archInfo.os}/{archInfo.architecture}
+																	{archInfo.variant
+																		? `/${archInfo.variant}`
+																		: ""}
 																</Typography>
 															</TableCell>
 															<TableCell sx={{ borderColor: "divider" }}>

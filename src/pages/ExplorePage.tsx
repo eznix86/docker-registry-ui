@@ -83,6 +83,7 @@ import { Link, useSearchParams } from "react-router-dom";
 import {
 	type RepositoryMeta,
 	useRepositoryStore,
+	useShallow,
 } from "../store/repositoryStore";
 
 function ExplorePage() {
@@ -103,7 +104,23 @@ function ExplorePage() {
 		stopPeriodicRefresh,
 		clearError,
 		hydrated,
-	} = useRepositoryStore();
+	} = useRepositoryStore(
+		useShallow((state) => ({
+			repositoryMetas: state.repositoryMetas,
+			loading: state.loading,
+			loadingStage: state.loadingStage,
+			error: state.error,
+			availableArchitectures: state.availableArchitectures,
+			sources: state.sources,
+			fetchRepositoryMetas: state.fetchRepositoryMetas,
+			fetchStatusCodes: state.fetchStatusCodes,
+			getStatusCodeInfo: state.getStatusCodeInfo,
+			startPeriodicRefresh: state.startPeriodicRefresh,
+			stopPeriodicRefresh: state.stopPeriodicRefresh,
+			clearError: state.clearError,
+			hydrated: state.hydrated,
+		})),
+	);
 
 	const searchQuery = searchParams.get("search");
 	const archQuery = searchParams.get("arch") || "all";

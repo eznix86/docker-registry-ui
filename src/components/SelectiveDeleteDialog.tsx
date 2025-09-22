@@ -14,7 +14,7 @@ import {
 	Typography,
 } from "@mui/material";
 import { useState } from "react";
-import type { ArchitectureInfo, Tag } from "../store/repositoryStore";
+import type { Tag } from "../store/repositoryStore";
 import { useRepositoryStore } from "../store/repositoryStore";
 import { useSnackbarStore } from "../store/snackbarStore";
 
@@ -33,41 +33,39 @@ export function SelectiveDeleteDialog({
 	repositoryKey,
 	tags,
 }: SelectiveDeleteDialogProps) {
-	const [selectedImages, setSelectedImages] = useState<Set<string>>(new Set());
+	const [selectedTags, setSelectedTags] = useState<Set<string>>(new Set());
 	const [isDeleting, setIsDeleting] = useState(false);
 
 	const { deleteRepository, deleteTag } = useRepositoryStore();
 	const { showSnackbar } = useSnackbarStore();
 
-	const allImages = tags.flatMap((tag) =>
-		tag.architectures.map((arch) => `${tag.name}:${arch.digest}`),
-	);
+	const allTags = tags.map((tag) => tag.name);
 
-	const handleImageToggle = (imageId: string) => {
-		const newSelected = new Set(selectedImages);
-		if (newSelected.has(imageId)) {
-			newSelected.delete(imageId);
+	const handleTagToggle = (tagName: string) => {
+		const newSelected = new Set(selectedTags);
+		if (newSelected.has(tagName)) {
+			newSelected.delete(tagName);
 		} else {
-			newSelected.add(imageId);
+			newSelected.add(tagName);
 		}
-		setSelectedImages(newSelected);
+		setSelectedTags(newSelected);
 	};
 
 	const handleSelectAll = () => {
-		if (selectedImages.size === allImages.length) {
-			setSelectedImages(new Set());
+		if (selectedTags.size === allTags.length) {
+			setSelectedTags(new Set());
 		} else {
-			setSelectedImages(new Set(allImages));
+			setSelectedTags(new Set(allTags));
 		}
 	};
 
 	const handleConfirm = async () => {
-		if (selectedImages.size === 0) return;
+		if (selectedTags.size === 0) return;
 
 		setIsDeleting(true);
 
 		try {
-			if (selectedImages.size === allImages.length) {
+			if (selectedTags.size === allTags.length) {
 				const [namespace, name] = repositoryKey.includes("/")
 					? repositoryKey.split("/", 2)
 					: [undefined, repositoryKey];
@@ -86,17 +84,11 @@ export function SelectiveDeleteDialog({
 					);
 				}
 			} else {
-				const imagesToDelete = [...selectedImages].map((imageId) => {
-					const [tagName] = imageId.split(":");
-					return tagName;
-				});
-
-				const uniqueTags = [...new Set(imagesToDelete)];
 				const [namespace, name] = repositoryKey.includes("/")
 					? repositoryKey.split("/", 2)
 					: [undefined, repositoryKey];
 
-				const deletePromises = uniqueTags.map((tagName) =>
+				const deletePromises = [...selectedTags].map((tagName) =>
 					deleteTag(name, tagName, namespace),
 				);
 
@@ -105,16 +97,16 @@ export function SelectiveDeleteDialog({
 					(result) => result.status === "fulfilled" && result.value === true,
 				).length;
 
-				if (successCount === uniqueTags.length) {
+				if (successCount === selectedTags.size) {
 					showSnackbar(
 						`${successCount} tag${successCount !== 1 ? "s" : ""} deleted successfully. To reclaim storage, run registry garbage collection: "registry garbage-collect <config>"`,
 						"success",
 						8000,
 					);
 				} else if (successCount > 0) {
-					const failedCount = uniqueTags.length - successCount;
+					const failedCount = selectedTags.size - successCount;
 					showSnackbar(
-						`${successCount} of ${uniqueTags.length} tags deleted successfully. ${failedCount} deletion${failedCount !== 1 ? "s" : ""} failed. To reclaim storage, run registry garbage collection: "registry garbage-collect <config>"`,
+						`${successCount} of ${selectedTags.size} tags deleted successfully. ${failedCount} deletion${failedCount !== 1 ? "s" : ""} failed. To reclaim storage, run registry garbage collection: "registry garbage-collect <config>"`,
 						"warning",
 						8000,
 					);
@@ -127,26 +119,24 @@ export function SelectiveDeleteDialog({
 			}
 		} finally {
 			setIsDeleting(false);
-			setSelectedImages(new Set());
+			setSelectedTags(new Set());
 			onClose();
 		}
 	};
 
 	const handleCancel = () => {
-		setSelectedImages(new Set());
+		setSelectedTags(new Set());
 		onClose();
 	};
 
 	return (
 		<Dialog open={open} onClose={handleCancel} maxWidth="md" fullWidth>
 			<DialogTitle>
-				<Typography variant="h6">
-					Select Images to Delete from {repositoryName}
-				</Typography>
+				Select Tags to Delete from {repositoryName}
 			</DialogTitle>
 			<DialogContent>
 				<Alert severity="warning" sx={{ mb: 2 }}>
-					This action cannot be undone. Selected images will be permanently
+					This action cannot be undone. Selected tags will be permanently
 					deleted from the repository.
 				</Alert>
 
@@ -154,17 +144,16 @@ export function SelectiveDeleteDialog({
 					<FormControlLabel
 						control={
 							<Checkbox
-								checked={selectedImages.size === allImages.length}
+								checked={selectedTags.size === allTags.length}
 								indeterminate={
-									selectedImages.size > 0 &&
-									selectedImages.size < allImages.length
+									selectedTags.size > 0 && selectedTags.size < allTags.length
 								}
 								onChange={handleSelectAll}
 								icon={<CheckBoxOutlineBlank />}
 								checkedIcon={<CheckBox />}
 							/>
 						}
-						label={`Select All (${allImages.length} images)`}
+						label={`Select All (${allTags.length} tags)`}
 					/>
 				</Box>
 
@@ -179,40 +168,40 @@ export function SelectiveDeleteDialog({
 					}}
 				>
 					<FormGroup>
-						{tags.map((tag) =>
-							tag.architectures.map((arch: ArchitectureInfo) => {
-								const imageId = `${tag.name}:${arch.digest}`;
-								return (
-									<Box key={imageId} sx={{ ml: 2, mb: 1 }}>
-										<FormControlLabel
-											control={
-												<Checkbox
-													checked={selectedImages.has(imageId)}
-													onChange={() => handleImageToggle(imageId)}
-													size="small"
-												/>
-											}
-											label={
-												<Box>
-													<Typography variant="body2" component="span">
-														<strong>{tag.name}</strong> • {arch.os}/
-														{arch.architecture} • {arch.size}
-													</Typography>
-													<Typography
-														variant="caption"
-														component="div"
-														color="text.secondary"
-														sx={{ fontFamily: "monospace" }}
-													>
-														{arch.digest.substring(0, 20)}...
-													</Typography>
-												</Box>
-											}
+						{tags.map((tag) => (
+							<Box key={tag.name} sx={{ ml: 2, mb: 1 }}>
+								<FormControlLabel
+									control={
+										<Checkbox
+											checked={selectedTags.has(tag.name)}
+											onChange={() => handleTagToggle(tag.name)}
+											size="small"
 										/>
-									</Box>
-								);
-							}),
-						)}
+									}
+									label={
+										<Box>
+											<Typography variant="body2" component="span">
+												<strong>{tag.name}</strong> • {tag.size} •{" "}
+												{tag.architectures.length} architecture
+												{tag.architectures.length !== 1 ? "s" : ""}
+											</Typography>
+											<Typography
+												variant="caption"
+												component="div"
+												color="text.secondary"
+											>
+												{tag.architectures
+													.map(
+														(arch) =>
+															`${arch.os}/${arch.architecture}${arch.variant ? `/${arch.variant}` : ""}`,
+													)
+													.join(", ")}
+											</Typography>
+										</Box>
+									}
+								/>
+							</Box>
+						))}
 					</FormGroup>
 				</Box>
 			</DialogContent>
@@ -224,12 +213,12 @@ export function SelectiveDeleteDialog({
 					onClick={handleConfirm}
 					color="error"
 					variant="contained"
-					disabled={selectedImages.size === 0 || isDeleting}
+					disabled={selectedTags.size === 0 || isDeleting}
 					startIcon={isDeleting ? <CircularProgress size={20} /> : null}
 				>
 					{isDeleting
 						? "Deleting..."
-						: `Delete ${selectedImages.size} Selected Image${selectedImages.size !== 1 ? "s" : ""}`}
+						: `Delete ${selectedTags.size} Selected Tag${selectedTags.size !== 1 ? "s" : ""}`}
 				</Button>
 			</DialogActions>
 		</Dialog>
