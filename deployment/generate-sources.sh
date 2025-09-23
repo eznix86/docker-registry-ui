@@ -50,6 +50,21 @@ for var in $(printenv | grep "^REGISTRY_URL" | cut -d= -f1); do
 
     HOST=$(echo "$URL" | sed 's|^https://||' | sed 's|^http://||' | sed 's|/.*$||')
 
+    # Include subdomain or port information
+    if [ "$SOURCE_KEY" != "default" ]; then
+        # Extract subdomain/port to make source key more unique for similar domains
+        SUBDOMAIN=$(echo "$HOST" | cut -d'.' -f1)
+        PORT=$(echo "$HOST" | grep -o ':[0-9]*$' | sed 's/://')
+
+        # If we have a port, include it in the source key
+        if [ -n "$PORT" ]; then
+            SOURCE_KEY="${SOURCE_KEY}_${PORT}"
+        # If subdomain is meaningful (not www), include it
+        elif [ "$SUBDOMAIN" != "www" ] && [ "$SUBDOMAIN" != "$SOURCE_KEY" ]; then
+            SOURCE_KEY="${SUBDOMAIN}_${SOURCE_KEY}"
+        fi
+    fi
+
     if [ -n "$AUTH" ] && [ "$AUTH" != "" ]; then
         AUTH_HEADER="
         proxy_set_header Authorization \"Basic $AUTH\";"
