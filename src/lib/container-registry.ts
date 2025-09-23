@@ -13,6 +13,48 @@ export interface SourceInfo {
 	lastChecked?: number;
 }
 
+
+interface DockerManifestLayer {
+	digest: string;
+	size?: number;
+	mediaType?: string;
+}
+
+interface DockerConfigResponse {
+	architecture?: string;
+	os?: string;
+	config?: {
+		ExposedPorts?: Record<string, Record<string, never>>;
+		Env?: string[];
+		Entrypoint?: string[];
+		Cmd?: string[];
+		WorkingDir?: string;
+		Labels?: Record<string, string>;
+		StopSignal?: string;
+		ArgsEscaped?: boolean;
+	};
+	created?: string;
+	history?: Array<{
+		created?: string;
+		created_by?: string;
+		comment?: string;
+		empty_layer?: boolean;
+	}>;
+	rootfs?: {
+		type: string;
+		diff_ids: string[];
+	};
+}
+
+interface DockerManifestResponse {
+	config?: {
+		size?: number;
+		digest?: string;
+		mediaType?: string;
+	};
+	layers?: DockerManifestLayer[];
+}
+
 interface ManifestReference {
 	digest: string;
 	annotations?: {
@@ -56,7 +98,7 @@ export class Blob {
 		public readonly mediaType: string,
 		private readonly client: ContainerRegistryClient,
 		private readonly repositoryName: string,
-	) {}
+	) { }
 
 	async exists(): Promise<boolean> {
 		try {
@@ -79,14 +121,14 @@ export class Blob {
 		return response.arrayBuffer();
 	}
 
-	async json(): Promise<any> {
+	async json(): Promise<DockerConfigResponse> {
 		if (!this.mediaType.includes("json")) {
 			throw new Error(
 				`Blob ${this.digest} is not JSON (mediaType: ${this.mediaType})`,
 			);
 		}
 		const data = await this.data();
-		return JSON.parse(new TextDecoder().decode(data));
+		return JSON.parse(new TextDecoder().decode(data)) as DockerConfigResponse;
 	}
 
 	get formattedSize(): string {
@@ -104,12 +146,12 @@ export class ConfigBlob {
 		public readonly variant: string | undefined,
 		public readonly created: string | null,
 		public readonly config: {
-			ExposedPorts?: { [port: string]: {} };
+			ExposedPorts?: Record<string, Record<string, never>>;
 			Env?: string[];
 			Entrypoint?: string[];
 			Cmd?: string[];
 			WorkingDir?: string;
-			Labels?: { [key: string]: string };
+			Labels?: Record<string, string>;
 			StopSignal?: string;
 			ArgsEscaped?: boolean;
 		},
@@ -123,14 +165,14 @@ export class ConfigBlob {
 			type: string;
 			diff_ids: string[];
 		},
-		private readonly rawData?: any,
-	) {}
+		private readonly rawData?: DockerConfigResponse,
+	) { }
 
 	get formattedSize(): string {
 		return formatBytes(this.size);
 	}
 
-	getRawData(): any {
+	getRawData(): DockerConfigResponse | undefined {
 		return this.rawData;
 	}
 }
@@ -148,7 +190,7 @@ export class ImageConfig {
 		public readonly os: string,
 		public readonly variant: string | undefined,
 		public readonly created: string | null,
-	) {}
+	) { }
 
 	async blob(): Promise<ConfigBlob> {
 		const configData = await this._blob.json();
@@ -184,7 +226,7 @@ export class Image {
 		public readonly layers: LayerInfo[],
 		readonly _client: ContainerRegistryClient,
 		readonly _repositoryName: string,
-	) {}
+	) { }
 
 	get formattedSize(): string {
 		return formatBytes(this.size);
@@ -210,11 +252,11 @@ export class Manifest {
 		public readonly digest: string,
 		public readonly mediaType: string,
 		public readonly size: number,
-		public readonly raw: any,
+		public readonly raw: DockerManifestResponse,
 		private readonly client: ContainerRegistryClient,
 		private readonly repositoryName: string,
 		private readonly tagName: string,
-	) {}
+	) { }
 
 	async isUpToDate(knownDigest?: string): Promise<boolean> {
 		if (!knownDigest) return false;
@@ -230,7 +272,7 @@ export class Manifest {
 				},
 			});
 
-			return response.status === 304; // Not Modified
+			return response.status === 304;
 		} catch (_error) {
 			return false;
 		}
@@ -239,7 +281,7 @@ export class Manifest {
 	isMultiPlatform(): boolean {
 		return (
 			this.mediaType ===
-				"application/vnd.docker.distribution.manifest.list.v2+json" ||
+			"application/vnd.docker.distribution.manifest.list.v2+json" ||
 			this.mediaType === "application/vnd.oci.image.index.v1+json"
 		);
 	}
@@ -319,7 +361,7 @@ export class Manifest {
 		return new Manifest(
 			manifestDigest,
 			manifestData.mediaType,
-			0, // Size will be calculated
+			0,
 			manifestData,
 			this.client,
 			this.repositoryName,
@@ -330,7 +372,7 @@ export class Manifest {
 	private async singleImage(): Promise<Image | null> {
 		if (
 			this.mediaType !==
-				"application/vnd.docker.distribution.manifest.v2+json" &&
+			"application/vnd.docker.distribution.manifest.v2+json" &&
 			this.mediaType !== "application/vnd.oci.image.manifest.v1+json"
 		) {
 			return null;
@@ -338,7 +380,7 @@ export class Manifest {
 
 		if (!this.raw.config || !this.raw.layers) return null;
 
-		// Create config blob
+
 		const configBlob = new Blob(
 			this.raw.config.digest,
 			this.raw.config.size || 0,
@@ -347,18 +389,20 @@ export class Manifest {
 			this.repositoryName,
 		);
 
-		const layers: LayerInfo[] = this.raw.layers.map((layer: any) => ({
-			digest: layer.digest,
-			size: layer.size || 0,
-			mediaType: layer.mediaType || "application/octet-stream",
-		}));
+		const layers: LayerInfo[] = (this.raw.layers || []).map(
+			(layer: DockerManifestLayer) => ({
+				digest: layer.digest,
+				size: layer.size || 0,
+				mediaType: layer.mediaType || "application/octet-stream",
+			}),
+		);
 
-		// Get config info for architecture and OS
+
 		const configInfo = await this.configInfo();
 		const totalSize =
-			(this.raw.config.size || 0) +
-			this.raw.layers.reduce(
-				(acc: number, layer: any) => acc + (layer.size || 0),
+			(this.raw.config?.size || 0) +
+			(this.raw.layers || []).reduce(
+				(acc: number, layer: DockerManifestLayer) => acc + (layer.size || 0),
 				0,
 			);
 
@@ -427,7 +471,7 @@ export class Tag {
 		public readonly lastUpdated: string,
 		private readonly client: ContainerRegistryClient,
 		private readonly repositoryName: string,
-	) {}
+	) { }
 
 	async manifest(): Promise<Manifest> {
 		const url = `${this.client.registry.sourcePath}/v2/${encodeURIComponent(this.repositoryName)}/manifests/${this.name}`;
@@ -451,7 +495,7 @@ export class Tag {
 		return new Manifest(
 			manifestDigest,
 			manifestData.mediaType,
-			0, // Size will be calculated when images are retrieved
+			0,
 			manifestData,
 			this.client,
 			this.repositoryName,
@@ -462,7 +506,7 @@ export class Tag {
 	async delete(): Promise<boolean> {
 		try {
 			const manifest = await this.manifest();
-			const sourcePath = this.client.registry.sourcePath.replace("/v2", ""); // Remove /v2 for delete API
+			const sourcePath = this.client.registry.sourcePath.replace("/v2", "");
 			const deleteResponse = await fetchWithTimeout(
 				`${sourcePath}/v2/${encodeURIComponent(this.repositoryName)}/manifests/${manifest.digest}`,
 				{
@@ -486,7 +530,7 @@ export class Repository {
 		public readonly name: string,
 		public readonly namespace: string | undefined,
 		private readonly client: ContainerRegistryClient,
-	) {}
+	) { }
 
 	get fullName(): string {
 		return this.namespace ? `${this.namespace}/${this.name}` : this.name;
@@ -519,7 +563,7 @@ export class Repository {
 
 	async delete(): Promise<boolean> {
 		try {
-			const sourcePath = this.client.registry.sourcePath.replace("/v2", ""); // Remove /v2 for delete API
+			const sourcePath = this.client.registry.sourcePath.replace("/v2", "");
 			const response = await fetchWithTimeout(
 				`${sourcePath}/v2/${encodeURIComponent(this.fullName)}`,
 				{ method: "DELETE" },
@@ -540,7 +584,7 @@ export class Registry {
 		public readonly host: string = "",
 		public status?: number,
 		public lastChecked?: number,
-	) {}
+	) { }
 
 	get sourceInfo(): SourceInfo {
 		return {
@@ -606,7 +650,7 @@ export class Registry {
 }
 
 export class ContainerRegistryClient {
-	constructor(public readonly registry: Registry) {}
+	constructor(public readonly registry: Registry) { }
 
 	static async fromSources(
 		sources: Record<string, SourceInfo>,

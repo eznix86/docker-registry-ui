@@ -14,9 +14,9 @@ import {
 	Typography,
 } from "@mui/material";
 import { useState } from "react";
-import type { Tag } from "../store/repositoryStore";
+import toast from "react-hot-toast";
+import type { Tag } from "../hooks/useRepositoryData";
 import { useRepositoryStore } from "../store/repositoryStore";
-import { useSnackbarStore } from "../store/snackbarStore";
 
 interface SelectiveDeleteDialogProps {
 	open: boolean;
@@ -37,7 +37,6 @@ export function SelectiveDeleteDialog({
 	const [isDeleting, setIsDeleting] = useState(false);
 
 	const { deleteRepository, deleteTag } = useRepositoryStore();
-	const { showSnackbar } = useSnackbarStore();
 
 	const allTags = tags.map((tag) => tag.name);
 
@@ -72,16 +71,11 @@ export function SelectiveDeleteDialog({
 
 				const success = await deleteRepository(name, namespace);
 				if (success) {
-					showSnackbar(
-						`Repository "${repositoryName}" deleted successfully. To reclaim storage, run registry garbage collection: "registry garbage-collect <config>"`,
-						"success",
-						8000,
-					);
+					toast.success(`Repository "${repositoryName}" deleted successfully`, {
+						duration: 6000,
+					});
 				} else {
-					showSnackbar(
-						"Failed to delete repository. Please try again.",
-						"error",
-					);
+					toast.error("Failed to delete repository. Please try again.");
 				}
 			} else {
 				const [namespace, name] = repositoryKey.includes("/")
@@ -98,23 +92,18 @@ export function SelectiveDeleteDialog({
 				).length;
 
 				if (successCount === selectedTags.size) {
-					showSnackbar(
-						`${successCount} tag${successCount !== 1 ? "s" : ""} deleted successfully. To reclaim storage, run registry garbage collection: "registry garbage-collect <config>"`,
-						"success",
-						8000,
+					toast.success(
+						`${successCount} tag${successCount !== 1 ? "s" : ""} deleted successfully`,
+						{ duration: 6000 },
 					);
 				} else if (successCount > 0) {
 					const failedCount = selectedTags.size - successCount;
-					showSnackbar(
-						`${successCount} of ${selectedTags.size} tags deleted successfully. ${failedCount} deletion${failedCount !== 1 ? "s" : ""} failed. To reclaim storage, run registry garbage collection: "registry garbage-collect <config>"`,
-						"warning",
-						8000,
+					toast(
+						`${successCount} of ${selectedTags.size} tags deleted. ${failedCount} failed`,
+						{ duration: 6000, icon: "⚠️" },
 					);
 				} else {
-					showSnackbar(
-						"Failed to delete selected tags. Please try again.",
-						"error",
-					);
+					toast.error("Failed to delete selected tags. Please try again.");
 				}
 			}
 		} finally {
@@ -130,12 +119,35 @@ export function SelectiveDeleteDialog({
 	};
 
 	return (
-		<Dialog open={open} onClose={handleCancel} maxWidth="md" fullWidth>
-			<DialogTitle>
-				Select Tags to Delete from {repositoryName}
+		<Dialog
+			open={open}
+			onClose={handleCancel}
+			maxWidth="md"
+			fullWidth
+			PaperProps={{
+				sx: {
+					background: "linear-gradient(135deg, #1a1e23 0%, #0d1117 100%)",
+					border: "1px solid #30363d",
+					borderRadius: "12px",
+					boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)",
+				},
+			}}
+		>
+			<DialogTitle
+				sx={{
+					color: "text.primary",
+					fontWeight: "bold",
+					fontSize: "1.25rem",
+					textAlign: "center",
+					py: 3,
+					borderBottom: "1px solid",
+					borderColor: "divider",
+				}}
+			>
+				Delete tags from {repositoryName}
 			</DialogTitle>
-			<DialogContent>
-				<Alert severity="warning" sx={{ mb: 2 }}>
+			<DialogContent sx={{ pt: 6, pb: 4, px: 4 }}>
+				<Alert severity="warning" sx={{ mt: 4, mb: 4 }}>
 					This action cannot be undone. Selected tags will be permanently
 					deleted from the repository.
 				</Alert>
@@ -205,14 +217,20 @@ export function SelectiveDeleteDialog({
 					</FormGroup>
 				</Box>
 			</DialogContent>
-			<DialogActions>
+			<DialogActions
+				sx={{
+					p: 3,
+					borderTop: "1px solid #30363d",
+					background: "rgba(13, 17, 23, 0.6)",
+				}}
+			>
 				<Button onClick={handleCancel} disabled={isDeleting}>
 					Cancel
 				</Button>
 				<Button
 					onClick={handleConfirm}
-					color="error"
 					variant="contained"
+					color="error"
 					disabled={selectedTags.size === 0 || isDeleting}
 					startIcon={isDeleting ? <CircularProgress size={20} /> : null}
 				>

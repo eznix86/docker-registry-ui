@@ -29,36 +29,38 @@ import {
 	Typography,
 } from "@mui/material";
 import type { SelectChangeEvent } from "@mui/material/Select";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
+import toast from "react-hot-toast";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import { SelectiveDeleteDialog } from "../components/SelectiveDeleteDialog";
+import {
+	useRepository,
+	useRepositoryMutations,
+} from "../hooks/useRepositoryData";
 import { useRepositoryStore, useShallow } from "../store/repositoryStore";
-import { useSnackbarStore } from "../store/snackbarStore";
+import { getRelativeTimeString } from "../utils/format";
 import { useSimpleClipboard } from "../utils/useClipboard";
 
 function RepositoryPage() {
 	const { name, namespace } = useParams<{ name: string; namespace?: string }>();
 	const [searchParams] = useSearchParams();
 	const source = searchParams.get("source") || undefined;
-	const {
-		repositoryDetails,
-		fetchRepositoryDetail,
-		error,
-		clearError,
-		deleteTag,
-		sources,
-	} = useRepositoryStore(
+
+	const { sources } = useRepositoryStore(
 		useShallow((state) => ({
-			repositoryDetails: state.repositoryDetails,
-			fetchRepositoryDetail: state.fetchRepositoryDetail,
-			error: state.error,
-			clearError: state.clearError,
-			deleteTag: state.deleteTag,
 			sources: state.sources,
 		})),
 	);
-	const { showSnackbar } = useSnackbarStore();
-	const [loading, setLoading] = useState(false);
+
+	const {
+		data: repository,
+		isLoading: loading,
+		error,
+		refetch,
+	} = useRepository(name || "", namespace, source);
+
+	const { deleteTag } = useRepositoryMutations();
+
 	const [sortBy, setSortBy] = useState("newest");
 	const [filterQuery, setFilterQuery] = useState("");
 	const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -69,7 +71,6 @@ function RepositoryPage() {
 		() => (namespace ? `${namespace}/${name}` : name || ""),
 		[name, namespace],
 	);
-	const repository = repositoryDetails[repoKey];
 
 	const getSourceHost = () => {
 		if (!source || !sources[source]) {
@@ -131,42 +132,6 @@ function RepositoryPage() {
 
 	const totalSize = repository?.totalSizeFormatted;
 
-	useEffect(() => {
-		if (!name) return;
-
-		if (repository) {
-			setLoading(false);
-			return;
-		}
-
-		let isMounted = true;
-		setLoading(true);
-
-		fetchRepositoryDetail(name, namespace, source).finally(() => {
-			if (isMounted) {
-				setLoading(false);
-			}
-		});
-
-		return () => {
-			isMounted = false;
-		};
-	}, [name, namespace, source, repository, fetchRepositoryDetail]);
-
-	useEffect(() => {
-		if (!name) return;
-
-		const interval = setInterval(() => {
-			if (!document.hidden) {
-				fetchRepositoryDetail(name, namespace, source);
-			}
-		}, 15000);
-
-		return () => {
-			clearInterval(interval);
-		};
-	}, [name, namespace, source, fetchRepositoryDetail]);
-
 	const copyToClipboard = useSimpleClipboard(
 		(method) => {
 			const methodMessages: {
@@ -177,14 +142,11 @@ function RepositoryPage() {
 				manual: "Please copy the command from the dialog.",
 			};
 
-			showSnackbar(methodMessages[method], "success");
+			toast.success(methodMessages[method]);
 		},
 		(error) => {
 			console.error("Copy failed:", error);
-			showSnackbar(
-				"Failed to copy to clipboard. Please copy manually.",
-				"error",
-			);
+			toast.error("Failed to copy to clipboard. Please copy manually.");
 		},
 	);
 
@@ -200,17 +162,24 @@ function RepositoryPage() {
 		const repoName = getRepositoryDisplayName();
 		const confirmMessage = `Are you sure you want to delete tag "${tagName}" from ${repoName}?`;
 		if (window.confirm(confirmMessage)) {
-			const success = await deleteTag(name || "", tagName, namespace);
-			if (success) {
-				showSnackbar(
-					`Tag "${tagName}" deleted successfully. To reclaim storage, run registry garbage collection: "registry garbage-collect <config>"`,
-					"success",
-					8000,
-				);
-				fetchRepositoryDetail(name || "", namespace, source);
-			} else {
-				showSnackbar("Failed to delete tag. Please try again.", "error");
-			}
+			deleteTag.mutate(
+				{
+					repositoryName: name || "",
+					tagName,
+					namespace,
+					source,
+				},
+				{
+					onSuccess: () => {
+						toast.success(`Tag "${tagName}" deleted successfully`, {
+							duration: 6000,
+						});
+					},
+					onError: () => {
+						toast.error("Failed to delete tag. Please try again.");
+					},
+				},
+			);
 		}
 	};
 
@@ -236,31 +205,6 @@ function RepositoryPage() {
 			return `docker pull ${host}/${repoName}:${tagName}`;
 		}
 		return `docker pull ${repoName}:${tagName}`;
-	};
-
-	const getRelativeTimeString = (dateString: string) => {
-		const now = new Date();
-		const date = new Date(dateString);
-		const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
-
-		if (diffInSeconds < 60) {
-			return "just now";
-		} else if (diffInSeconds < 3600) {
-			const minutes = Math.floor(diffInSeconds / 60);
-			return `about ${minutes} minute${minutes !== 1 ? "s" : ""} ago`;
-		} else if (diffInSeconds < 86400) {
-			const hours = Math.floor(diffInSeconds / 3600);
-			return `about ${hours} hour${hours !== 1 ? "s" : ""} ago`;
-		} else if (diffInSeconds < 2592000) {
-			const days = Math.floor(diffInSeconds / 86400);
-			return `about ${days} day${days !== 1 ? "s" : ""} ago`;
-		} else if (diffInSeconds < 31536000) {
-			const months = Math.floor(diffInSeconds / 2592000);
-			return `about ${months} month${months !== 1 ? "s" : ""} ago`;
-		} else {
-			const years = Math.floor(diffInSeconds / 31536000);
-			return `about ${years} year${years !== 1 ? "s" : ""} ago`;
-		}
 	};
 
 	if (loading) {
@@ -289,8 +233,8 @@ function RepositoryPage() {
 			<Box sx={{ minHeight: "100vh", bgcolor: "background.default" }}>
 				<Box sx={{ p: 3 }}>
 					{error && (
-						<Alert severity="error" sx={{ mb: 3 }} onClose={clearError}>
-							{error}
+						<Alert severity="error" sx={{ mb: 3 }} onClose={() => refetch()}>
+							{error.message || "Failed to load repository"}
 						</Alert>
 					)}
 					<Typography variant="h4">Repository not found</Typography>
@@ -326,8 +270,8 @@ function RepositoryPage() {
 				</Breadcrumbs>
 
 				{error && (
-					<Alert severity="error" sx={{ mb: 3 }} onClose={clearError}>
-						{error}
+					<Alert severity="error" sx={{ mb: 3 }} onClose={() => refetch()}>
+						{error.message || "Failed to load repository"}
 					</Alert>
 				)}
 

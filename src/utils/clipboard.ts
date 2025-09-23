@@ -1,8 +1,3 @@
-/**
- * Robust clipboard utility with multiple fallback methods
- * Handles various browser environments and security contexts
- */
-
 export interface ClipboardResult {
 	success: boolean;
 	method: "modern" | "fallback" | "manual" | "failed";
@@ -91,11 +86,9 @@ export async function copyToClipboard(
  * @param text - The text to copy manually
  */
 function showManualCopyDialog(text: string): void {
-	// Use window.prompt which automatically selects the text for easy copying
 	if (window.prompt) {
 		window.prompt("Please select all and copy (Ctrl+C or Cmd+C):", text);
 	} else {
-		// Final fallback - just alert with the text
 		const message = `Copy failed. Please copy the command manually:\n\n${text}`;
 		alert(message);
 	}
@@ -103,7 +96,6 @@ function showManualCopyDialog(text: string): void {
 
 /**
  * Check if clipboard API is available in current environment
- * @returns Boolean indicating if modern clipboard API is available
  */
 export function isClipboardAvailable(): boolean {
 	return !!(
@@ -114,7 +106,6 @@ export function isClipboardAvailable(): boolean {
 
 /**
  * Check if any clipboard functionality is available
- * @returns Boolean indicating if any clipboard method is available
  */
 export function isAnyClipboardMethodAvailable(): boolean {
 	return (
@@ -126,7 +117,6 @@ export function isAnyClipboardMethodAvailable(): boolean {
 
 /**
  * Get the most appropriate clipboard method for current environment
- * @returns String indicating the method that would be used
  */
 export function getPreferredClipboardMethod(): ClipboardResult["method"] {
 	if (isClipboardAvailable()) {

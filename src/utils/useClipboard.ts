@@ -7,7 +7,7 @@ import {
 
 export interface UseClipboardOptions
 	extends Omit<ClipboardOptions, "onSuccess" | "onError" | "onManualCopy"> {
-	resetAfter?: number; // Reset copied state after X milliseconds
+	resetAfter?: number;
 }
 
 export interface UseClipboardReturn {
