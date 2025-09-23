@@ -64,6 +64,10 @@ function App() {
 								path="/repository/:namespace/:name"
 								element={<RepositoryPage />}
 							/>
+							<Route
+								path="/repository/:namespace/:name/*"
+								element={<RepositoryPage />}
+							/>
 						</Routes>
 					</Layout>
 					<Toaster

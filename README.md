@@ -101,6 +101,8 @@ For Kubernetes, extend the `env` configuration in your Helm values.
 
 As of `v0.3.2`, the env `REGISTRY_AUTH` or `REGISTRY_AUTH_<SUFFIX>` can be omitted for no auth registries
 
+As of `v0.5.0`, Github Container Registry is supported. Use `REGISTRY_URL_XXX="https://ghcr.io"` and `REGISTRY_AUTH_XXX="base64 of github-username:PAT"` where the [PAT (Personal Access Token)](https://github.com/settings/tokens) has the `delete:packages, repo, write:packages` permissions.
+
 ---
 
 ## Contributing

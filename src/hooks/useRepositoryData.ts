@@ -1,11 +1,12 @@
+import type { QueryClient } from "@tanstack/react-query";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import type {
 	ContainerRegistryClient,
+	Manifest,
 	Repository,
 } from "../lib/container-registry";
 import { useRepositoryStore, useShallow } from "../store/repositoryStore";
-
 
 export interface RepositoryMeta {
 	name: string;
@@ -47,7 +48,6 @@ export interface RepositoryDetail {
 	source?: string;
 }
 
-
 function formatBytes(bytes: number): string {
 	if (bytes === 0) return "0 Bytes";
 	const k = 1024;
@@ -55,7 +55,6 @@ function formatBytes(bytes: number): string {
 	const i = Math.floor(Math.log(bytes) / Math.log(k));
 	return `${parseFloat((bytes / k ** i).toFixed(2))} ${sizes[i]}`;
 }
-
 
 function calculateRepositorySize(tags: Tag[]): number {
 	return tags.reduce((sum, tag) => {
@@ -76,7 +75,6 @@ function calculateRepositorySize(tags: Tag[]): number {
 	}, 0);
 }
 
-
 export interface LoadingProgress {
 	progress: number;
 	message: string;
@@ -84,10 +82,10 @@ export interface LoadingProgress {
 	totalSteps: number;
 }
 
-
 async function fetchRepositories(
 	clients: ContainerRegistryClient[],
 	onProgress?: (progress: LoadingProgress) => void,
+	queryClient?: QueryClient,
 ): Promise<RepositoryMeta[]> {
 	if (clients.length === 0) {
 		throw new Error("No registry clients available");
@@ -96,7 +94,6 @@ async function fetchRepositories(
 	const allRepos: RepositoryMeta[] = [];
 	let totalRepositories = 0;
 	let processedRepositories = 0;
-
 
 	onProgress?.({
 		progress: 0,
@@ -119,10 +116,8 @@ async function fetchRepositories(
 		}
 	}
 
-
 	for (const { client, repos } of clientRepos) {
 		try {
-
 			for (const repo of repos) {
 				processedRepositories++;
 				const progress = (processedRepositories / totalRepositories) * 100;
@@ -137,13 +132,75 @@ async function fetchRepositories(
 				try {
 					const tags = await repo.tags();
 
-
 					const sampleTags = tags.slice(0, 2);
 					const processedTags: Tag[] = [];
 
 					for (const tag of sampleTags) {
 						try {
-							const manifest = await tag.manifest();
+							let manifest: Manifest;
+
+							if (queryClient) {
+								const cachedDigest = queryClient.getQueryData<string>([
+									"manifest-digest",
+									client.registry.name,
+									repo.fullName || repo.name,
+									tag.name,
+								]);
+
+								if (cachedDigest && (await tag.isUpToDate(cachedDigest))) {
+									// Manifest is up to date, but we still need to create a proper instance
+									// Skip the network request by getting cached manifest data if available
+									const cachedManifestData = queryClient.getQueryData<Manifest>([
+										"manifest-data",
+										client.registry.name,
+										repo.fullName || repo.name,
+										tag.name,
+									]);
+
+									if (cachedManifestData) {
+										// Create Manifest instance from cached raw data
+										const { Manifest } = await import(
+											"../lib/container-registry"
+										);
+										manifest = new Manifest(
+											cachedDigest,
+											cachedManifestData.mediaType,
+											cachedManifestData.size || 0,
+											cachedManifestData,
+											client,
+											repo.fullName || repo.name,
+											tag.name,
+										);
+									} else {
+										// Fall back to fetching if no cached data
+										manifest = await tag.manifest();
+									}
+								} else {
+									// Fetch new manifest and cache both digest and raw data
+									manifest = await tag.manifest();
+									queryClient.setQueryData(
+										[
+											"manifest-digest",
+											client.registry.name,
+											repo.fullName || repo.name,
+											tag.name,
+										],
+										manifest.digest,
+									);
+									queryClient.setQueryData(
+										[
+											"manifest-data",
+											client.registry.name,
+											repo.fullName || repo.name,
+											tag.name,
+										],
+										manifest.raw,
+									);
+								}
+							} else {
+								manifest = await tag.manifest();
+							}
+
 							const images = await manifest.images();
 
 							if (images.length === 0) continue;
@@ -152,7 +209,6 @@ async function fetchRepositories(
 								(image) => image.architectureInfo,
 							);
 
-
 							let totalSize = 0;
 							if (manifest.isMultiPlatform()) {
 								totalSize = images.reduce((sum, image) => sum + image.size, 0);
@@ -160,16 +216,13 @@ async function fetchRepositories(
 								totalSize = images[0].size;
 							}
 
-
 							let lastUpdated = new Date().toISOString();
 							try {
 								const configBlob = await images[0].config.blob();
 								if (configBlob.created) {
 									lastUpdated = configBlob.created;
 								}
-							} catch (_error) {
-
-							}
+							} catch (_error) { }
 
 							processedTags.push({
 								name: tag.name,
@@ -215,7 +268,6 @@ async function fetchRepositories(
 							source: client.registry.name,
 						});
 					} else {
-
 						allRepos.push({
 							name: repo.name,
 							namespace: repo.namespace,
@@ -243,17 +295,16 @@ async function fetchRepositories(
 	return allRepos;
 }
 
-
 async function fetchRepositoryDetail(
 	name: string,
 	namespace?: string,
 	source?: string,
 	clients: ContainerRegistryClient[] = [],
+	queryClient?: QueryClient,
 ): Promise<RepositoryDetail> {
 	if (clients.length === 0) {
 		throw new Error("No registry clients available");
 	}
-
 
 	let targetClient: ContainerRegistryClient;
 	if (source) {
@@ -266,7 +317,6 @@ async function fetchRepositoryDetail(
 		targetClient = clients[0];
 	}
 
-
 	const repository = await targetClient.repository(name, namespace);
 	if (!repository) {
 		throw new Error(
@@ -274,20 +324,79 @@ async function fetchRepositoryDetail(
 		);
 	}
 
-
-	const oopTags = await repository.tags();
+	const remoteTags = await repository.tags();
 	const tags: Tag[] = [];
 
-
-	for (const oopTag of oopTags) {
+	for (const remoteTag of remoteTags) {
 		try {
-			const manifest = await oopTag.manifest();
+			let manifest: Manifest;
+
+			if (queryClient) {
+				// Check if we have a cached digest and if manifest is up to date
+				const cachedDigest = queryClient.getQueryData<string>([
+					"manifest-digest",
+					targetClient.registry.name,
+					namespace ? `${namespace}/${name}` : name,
+					remoteTag.name,
+				]);
+
+				if (cachedDigest && (await remoteTag.isUpToDate(cachedDigest))) {
+					// Manifest is up to date, but we still need to create a proper instance
+					// Skip the network request by getting cached manifest data if available
+					const cachedManifestData = queryClient.getQueryData([
+						"manifest-data",
+						targetClient.registry.name,
+						namespace ? `${namespace}/${name}` : name,
+						remoteTag.name,
+					]);
+
+					if (cachedManifestData) {
+						// Create Manifest instance from cached raw data
+						const { Manifest } = await import("../lib/container-registry");
+						manifest = new Manifest(
+							cachedDigest,
+							cachedManifestData.mediaType,
+							cachedManifestData.size || 0,
+							cachedManifestData,
+							targetClient,
+							namespace ? `${namespace}/${name}` : name,
+							remoteTag.name,
+						);
+					} else {
+						// Fall back to fetching if no cached data
+						manifest = await remoteTag.manifest();
+					}
+				} else {
+					// Fetch new manifest and cache both digest and raw data
+					manifest = await remoteTag.manifest();
+					queryClient.setQueryData(
+						[
+							"manifest-digest",
+							targetClient.registry.name,
+							namespace ? `${namespace}/${name}` : name,
+							remoteTag.name,
+						],
+						manifest.digest,
+					);
+					queryClient.setQueryData(
+						[
+							"manifest-data",
+							targetClient.registry.name,
+							namespace ? `${namespace}/${name}` : name,
+							remoteTag.name,
+						],
+						manifest.raw,
+					);
+				}
+			} else {
+				manifest = await remoteTag.manifest();
+			}
+
 			const images = await manifest.images();
 
 			if (images.length === 0) continue;
 
 			const architectures = images.map((image) => image.architectureInfo);
-
 
 			let totalSize = 0;
 			if (manifest.isMultiPlatform()) {
@@ -296,19 +405,16 @@ async function fetchRepositoryDetail(
 				totalSize = images[0].size;
 			}
 
-
 			let lastUpdated = new Date().toISOString();
 			try {
 				const configBlob = await images[0].config.blob();
 				if (configBlob.created) {
 					lastUpdated = configBlob.created;
 				}
-			} catch (_error) {
-
-			}
+			} catch (_error) { }
 
 			tags.push({
-				name: oopTag.name,
+				name: remoteTag.name,
 				digest: manifest.digest,
 				size: formatBytes(totalSize),
 				lastUpdated,
@@ -316,7 +422,7 @@ async function fetchRepositoryDetail(
 				mediaType: manifest.mediaType,
 			});
 		} catch (error) {
-			console.warn(`Failed to process tag ${oopTag.name}:`, error);
+			console.warn(`Failed to process tag ${remoteTag.name}:`, error);
 		}
 	}
 
@@ -344,7 +450,7 @@ async function fetchRepositoryDetail(
 	return {
 		name,
 		namespace,
-		tagCount: oopTags.length,
+		tagCount: remoteTags.length,
 		totalSize,
 		totalSizeFormatted: formatBytes(totalSize),
 		architectures,
@@ -355,10 +461,10 @@ async function fetchRepositoryDetail(
 	};
 }
 
-
 export function useRepositories() {
 	const [loadingProgress, setLoadingProgress] =
 		useState<LoadingProgress | null>(null);
+	const queryClient = useQueryClient();
 	const { clients, initializeClients } = useRepositoryStore(
 		useShallow((state) => ({
 			clients: state.clients,
@@ -368,7 +474,6 @@ export function useRepositories() {
 
 	const selectRepositories = useMemo(
 		() => (data: RepositoryMeta[]) => {
-
 			return [...data].sort((a, b) => {
 				const aName = `${a.namespace || ""}/${a.name}`;
 				const bName = `${b.namespace || ""}/${b.name}`;
@@ -381,7 +486,6 @@ export function useRepositories() {
 	const queryResult = useQuery({
 		queryKey: ["repositories"],
 		queryFn: async () => {
-
 			setLoadingProgress({
 				progress: 0,
 				message: "Starting refresh...",
@@ -390,18 +494,22 @@ export function useRepositories() {
 			});
 
 			try {
-
 				if (clients.length === 0) {
 					await initializeClients();
 					const updatedState = useRepositoryStore.getState();
 					const result = await fetchRepositories(
 						updatedState.clients,
 						setLoadingProgress,
+						queryClient,
 					);
 					setLoadingProgress(null);
 					return result;
 				}
-				const result = await fetchRepositories(clients, setLoadingProgress);
+				const result = await fetchRepositories(
+					clients,
+					setLoadingProgress,
+					queryClient,
+				);
 				setLoadingProgress(null);
 				return result;
 			} catch (error) {
@@ -419,12 +527,12 @@ export function useRepositories() {
 	};
 }
 
-
 export function useRepository(
 	name: string,
 	namespace?: string,
 	source?: string,
 ) {
+	const queryClient = useQueryClient();
 	const { clients } = useRepositoryStore(
 		useShallow((state) => ({
 			clients: state.clients,
@@ -435,7 +543,6 @@ export function useRepository(
 
 	const selectRepository = useMemo(
 		() => (data: RepositoryDetail) => {
-
 			return {
 				...data,
 				tags: [...data.tags].sort((a, b) => a.name.localeCompare(b.name)),
@@ -446,13 +553,13 @@ export function useRepository(
 
 	return useQuery({
 		queryKey: ["repository", repoKey, source],
-		queryFn: () => fetchRepositoryDetail(name, namespace, source, clients),
+		queryFn: () =>
+			fetchRepositoryDetail(name, namespace, source, clients, queryClient),
 		enabled: !!name && clients.length > 0,
 		select: selectRepository,
 		refetchInterval: 30 * 1000,
 	});
 }
-
 
 export function useRepositoryMutations() {
 	const queryClient = useQueryClient();
@@ -480,7 +587,6 @@ export function useRepositoryMutations() {
 			return { success, name, namespace, source };
 		},
 		onSuccess: (data) => {
-
 			const repoKey = data.namespace
 				? `${data.namespace}/${data.name}`
 				: data.name;
@@ -516,7 +622,6 @@ export function useRepositoryMutations() {
 			return success;
 		},
 		onSuccess: (_, variables) => {
-
 			const repoKey = variables.namespace
 				? `${variables.namespace}/${variables.repositoryName}`
 				: variables.repositoryName;

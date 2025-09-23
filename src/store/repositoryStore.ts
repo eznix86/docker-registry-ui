@@ -6,7 +6,6 @@ import {
 	type SourceInfo,
 } from "../lib/container-registry";
 
-
 const storage = createJSONStorage(() => ({
 	getItem: async (name: string) => {
 		const value = await idbGet(name);
@@ -24,7 +23,6 @@ interface SimpleRepositoryStore {
 	clients: ContainerRegistryClient[];
 	sources: Record<string, SourceInfo>;
 	hydrated: boolean;
-
 
 	initializeClients: () => Promise<void>;
 	deleteRepository: (
@@ -56,11 +54,9 @@ async function fetchSources(): Promise<Record<string, SourceInfo>> {
 export const useRepositoryStore = create<SimpleRepositoryStore>()(
 	persist(
 		(set, get) => ({
-
 			clients: [],
 			sources: {},
 			hydrated: false,
-
 
 			initializeClients: async () => {
 				try {
@@ -81,7 +77,6 @@ export const useRepositoryStore = create<SimpleRepositoryStore>()(
 				}
 			},
 
-
 			deleteRepository: async (
 				name: string,
 				namespace?: string,
@@ -90,12 +85,11 @@ export const useRepositoryStore = create<SimpleRepositoryStore>()(
 				const state = get();
 
 				try {
-
 					let targetClient: ContainerRegistryClient;
 
 					if (source) {
 						const client = state.clients.find(
-							(c) => c.registry.name === source,
+							(c) => c.registry.name === source || c.registry.registryType === source,
 						);
 						if (!client) {
 							throw new Error(
@@ -110,7 +104,6 @@ export const useRepositoryStore = create<SimpleRepositoryStore>()(
 						targetClient = state.clients[0];
 					}
 
-
 					const repository = await targetClient.repository(name, namespace);
 					if (!repository) {
 						throw new Error(
@@ -120,7 +113,6 @@ export const useRepositoryStore = create<SimpleRepositoryStore>()(
 
 					const tags = await repository.tags();
 					let allDeleted = true;
-
 
 					for (const tag of tags) {
 						try {
@@ -142,7 +134,6 @@ export const useRepositoryStore = create<SimpleRepositoryStore>()(
 				}
 			},
 
-
 			deleteTag: async (
 				repositoryName: string,
 				tagName: string,
@@ -152,12 +143,11 @@ export const useRepositoryStore = create<SimpleRepositoryStore>()(
 				const state = get();
 
 				try {
-
 					let targetClient: ContainerRegistryClient;
 
 					if (source) {
 						const client = state.clients.find(
-							(c) => c.registry.name === source,
+							(c) => c.registry.name === source || c.registry.registryType === source,
 						);
 						if (!client) {
 							throw new Error(
@@ -172,7 +162,6 @@ export const useRepositoryStore = create<SimpleRepositoryStore>()(
 						targetClient = state.clients[0];
 					}
 
-
 					const repository = await targetClient.repository(
 						repositoryName,
 						namespace,
@@ -185,10 +174,8 @@ export const useRepositoryStore = create<SimpleRepositoryStore>()(
 
 					const tag = await repository.tag(tagName);
 					if (!tag) {
-
 						return true;
 					}
-
 
 					const success = await tag.delete();
 					return success;
@@ -197,7 +184,6 @@ export const useRepositoryStore = create<SimpleRepositoryStore>()(
 					return false;
 				}
 			},
-
 
 			setHydrated: (hydrated: boolean) => set({ hydrated }),
 		}),
@@ -213,6 +199,5 @@ export const useRepositoryStore = create<SimpleRepositoryStore>()(
 		},
 	),
 );
-
 
 export { useShallow } from "zustand/react/shallow";

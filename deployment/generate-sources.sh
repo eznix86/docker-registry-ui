@@ -7,6 +7,7 @@ SOURCES_FILE="/usr/share/nginx/html/sources.json"
 NGINX_TEMPLATE="/etc/nginx/conf.d/nginx.conf.template"
 NGINX_CONFIG="/etc/nginx/conf.d/default.conf"
 LOCATION_TEMPLATE="/etc/nginx/conf.d/nginx-location.template"
+GITHUB_TEMPLATE="/etc/nginx/conf.d/nginx-github.template"
 
 echo "🔧 Generating sources configuration from environment variables..."
 
@@ -21,7 +22,20 @@ generate_location() {
     local source_url="$2"
     local source_host="$3"
     local auth_header="$4"
+    local is_github="$5"
+    local github_auth_header="$6"
 
+    if [ "$is_github" = true ]; then
+        # Use GitHub template for GitHub registries
+        SOURCE_KEY="$source_key" \
+        SOURCE_URL="$source_url" \
+        SOURCE_HOST="$source_host" \
+        SOURCE_AUTH_HEADER="$auth_header" \
+        GITHUB_AUTH_HEADER="$github_auth_header" \
+        envsubst '$SOURCE_KEY $SOURCE_URL $SOURCE_HOST $SOURCE_AUTH_HEADER $GITHUB_AUTH_HEADER' < "$GITHUB_TEMPLATE"
+    fi
+
+    # Always include standard location block
     SOURCE_KEY="$source_key" \
     SOURCE_URL="$source_url" \
     SOURCE_HOST="$source_host" \
@@ -50,6 +64,12 @@ for var in $(printenv | grep "^REGISTRY_URL" | cut -d= -f1); do
 
     HOST=$(echo "$URL" | sed 's|^https://||' | sed 's|^http://||' | sed 's|/.*$||')
 
+    # Detect if this is a GitHub registry
+    IS_GITHUB_REGISTRY=false
+    if echo "$HOST" | grep -q "ghcr.io"; then
+        IS_GITHUB_REGISTRY=true
+    fi
+
     # Include subdomain or port information
     if [ "$SOURCE_KEY" != "default" ]; then
         # Extract subdomain/port to make source key more unique for similar domains
@@ -66,12 +86,39 @@ for var in $(printenv | grep "^REGISTRY_URL" | cut -d= -f1); do
     fi
 
     if [ -n "$AUTH" ] && [ "$AUTH" != "" ]; then
-        AUTH_HEADER="
+        if [ "$IS_GITHUB_REGISTRY" = true ]; then
+            # For GitHub, extract password from base64 username:password for authentication
+            DECODED_AUTH=$(echo "$AUTH" | base64 -d)
+            if echo "$DECODED_AUTH" | grep -q ":"; then
+                GITHUB_PASSWORD=$(echo "$DECODED_AUTH" | cut -d':' -f2)
+            else
+                GITHUB_PASSWORD="$DECODED_AUTH"
+            fi
+            # GitHub uses Bearer tokens - password for API, base64(password) for v2
+            GITHUB_PASSWORD_B64=$(echo -n "$GITHUB_PASSWORD" | base64 | tr -d '\n')
+
+            # Docker Registry v2 auth for ghcr.io/v2 - Bearer with base64 password
+            AUTH_HEADER="
+        proxy_set_header Authorization \"Bearer $GITHUB_PASSWORD_B64\";"
+            # GitHub API auth for api.github.com - Bearer with raw password
+            GITHUB_AUTH_HEADER="
+        proxy_set_header Authorization \"Bearer $GITHUB_PASSWORD\";
+        proxy_set_header User-Agent \"container-registry-ui\";"
+            echo "✅ Found GitHub source: $SOURCE_KEY -> $HOST (with auth)"
+        else
+            AUTH_HEADER="
         proxy_set_header Authorization \"Basic $AUTH\";"
-        echo "✅ Found source: $SOURCE_KEY -> $HOST (with auth)"
+            GITHUB_AUTH_HEADER=""
+            echo "✅ Found source: $SOURCE_KEY -> $HOST (with auth)"
+        fi
     else
         AUTH_HEADER=""
-        echo "✅ Found source: $SOURCE_KEY -> $HOST (no auth)"
+        GITHUB_AUTH_HEADER=""
+        if [ "$IS_GITHUB_REGISTRY" = true ]; then
+            echo "✅ Found GitHub source: $SOURCE_KEY -> $HOST (no auth)"
+        else
+            echo "✅ Found source: $SOURCE_KEY -> $HOST (no auth)"
+        fi
     fi
 
     if [ "$FIRST_SOURCE" = false ]; then
@@ -80,10 +127,24 @@ for var in $(printenv | grep "^REGISTRY_URL" | cut -d= -f1); do
 
     echo "  \"$SOURCE_KEY\": {" >> "$SOURCES_FILE"
     echo "    \"path\": \"/api/$SOURCE_KEY\"," >> "$SOURCES_FILE"
-    echo "    \"host\": \"$HOST\"" >> "$SOURCES_FILE"
+
+    # Add username for GitHub registries
+    if [ "$IS_GITHUB_REGISTRY" = true ] && [ -n "$AUTH" ] && [ "$AUTH" != "" ]; then
+        DECODED_AUTH=$(echo "$AUTH" | base64 -d)
+        if echo "$DECODED_AUTH" | grep -q ":"; then
+            GITHUB_USERNAME=$(echo "$DECODED_AUTH" | cut -d':' -f1)
+        else
+            GITHUB_USERNAME="unknown"
+        fi
+        echo "    \"host\": \"$HOST\"," >> "$SOURCES_FILE"
+        echo "    \"username\": \"$GITHUB_USERNAME\"" >> "$SOURCES_FILE"
+    else
+        echo "    \"host\": \"$HOST\"" >> "$SOURCES_FILE"
+    fi
+
     echo -n "  }" >> "$SOURCES_FILE"
 
-    LOCATION_BLOCK=$(generate_location "$SOURCE_KEY" "$URL" "$HOST" "$AUTH_HEADER")
+    LOCATION_BLOCK=$(generate_location "$SOURCE_KEY" "$URL" "$HOST" "$AUTH_HEADER" "$IS_GITHUB_REGISTRY" "$GITHUB_AUTH_HEADER")
     NGINX_PROXY_LOCATIONS="${NGINX_PROXY_LOCATIONS}${LOCATION_BLOCK}
 
 "

@@ -31,7 +31,12 @@ import {
 import type { SelectChangeEvent } from "@mui/material/Select";
 import { useMemo, useState } from "react";
 import toast from "react-hot-toast";
-import { Link, useParams, useSearchParams } from "react-router-dom";
+import {
+	Link,
+	useLocation,
+	useParams,
+	useSearchParams,
+} from "react-router-dom";
 import { SelectiveDeleteDialog } from "../components/SelectiveDeleteDialog";
 import {
 	useRepository,
@@ -42,9 +47,32 @@ import { getRelativeTimeString } from "../utils/format";
 import { useSimpleClipboard } from "../utils/useClipboard";
 
 function RepositoryPage() {
-	const { name, namespace } = useParams<{ name: string; namespace?: string }>();
+	const { name: paramName, namespace: paramNamespace } = useParams<{
+		name: string;
+		namespace?: string;
+	}>();
 	const [searchParams] = useSearchParams();
+	const location = useLocation();
 	const source = searchParams.get("source") || undefined;
+
+	const { name, namespace } = useMemo(() => {
+		const pathParts = location.pathname
+			.replace(/^\/repository\//, "")
+			.split("/");
+
+		if (pathParts.length === 1) {
+			return { name: decodeURIComponent(pathParts[0]), namespace: undefined };
+		} else if (pathParts.length >= 2) {
+			const namespace = decodeURIComponent(pathParts[0]);
+			const name = pathParts
+				.slice(1)
+				.map((part) => decodeURIComponent(part))
+				.join("/");
+			return { name, namespace };
+		}
+
+		return { name: paramName || "", namespace: paramNamespace };
+	}, [location.pathname, paramName, paramNamespace]);
 
 	const { sources } = useRepositoryStore(
 		useShallow((state) => ({

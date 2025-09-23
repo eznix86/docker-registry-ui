@@ -1,0 +1,152 @@
+    # GitHub API proxy for source: ${SOURCE_KEY} (${SOURCE_HOST})
+    location /api/${SOURCE_KEY}/github/ {
+        # Remove /api/${SOURCE_KEY}/github from the path when proxying
+        rewrite ^/api/${SOURCE_KEY}/github/(.*)$ /$1 break;
+
+        proxy_pass https://api.github.com;
+        proxy_set_header Host api.github.com;${GITHUB_AUTH_HEADER}
+        proxy_pass_request_headers on;
+
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+
+        # Handle GitHub API redirects
+        proxy_intercept_errors on;
+        error_page 301 302 303 307 308 = @handle_github_api_redirect_${SOURCE_KEY};
+
+        # CORS headers for GitHub API requests
+        add_header 'Access-Control-Allow-Origin' '*' always;
+        add_header 'Access-Control-Allow-Methods' 'GET, HEAD, OPTIONS' always;
+        add_header 'Access-Control-Allow-Headers' '*' always;
+
+        proxy_redirect off;
+        proxy_buffering off;
+        proxy_ssl_server_name on;
+    }
+
+    # Handle GitHub API redirects internally for source: ${SOURCE_KEY}
+    location @handle_github_api_redirect_${SOURCE_KEY} {
+        internal;
+
+        # Extract redirect URL from upstream response
+        set $redirect_uri $upstream_http_location;
+
+        # Validate redirect URI exists
+        if ($redirect_uri = "") {
+            return 502;
+        }
+
+        # Proxy to the redirect URL
+        proxy_pass $redirect_uri;
+        proxy_set_header Host $proxy_host;
+        proxy_set_header Connection '';
+        proxy_http_version 1.1;
+
+        # Essential headers for API requests
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+
+        # Add CORS headers
+        add_header 'Access-Control-Allow-Origin' '*' always;
+        add_header 'Access-Control-Allow-Methods' 'GET, HEAD, OPTIONS' always;
+        add_header 'Access-Control-Allow-Headers' '*' always;
+
+        proxy_buffering off;
+        proxy_ssl_server_name on;
+        proxy_ssl_verify off;
+    }
+
+    # GitHub Container Registry blob redirect handler for source: ${SOURCE_KEY}
+    location ~ ^/api/${SOURCE_KEY}/v2/.+/blobs/.+ {
+        # Remove /api/${SOURCE_KEY} from the path when proxying
+        rewrite ^/api/${SOURCE_KEY}/(.*)$ /$1 break;
+
+        # Debug headers for blob requests
+        add_header 'X-Debug-Blob-Request' 'true' always;
+        add_header 'X-Debug-Upstream-URL' '${SOURCE_URL}$1' always;
+
+        proxy_pass ${SOURCE_URL};
+        proxy_set_header Host ${SOURCE_HOST};${SOURCE_AUTH_HEADER}
+        proxy_pass_request_headers on;
+
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+
+        # Handle redirects for GitHub blob requests
+        proxy_intercept_errors on;
+        error_page 301 302 307 308 = @handle_github_redirect_${SOURCE_KEY};
+
+        # CORS headers for blob requests
+        add_header 'Access-Control-Allow-Origin' '*' always;
+        add_header 'Access-Control-Allow-Methods' 'GET, HEAD, OPTIONS' always;
+        add_header 'Access-Control-Allow-Headers' '*' always;
+
+        proxy_buffering off;
+        proxy_ssl_server_name on;
+    }
+
+    # Handle GitHub redirects internally for source: ${SOURCE_KEY}
+    location @handle_github_redirect_${SOURCE_KEY} {
+        internal;
+
+        # Extract redirect URL from upstream response
+        set $redirect_uri $upstream_http_location;
+
+        # Add debugging - log the redirect URI
+        access_log /var/log/nginx/github_redirects.log combined;
+
+        # Validate redirect URI exists and is a valid URL
+        if ($redirect_uri = "") {
+            add_header 'X-Debug-Error' 'No redirect URI provided' always;
+            return 502;
+        }
+
+        # Additional validation for HTTPS URLs
+        if ($redirect_uri !~ "^https://") {
+            add_header 'X-Debug-Error' 'Invalid redirect URI format' always;
+            add_header 'X-Debug-URI' $redirect_uri always;
+            return 502;
+        }
+
+        # Proxy to the redirect URL with minimal headers
+        proxy_pass $redirect_uri;
+
+        # Clear all existing headers and set minimal required ones
+        proxy_pass_request_headers off;
+        proxy_set_header Host $proxy_host;
+        proxy_set_header Connection "close";
+        proxy_set_header User-Agent "nginx-proxy";
+        proxy_http_version 1.1;
+
+        # Add CORS headers
+        add_header 'Access-Control-Allow-Origin' '*' always;
+        add_header 'Access-Control-Allow-Methods' 'GET, HEAD, OPTIONS' always;
+        add_header 'Access-Control-Allow-Headers' '*' always;
+
+        # Cache control for blobs
+        add_header 'Cache-Control' 'public, max-age=3600' always;
+
+        # Debug headers
+        add_header 'X-Debug-Redirect-URI' $redirect_uri always;
+        add_header 'X-Debug-Proxy-Host' $proxy_host always;
+        add_header 'X-Debug-Upstream-Status' $upstream_status always;
+        add_header 'X-Debug-Upstream-Response-Time' $upstream_response_time always;
+
+        # Optimized settings for CDN connections
+        proxy_buffering off;
+        proxy_ssl_server_name on;
+        proxy_ssl_verify off;
+        proxy_ssl_protocols TLSv1.2 TLSv1.3;
+
+        # Increased timeouts for large blob downloads
+        proxy_connect_timeout 30s;
+        proxy_send_timeout 60s;
+        proxy_read_timeout 300s;
+
+        # DNS resolution
+        resolver 8.8.8.8 8.8.4.4 valid=300s;
+        resolver_timeout 10s;
+    }

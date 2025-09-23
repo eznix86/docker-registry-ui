@@ -11,8 +11,8 @@ export interface SourceInfo {
 	host: string;
 	status?: number;
 	lastChecked?: number;
+	username?: string; // GitHub username for GitHub registries
 }
-
 
 interface DockerManifestLayer {
 	digest: string;
@@ -67,6 +67,19 @@ interface ManifestReference {
 	};
 }
 
+interface GitHubPackage {
+	name: string;
+	package_type: string;
+	visibility: string;
+	owner: {
+		login: string;
+	};
+	repository?: {
+		name: string;
+		full_name: string;
+	};
+}
+
 function formatBytes(bytes: number): string {
 	if (bytes === 0) return "0 Bytes";
 	const k = 1024;
@@ -102,7 +115,7 @@ export class Blob {
 
 	async exists(): Promise<boolean> {
 		try {
-			const url = `${this.client.registry.sourcePath}/v2/${this.repositoryName}/blobs/${this.digest}`;
+			const url = `${this.client.registry.sourcePath}/v2/${encodeURIComponent(this.repositoryName)}/blobs/${this.digest}`;
 			const response = await fetchWithTimeout(url, { method: "HEAD" });
 			return response.ok;
 		} catch (_error) {
@@ -111,7 +124,7 @@ export class Blob {
 	}
 
 	async data(): Promise<ArrayBuffer> {
-		const url = `${this.client.registry.sourcePath}/v2/${this.repositoryName}/blobs/${this.digest}`;
+		const url = `${this.client.registry.sourcePath}/v2/${encodeURIComponent(this.repositoryName)}/blobs/${this.digest}`;
 		const response = await fetchWithTimeout(url);
 		if (!response.ok) {
 			throw new Error(
@@ -380,7 +393,6 @@ export class Manifest {
 
 		if (!this.raw.config || !this.raw.layers) return null;
 
-
 		const configBlob = new Blob(
 			this.raw.config.digest,
 			this.raw.config.size || 0,
@@ -396,7 +408,6 @@ export class Manifest {
 				mediaType: layer.mediaType || "application/octet-stream",
 			}),
 		);
-
 
 		const configInfo = await this.configInfo();
 		const totalSize =
@@ -469,8 +480,8 @@ export class Tag {
 	constructor(
 		public readonly name: string,
 		public readonly lastUpdated: string,
-		private readonly client: ContainerRegistryClient,
-		private readonly repositoryName: string,
+		public readonly client: ContainerRegistryClient,
+		public readonly repositoryName: string,
 	) { }
 
 	async manifest(): Promise<Manifest> {
@@ -503,25 +514,29 @@ export class Tag {
 		);
 	}
 
-	async delete(): Promise<boolean> {
-		try {
-			const manifest = await this.manifest();
-			const sourcePath = this.client.registry.sourcePath.replace("/v2", "");
-			const deleteResponse = await fetchWithTimeout(
-				`${sourcePath}/v2/${encodeURIComponent(this.repositoryName)}/manifests/${manifest.digest}`,
-				{
-					method: "DELETE",
-					headers: {
-						Accept: manifest.mediaType,
-					},
-				},
-			);
+	async isUpToDate(knownDigest?: string): Promise<boolean> {
+		if (!knownDigest) return false;
 
-			return deleteResponse.ok || deleteResponse.status === 404;
-		} catch (error) {
-			console.error("Failed to delete tag:", error);
+		try {
+			const url = `${this.client.registry.sourcePath}/v2/${encodeURIComponent(this.repositoryName)}/manifests/${this.name}`;
+			const response = await fetchWithTimeout(url, {
+				method: "HEAD",
+				headers: {
+					"If-None-Match": knownDigest,
+					Accept:
+						"application/vnd.oci.image.index.v1+json, application/vnd.docker.distribution.manifest.list.v2+json, application/vnd.docker.distribution.manifest.v2+json, application/vnd.oci.image.manifest.v1+json",
+				},
+			});
+
+			return response.status === 304;
+		} catch (_error) {
 			return false;
 		}
+	}
+
+	async delete(): Promise<boolean> {
+		const strategy = createTagStrategy(this.client.registry);
+		return strategy.delete(this);
 	}
 }
 
@@ -537,66 +552,39 @@ export class Repository {
 	}
 
 	async tags(): Promise<Tag[]> {
-		const url = `${this.client.registry.sourcePath}/v2/${this.fullName}/tags/list`;
-		const response = await fetchWithTimeout(url);
-
-		if (!response.ok) {
-			if (response.status === 404) return [];
-			throw new Error(
-				`Failed to fetch tags for ${this.fullName}: ${response.statusText}`,
-			);
-		}
-
-		const data = await response.json();
-		const tagNames = data.tags || [];
-
-		return tagNames.map(
-			(tagName: string) =>
-				new Tag(tagName, new Date().toISOString(), this.client, this.fullName),
-		);
+		const strategy = createRepositoryStrategy(this.client, this.fullName);
+		return strategy.tags();
 	}
 
 	async tag(tagName: string): Promise<Tag | null> {
-		const allTags = await this.tags();
-		return allTags.find((tag) => tag.name === tagName) || null;
+		const strategy = createRepositoryStrategy(this.client, this.fullName);
+		return strategy.tag(tagName);
 	}
 
-	async delete(): Promise<boolean> {
-		try {
-			const sourcePath = this.client.registry.sourcePath.replace("/v2", "");
-			const response = await fetchWithTimeout(
-				`${sourcePath}/v2/${encodeURIComponent(this.fullName)}`,
-				{ method: "DELETE" },
-			);
-
-			return response.ok || response.status === 404;
-		} catch (error) {
-			console.error("Failed to delete repository:", error);
-			return false;
-		}
-	}
 }
 
-export class Registry {
-	constructor(
-		public readonly name: string,
-		public readonly sourcePath: string,
-		public readonly host: string = "",
-		public status?: number,
-		public lastChecked?: number,
-	) { }
+export type RegistryType = "standard" | "github";
 
-	get sourceInfo(): SourceInfo {
-		return {
-			path: this.sourcePath,
-			host: this.host,
-			status: this.status,
-			lastChecked: this.lastChecked,
-		};
-	}
+interface RegistryStrategy {
+	repositories(): Promise<Repository[]>;
+	repository(name: string, namespace?: string): Promise<Repository | null>;
+	ping(): Promise<{ success: boolean; status: number }>;
+}
+
+interface RepositoryStrategy {
+	tags(): Promise<Tag[]>;
+	tag(tagName: string): Promise<Tag | null>;
+}
+
+interface TagStrategy {
+	delete(tag: Tag): Promise<boolean>;
+}
+
+class StandardRegistryStrategy implements RegistryStrategy {
+	constructor(private registry: Registry) { }
 
 	async repositories(): Promise<Repository[]> {
-		const url = `${this.sourcePath}/v2/_catalog`;
+		const url = `${this.registry.sourcePath}/v2/_catalog`;
 		const response = await fetchWithTimeout(url);
 
 		if (!response.ok) {
@@ -612,7 +600,11 @@ export class Registry {
 			const namespace =
 				parts.length > 1 ? parts.slice(0, -1).join("/") : undefined;
 
-			return new Repository(name, namespace, new ContainerRegistryClient(this));
+			return new Repository(
+				name,
+				namespace,
+				new ContainerRegistryClient(this.registry),
+			);
 		});
 	}
 
@@ -630,12 +622,275 @@ export class Registry {
 
 	async ping(): Promise<{ success: boolean; status: number }> {
 		try {
-			const url = `${this.sourcePath}/v2/`;
+			const url = `${this.registry.sourcePath}/v2/`;
 			const response = await fetchWithTimeout(url);
 			return { success: response.ok, status: response.status };
 		} catch (_error) {
 			return { success: false, status: 0 };
 		}
+	}
+}
+
+class GitHubRegistryStrategy implements RegistryStrategy {
+	constructor(private registry: Registry) { }
+
+	private getUsername(): string {
+		return this.registry.username || "unknown";
+	}
+
+	async repositories(): Promise<Repository[]> {
+		const username = this.getUsername();
+		const url = `${this.registry.sourcePath}/github/users/${username}/packages?package_type=container`;
+		const response = await fetchWithTimeout(url);
+
+		if (!response.ok) {
+			throw new Error(
+				`Failed to fetch GitHub packages: ${response.statusText}`,
+			);
+		}
+
+		const packages = await response.json();
+
+		return packages.map((pkg: GitHubPackage) => {
+			const fullName = `${pkg.owner.login}/${pkg.name}`;
+			const parts = fullName.split("/");
+			const name = parts.length > 1 ? parts[parts.length - 1] : fullName;
+			const namespace =
+				parts.length > 1 ? parts.slice(0, -1).join("/") : undefined;
+
+			return new Repository(
+				name,
+				namespace,
+				new ContainerRegistryClient(this.registry),
+			);
+		});
+	}
+
+	async repository(
+		name: string,
+		namespace?: string,
+	): Promise<Repository | null> {
+		const repos = await this.repositories();
+		return (
+			repos.find(
+				(repo) => repo.name === name && repo.namespace === namespace,
+			) || null
+		);
+	}
+
+	async ping(): Promise<{ success: boolean; status: number }> {
+		try {
+			const username = this.getUsername();
+			const url = `${this.registry.sourcePath}/github/users/${username}/packages?package_type=container&per_page=1`;
+			const response = await fetchWithTimeout(url);
+			return { success: response.ok, status: response.status };
+		} catch (_error) {
+			return { success: false, status: 0 };
+		}
+	}
+}
+
+class StandardRepositoryStrategy implements RepositoryStrategy {
+	constructor(
+		private client: ContainerRegistryClient,
+		private repositoryName: string,
+	) { }
+
+	async tags(): Promise<Tag[]> {
+		const url = `${this.client.registry.sourcePath}/v2/${this.repositoryName}/tags/list`;
+		const response = await fetchWithTimeout(url);
+
+		if (!response.ok) {
+			if (response.status === 404) return [];
+			throw new Error(
+				`Failed to fetch tags for ${this.repositoryName}: ${response.statusText}`,
+			);
+		}
+
+		const data = await response.json();
+		const tagNames = data.tags || [];
+
+		return tagNames.map(
+			(tagName: string) =>
+				new Tag(
+					tagName,
+					new Date().toISOString(),
+					this.client,
+					this.repositoryName,
+				),
+		);
+	}
+
+	async tag(tagName: string): Promise<Tag | null> {
+		const allTags = await this.tags();
+		return allTags.find((tag) => tag.name === tagName) || null;
+	}
+
+}
+
+class GitHubRepositoryStrategy implements RepositoryStrategy {
+	constructor(
+		private client: ContainerRegistryClient,
+		private repositoryName: string,
+	) { }
+
+	async tags(): Promise<Tag[]> {
+		// Use standard strategy for tags since GitHub uses the same v2 API for tags
+		const standardStrategy = new StandardRepositoryStrategy(this.client, this.repositoryName);
+		return standardStrategy.tags();
+	}
+
+	async tag(tagName: string): Promise<Tag | null> {
+		// Use standard strategy for tag lookup
+		const standardStrategy = new StandardRepositoryStrategy(this.client, this.repositoryName);
+		return standardStrategy.tag(tagName);
+	}
+
+}
+
+class StandardTagStrategy implements TagStrategy {
+	async delete(tag: Tag): Promise<boolean> {
+		try {
+			const manifest = await tag.manifest();
+			const sourcePath = tag.client.registry.sourcePath.replace("/v2", "");
+			const deleteResponse = await fetchWithTimeout(
+				`${sourcePath}/v2/${encodeURIComponent(tag.repositoryName)}/manifests/${manifest.digest}`,
+				{
+					method: "DELETE",
+					headers: {
+						Accept: manifest.mediaType,
+					},
+				},
+			);
+
+			return deleteResponse.ok || deleteResponse.status === 404;
+		} catch (error) {
+			console.error("Failed to delete tag:", error);
+			return false;
+		}
+	}
+}
+
+class GitHubTagStrategy implements TagStrategy {
+	async delete(tag: Tag): Promise<boolean> {
+		try {
+			const packageName = tag.repositoryName.split('/').slice(1).join('/') || tag.repositoryName;
+			const baseUrl = tag.client.registry.sourcePath.replace('/v2', '');
+
+			const versionsUrl = `${baseUrl}/github/user/packages/container/${encodeURIComponent(packageName)}/versions?per_page=100`;
+			const versionsResponse = await fetchWithTimeout(versionsUrl);
+
+			if (!versionsResponse.ok) {
+				console.error(`Failed to fetch package versions: ${versionsResponse.statusText}`);
+				return false;
+			}
+
+			const versions = await versionsResponse.json();
+			const targetVersion = versions.find((version: { metadata?: { container?: { tags?: string[] } } }) =>
+				version.metadata?.container?.tags?.includes(tag.name)
+			);
+
+			if (!targetVersion) {
+				console.error(`Could not find package version for tag: ${tag.name}`);
+				return false;
+			}
+
+			// Delete using the version ID (integer)
+			const deleteUrl = `${baseUrl}/github/user/packages/container/${encodeURIComponent(packageName)}/versions/${targetVersion.id}`;
+			const deleteResponse = await fetchWithTimeout(deleteUrl, {
+				method: "DELETE",
+			});
+
+			return deleteResponse.ok || deleteResponse.status === 404;
+		} catch (error) {
+			console.error("Failed to delete GitHub package version:", error);
+			return false;
+		}
+	}
+}
+
+function createTagStrategy(registry: Registry): TagStrategy {
+	switch (registry.registryType) {
+		case "github":
+			return new GitHubTagStrategy();
+		default:
+			return new StandardTagStrategy();
+	}
+}
+
+function createRepositoryStrategy(
+	client: ContainerRegistryClient,
+	repositoryName: string,
+): RepositoryStrategy {
+	switch (client.registry.registryType) {
+		case "github":
+			return new GitHubRepositoryStrategy(client, repositoryName);
+		default:
+			return new StandardRepositoryStrategy(client, repositoryName);
+	}
+}
+
+function createRegistryStrategy(registry: Registry): RegistryStrategy {
+	switch (registry.registryType) {
+		case "github":
+			return new GitHubRegistryStrategy(registry);
+		default:
+			return new StandardRegistryStrategy(registry);
+	}
+}
+
+export class Registry {
+	public readonly registryType: RegistryType;
+	public username?: string; // GitHub username
+
+	constructor(
+		public readonly name: string,
+		public readonly sourcePath: string,
+		public readonly host: string = "",
+		public status?: number,
+		public lastChecked?: number,
+		registryType?: RegistryType,
+		username?: string,
+	) {
+		this.registryType = registryType || this.detectRegistryType();
+		this.username = username;
+	}
+
+	private detectRegistryType(): RegistryType {
+		const url = this.sourcePath.toLowerCase();
+		const host = this.host.toLowerCase();
+
+		if (url.includes("ghcr.io") || host.includes("ghcr.io")) {
+			return "github";
+		}
+		return "standard";
+	}
+
+	get sourceInfo(): SourceInfo {
+		return {
+			path: this.sourcePath,
+			host: this.host,
+			status: this.status,
+			lastChecked: this.lastChecked,
+		};
+	}
+
+	async repositories(): Promise<Repository[]> {
+		const strategy = createRegistryStrategy(this);
+		return strategy.repositories();
+	}
+
+	async repository(
+		name: string,
+		namespace?: string,
+	): Promise<Repository | null> {
+		const strategy = createRegistryStrategy(this);
+		return strategy.repository(name, namespace);
+	}
+
+	async ping(): Promise<{ success: boolean; status: number }> {
+		const strategy = createRegistryStrategy(this);
+		return strategy.ping();
 	}
 
 	updateStatus(status: number): Registry {
@@ -645,6 +900,8 @@ export class Registry {
 			this.host,
 			status,
 			Date.now(),
+			this.registryType,
+			this.username,
 		);
 	}
 }
@@ -655,18 +912,18 @@ export class ContainerRegistryClient {
 	static async fromSources(
 		sources: Record<string, SourceInfo>,
 	): Promise<ContainerRegistryClient[]> {
-		return Object.entries(sources).map(
-			([sourceName, sourceInfo]) =>
-				new ContainerRegistryClient(
-					new Registry(
-						sourceName,
-						sourceInfo.path,
-						sourceInfo.host,
-						sourceInfo.status,
-						sourceInfo.lastChecked,
-					),
-				),
-		);
+		return Object.entries(sources).map(([sourceName, sourceInfo]) => {
+			const registry = new Registry(
+				sourceName,
+				sourceInfo.path,
+				sourceInfo.host,
+				sourceInfo.status,
+				sourceInfo.lastChecked,
+				undefined, // registryType will be auto-detected
+				sourceInfo.username, // GitHub username
+			);
+			return new ContainerRegistryClient(registry);
+		});
 	}
 
 	async repositories(): Promise<Repository[]> {

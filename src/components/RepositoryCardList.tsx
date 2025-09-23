@@ -18,7 +18,7 @@ const gridSx = {
 		md: "repeat(2, 1fr)",
 		lg: "repeat(3, 1fr)",
 	},
-	gap: 2
+	gap: 2,
 };
 
 const EmptyState = () => (

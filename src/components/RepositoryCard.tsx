@@ -18,8 +18,8 @@ interface RepositoryCardProps {
 
 const getRepositoryPath = (repo: RepositoryMeta) => {
 	const basePath = repo.namespace
-		? `/repository/${repo.namespace}/${repo.name}`
-		: `/repository/${repo.name}`;
+		? `/repository/${encodeURIComponent(repo.namespace)}/${encodeURIComponent(repo.name)}`
+		: `/repository/${encodeURIComponent(repo.name)}`;
 	return repo.source
 		? `${basePath}?source=${encodeURIComponent(repo.source)}`
 		: basePath;
@@ -61,8 +61,8 @@ const RepositoryCard = memo(function RepositoryCard({
 						borderColor: "primary.main",
 						boxShadow: "0 0 0 1px #4584f7",
 					},
-					transition: "border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out",
-					// Prevent layout shifts during AutoAnimate
+					transition:
+						"border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out",
 					willChange: "auto",
 				}}
 			>
@@ -218,8 +218,8 @@ const RepositoryCard = memo(function RepositoryCard({
 					borderColor: "primary.main",
 					boxShadow: "0 0 0 1px #4584f7",
 				},
-				transition: "border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out",
-				// Prevent layout shifts during AutoAnimate
+				transition:
+					"border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out",
 				willChange: "auto",
 			}}
 		>
@@ -296,7 +296,7 @@ const RepositoryCard = memo(function RepositoryCard({
 							}}
 						>
 							{repository.architectures &&
-							repository.architectures.length > 0 ? (
+								repository.architectures.length > 0 ? (
 								<>
 									{repository.architectures.slice(0, 8).map((arch: string) => (
 										<Chip
