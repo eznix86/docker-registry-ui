@@ -1,4 +1,3 @@
-
 # Container Hub – Docker Registry UI
 
 A simple, lightweight **UI for exploring and managing Docker/OCI container registries**.
@@ -9,6 +8,8 @@ A simple, lightweight **UI for exploring and managing Docker/OCI container regis
 
 ## Quick Start
 
+The UI can be deployed in minutes with Docker Compose:
+
 ```yaml
 services:
   registry-ui:
@@ -18,9 +19,9 @@ services:
     environment:
       - REGISTRY_URL=http://your-registry.com:5000
       - REGISTRY_AUTH=base64basicauthhere
-````
+```
 
-Then open: [http://localhost:8011](http://localhost:8011)
+Then open the UI at: [http://localhost:8011](http://localhost:8011)
 
 ---
 
@@ -39,7 +40,7 @@ services:
       - REGISTRY_AUTH=base64basicauthhere
 ```
 
-### Kubernetes (via Helm)
+### Kubernetes (Helm)
 
 ```sh
 helm repo add docker-registry-ui https://eznix86.github.io/docker-registry-ui
@@ -50,7 +51,7 @@ helm install docker-registry-ui docker-registry-ui/docker-registry-ui \
   --create-namespace
 ```
 
-#### Creating Secrets
+#### Creating Registry Secrets
 
 ```sh
 kubectl create secret generic registry-ui-secret \
@@ -59,7 +60,7 @@ kubectl create secret generic registry-ui-secret \
   --from-literal=auth="$(echo -n 'username:password' | base64)"
 ```
 
-Then reference the secret in your Helm values:
+Reference the secret in your Helm values:
 
 ```yaml
 env:
@@ -79,10 +80,10 @@ env:
 
 ## Multiple Registry Support
 
-You can connect to multiple registries by adding **suffix environment variables**:
+The UI supports connections to multiple registries. Configure them via environment variables with suffixes:
 
 ```env
-# Default
+# Default registry
 REGISTRY_URL=https://repository.a.com
 REGISTRY_AUTH=...
 
@@ -97,46 +98,53 @@ REGISTRY_URL_CUSTOM=https://repository.whatever.com
 REGISTRY_AUTH_CUSTOM=...
 ```
 
-For Kubernetes, extend the `env` configuration in your Helm values.
+Notes:
 
-As of `v0.3.2`, the env `REGISTRY_AUTH` or `REGISTRY_AUTH_<SUFFIX>` can be omitted for no auth registries
+* From `v0.3.2`, `REGISTRY_AUTH` (or its suffixed variants) can be omitted for unauthenticated registries.
+* From `v0.5.0`, GitHub Container Registry is supported:
 
-As of `v0.5.0`, Github Container Registry is supported. Use `REGISTRY_URL_XXX="https://ghcr.io"` and `REGISTRY_AUTH_XXX="base64 of github-username:PAT"` where the [PAT (Personal Access Token)](https://github.com/settings/tokens) has the `delete:packages, repo, write:packages` permissions.
+  ```env
+  REGISTRY_URL_GHCR=https://ghcr.io
+  REGISTRY_AUTH_GHCR=base64(github-username:PAT)
+  ```
+
+  The PAT requires `delete:packages, repo, write:packages` permissions. [Generate a PAT](https://github.com/settings/tokens).
 
 ---
 
-## Contributing
+## Development
+
+To contribute, set up a local development environment:
 
 ```sh
-# Setup .env
-# Example: echo -n "USERNAME:PASSWORD" | base64
+# Prepare environment variables
 cp .env.example .env
+# Example: echo -n "USERNAME:PASSWORD" | base64 > .env
 
 bun install
-bun run dev         # start development
-bun run lint        # lint code
-bun run lint:fix    # auto-fix lint issues where possible
+bun run dev         # start local dev server
+bun run lint        # run linter
+bun run lint:fix    # auto-fix linting issues where possible
 ```
+
+Pull requests are welcome. Please ensure code is linted and tested before submission.
 
 ---
 
-## Reclaiming Storage
+## Storage Reclamation
 
-In Docker Registry **v2/v3**, deleting an image through the UI only *marks* it as deleted — the storage is **not automatically reclaimed**.
-
-To free disk space, you must run the registry’s built-in **garbage collection** or other cleanup processes.
+When deleting images, Docker Registry **v2/v3** only marks them as deleted. Disk space is not automatically reclaimed.
+To free space, run garbage collection inside your registry container:
 
 ```sh
-# Do this inside of your registry container.
-bin/registry garbage-collect [--dry-run] [--delete-untagged] [--quiet] /path/to/config.yml
-# Example:
-# To run the garbage collector. 
-# bin/registry garbage-collect --delete-untagged /etc/docker/registry/config.yml
-# To delete the repository itself.
-# rm -rf /var/lib/registry/docker/registry/v2/repositories/<registry_name>
+# Run garbage collection
+bin/registry garbage-collect --delete-untagged /etc/docker/registry/config.yml
+
+# Optionally, remove an entire repository manually
+rm -rf /var/lib/registry/docker/registry/v2/repositories/<repository_name>
 ```
 
-Useful references:
+Further reading:
 
 * [Docker Distribution: Garbage Collection](https://distribution.github.io/distribution/about/garbage-collection/)
 * [Cleaning Up Registry Blobs in Kubernetes](https://thelinuxnotes.com/how-to-cleanup-container-registry-blobs-in-kubernetes-with-garbage-collection/)
