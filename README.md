@@ -6,6 +6,14 @@ A simple, lightweight **UI for exploring and managing Docker/OCI container regis
 
 ---
 
+> [!IMPORTANT]
+> I’m currently working towards the upcoming **`v1.0.0`** release. While the current version works well, it doesn’t scale efficiently—even for relatively small projects (e.g., repositories with 100+ tags).
+>
+> To address this, I’ve opened a tracking issue: [#28](https://github.com/eznix86/docker-registry-ui/issues/28).
+>
+> **Community input is welcome** — feel free to share your ideas or propose improvements in the issue.
+
+
 ## Quick Start
 
 The UI can be deployed in minutes with Docker Compose:
