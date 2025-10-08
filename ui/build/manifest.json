@@ -1,0 +1,19 @@
+{
+  "ui/css/app.css": {
+    "file": "assets/app-tn0RQdqM.css",
+    "src": "ui/css/app.css",
+    "isEntry": true,
+    "names": [
+      "app.css"
+    ]
+  },
+  "ui/js/app.jsx": {
+    "file": "assets/app-DYd5-_m_.js",
+    "name": "app",
+    "src": "ui/js/app.jsx",
+    "isEntry": true,
+    "css": [
+      "assets/app-tn0RQdqM.css"
+    ]
+  }
+}
