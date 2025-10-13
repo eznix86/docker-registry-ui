@@ -1,0 +1,10 @@
+repos:
+  - repo: local
+    hooks:
+      - id: spdx-header-check
+        name: Check SPDX Headers
+        entry: python3 license.py Apache-2.0 "Bruno Bernard" --fix
+        language: system
+        files: (\.(go|ts|tsx|py)|Dockerfile)$
+        pass_filenames: true
+        stages: [pre-commit]
