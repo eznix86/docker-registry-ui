@@ -3,7 +3,12 @@
 
 package main
 
-import "fmt"
+import (
+	"fmt"
+	"net/http"
+
+	"github.com/eznix86/docker-registry-ui/internal/routes"
+)
 
 var (
 	Version        = "dev"
@@ -17,4 +22,7 @@ func BuildVersion() string {
 
 func main() {
 	fmt.Println(BuildVersion())
+	r := routes.NewRouter()
+	fmt.Println("Starting server on port http://localhost:3000/")
+	http.ListenAndServe(":3000", r)
 }
