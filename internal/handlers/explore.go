@@ -5,6 +5,6 @@ package handlers
 
 import "net/http"
 
-func Explore(w http.ResponseWriter, r *http.Request) {
-	w.Write([]byte("explore"))
+func (h *handler) Explore(w http.ResponseWriter, r *http.Request) {
+	h.inertia.Render(w, r, "Explore")
 }

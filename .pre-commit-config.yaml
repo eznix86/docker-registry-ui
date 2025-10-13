@@ -5,7 +5,7 @@ repos:
         name: Check SPDX Headers
         entry: python3 license.py Apache-2.0 "Bruno Bernard" --fix
         language: system
-        files: (\.(go|ts|tsx|py)|Dockerfile)$
+        files: (\.(go|ts|tsx|py|js|jsx|html)|Dockerfile)$
         pass_filenames: true
         stages: [pre-commit]
 
@@ -13,6 +13,12 @@ repos:
         name: Run go fmt
         entry: bash -c 'go fmt ./...'
         language: system
-        types: [go]
         pass_filenames: false
         stages: [pre-commit]
+
+      - id: biome-lint
+        name: Run biome lint
+        entry: bash -c 'bun run lint'
+        language: system
+        stages: [pre-commit]
+

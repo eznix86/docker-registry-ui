@@ -5,6 +5,6 @@ package handlers
 
 import "net/http"
 
-func RepositoryDetail(w http.ResponseWriter, r *http.Request) {
-	w.Write([]byte("repository"))
+func (h *handler) RepositoryDetail(w http.ResponseWriter, r *http.Request) {
+	h.inertia.Render(w, r, "Repository")
 }

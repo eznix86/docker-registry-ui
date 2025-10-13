@@ -1,2 +1,5 @@
 bin/dev
 build-errors.log
+node_modules
+public/build
+public/hot
