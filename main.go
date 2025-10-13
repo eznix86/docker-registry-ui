@@ -5,12 +5,10 @@ package main
 
 import "fmt"
 
-
 var (
-	Version    = "dev"
-	CommitHash = "n/a"
-	BuildTimestamp  = "n/a"
-
+	Version        = "dev"
+	CommitHash     = "n/a"
+	BuildTimestamp = "n/a"
 )
 
 func BuildVersion() string {
