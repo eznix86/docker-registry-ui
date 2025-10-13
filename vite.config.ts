@@ -2,7 +2,7 @@
 // Copyright (C) 2025  Bruno Bernard
 
 import preact from "@preact/preset-vite";
-import react from "@vitejs/plugin-react";
+// import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
 import hmr from "vite-hmr";
 
