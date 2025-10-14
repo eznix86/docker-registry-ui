@@ -159,3 +159,72 @@ Further reading:
 * [DigitalOcean: Clean Up Container Registry](https://docs.digitalocean.com/products/container-registry/how-to/clean-up-container-registry/)
 * [Community Guide: Reclaiming Disk Space](https://dev.to/limal/reclaiming-free-disk-space-from-a-private-docker-repository-30f5)
 * [GitHub Issue: Registry Garbage Collection](https://github.com/distribution/distribution/issues/3178)
+
+---
+
+Got it — here’s the same **“How to Contribute”** section without emojis or decorative symbols, keeping a clean and professional tone:
+
+---
+
+## How to Contribute
+
+Contributions are welcome. Whether you want to fix a bug, improve performance, or add a new feature, here’s how to get started.
+
+### 1. Fork and Clone
+
+```sh
+git clone https://github.com/<your-username>/docker-registry-ui.git
+cd docker-registry-ui
+```
+
+### 2. Create a Branch
+
+```sh
+git checkout -b feature/your-feature-name
+```
+
+Use a descriptive branch name, for example `fix/tag-pagination` or `feature/multi-registry-auth`.
+
+### 3. Set Up the Environment
+
+```sh
+cp .env.example .env
+bun install
+bun run dev
+```
+
+### 4. Lint and Test Before Submitting
+
+```sh
+bun run lint
+bun run lint:fix
+```
+
+Ensure your code passes all checks before committing.
+
+### 5. Commit and Push
+
+```sh
+git commit -m "feat: add registry pagination support"
+git push origin feature/your-feature-name
+```
+
+### 6. Open a Pull Request
+
+Open a pull request to the `main` branch
+
+Please include:
+
+* A clear description of what your change does.
+* Screenshots or examples if relevant.
+* Links to related issues, for example `Fixes #28`.
+
+---
+
+### Contribution Guidelines
+
+* Follow the existing code style and linting rules.
+* Keep commits small and descriptive.
+* Document any new features or configuration options.
+* Pick any issue listed.
+* Open an issue before contributing
