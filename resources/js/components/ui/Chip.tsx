@@ -45,7 +45,10 @@ const StyledChip = styled(MuiChip, {
 					}
 				: {};
 
-		const variantStyles: Record<Variant, any> = {
+		const variantStyles: Record<
+			Variant,
+			{ borderColor: string; color: string }
+		> = {
 			outlined: {
 				borderColor: theme.palette.divider,
 				color: theme.palette.text.secondary,

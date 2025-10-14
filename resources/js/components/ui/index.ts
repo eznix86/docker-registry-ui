@@ -14,4 +14,9 @@ export {
 } from "~/components/ui/Form";
 export { InfoBox, WarningBox } from "~/components/ui/InfoBox";
 export { Table } from "~/components/ui/Table";
-export { FilterTitle, Label, Text } from "~/components/ui/Typography";
+export {
+	FilterItemTitle,
+	FilterTitle,
+	Label,
+	Text,
+} from "~/components/ui/Typography";

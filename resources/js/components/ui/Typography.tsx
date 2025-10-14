@@ -4,6 +4,12 @@
 import { Typography as MuiTypography, styled } from "@mui/material";
 
 export const FilterTitle = styled(MuiTypography)(({ theme }) => ({
+	fontSize: theme.custom.typography.fontSizes["2xl"],
+	fontWeight: theme.custom.typography.fontWeights.semibold,
+	marginBottom: theme.spacing(3),
+}));
+
+export const FilterItemTitle = styled(MuiTypography)(({ theme }) => ({
 	fontSize: theme.custom.typography.fontSizes.xl,
 	fontWeight: theme.custom.typography.fontWeights.semibold,
 	marginBottom: theme.spacing(1),

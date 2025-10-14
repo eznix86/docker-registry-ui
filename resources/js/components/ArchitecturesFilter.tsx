@@ -1,33 +1,37 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright (C) 2025  Bruno Bernard
 
-import { FormControl } from "@mui/material";
+import { usePage } from "@inertiajs/react";
+import { FormControl, type SelectChangeEvent } from "@mui/material";
 import { memo, useCallback } from "react";
-import { FilterTitle, MenuItem, Select } from "~/components/ui";
+import { FilterItemTitle, MenuItem, Select } from "~/components/ui";
+import { useExploreFilters } from "~/hooks/useExploreFilters";
+import type { ExploreProps } from "~/types";
 
-interface ArchitecturesFilterProps {
-	architectures?: string[];
-	selected?: string;
-	onSelect?: (architecture: string) => void;
-}
+function ArchitecturesFilter() {
+	const { architectures = [] } = usePage().props as ExploreProps;
+	const { filters, setArchitecture } = useExploreFilters();
 
-function ArchitecturesFilter({
-	architectures = ["amd64", "arm64", "arm/v7", "386"],
-	selected = "all",
-	onSelect,
-}: ArchitecturesFilterProps) {
 	const handleChange = useCallback(
-		(event: any) => {
-			onSelect?.(event.target.value);
+		(event: SelectChangeEvent<string>) => {
+			const value = event.target.value;
+			setArchitecture(value === "all" ? null : value);
 		},
-		[onSelect],
+		[setArchitecture],
 	);
+
+	const selectedValue =
+		filters.architectures.length === 1 ? filters.architectures[0] : "all";
 
 	return (
 		<>
-			<FilterTitle variant="h6">Architectures</FilterTitle>
+			<FilterItemTitle variant="h6">Architectures</FilterItemTitle>
 			<FormControl size="small" fullWidth>
-				<Select value={selected} displayEmpty onChange={handleChange}>
+				<Select
+					value={selectedValue}
+					displayEmpty
+					onChange={handleChange as (event: unknown) => void}
+				>
 					<MenuItem value="all">All Architectures</MenuItem>
 					{architectures.map((arch) => (
 						<MenuItem key={arch} value={arch}>

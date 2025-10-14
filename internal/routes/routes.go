@@ -41,10 +41,12 @@ func NewRouter() *chi.Mux {
 
 	r.Get("/", h.Explore)
 	r.Get("/r/{registry}/{repository}", h.RepositoryDetail)
-
+	r.Get("/r/{registry}/{namespace}/{repository}", h.RepositoryDetail)
 	r.Handle("/build/*", http.StripPrefix("/build/", http.FileServer(http.Dir("public/build"))))
 	r.Handle("/js/*", http.StripPrefix("/js/", http.FileServer(http.Dir("public/build/js"))))
 	r.Handle("/public/*", http.StripPrefix("/public/", http.FileServer(http.Dir("public"))))
+
+	r.NotFound(h.NotFound)
 
 	return r
 }

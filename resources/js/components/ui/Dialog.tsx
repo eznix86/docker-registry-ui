@@ -29,7 +29,7 @@ const DialogHeader = styled(DialogTitle)(({ theme }) => ({
 const DialogBody = styled(DialogContent)(({ theme }) => ({
 	padding: theme.spacing(2.5),
 	paddingTop: theme.spacing(2.5),
-	"& > :first-child": {
+	"& > :first-of-type": {
 		marginTop: theme.spacing(2.5),
 	},
 }));

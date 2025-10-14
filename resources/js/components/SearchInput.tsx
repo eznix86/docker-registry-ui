@@ -49,6 +49,7 @@ const InputBaseRoot = styled(InputBase)(({ theme }) => ({
 interface SearchInputProps {
 	value?: string;
 	placeholder?: string;
+	onChange?: (value: string) => void;
 }
 
 const FormWrapper = styled("form")({
@@ -84,9 +85,14 @@ const getOnMobile = (): boolean => {
 function SearchInput({
 	value = "",
 	placeholder = "Search repositories...",
+	onChange,
 }: SearchInputProps) {
 	const shortcutText = useMemo(() => getShortcutText(), []);
 	const isOnMobile = useMemo(() => getOnMobile(), []);
+
+	const handleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+		onChange?.(event.target.value);
+	};
 
 	return (
 		<FormWrapper>
@@ -99,6 +105,7 @@ function SearchInput({
 					placeholder={placeholder}
 					inputProps={{ "aria-label": "search", autoComplete: "off" }}
 					value={value}
+					onChange={handleChange}
 					sx={{ width: "100%", pr: 6 }}
 				/>
 				<ShortcutBadge

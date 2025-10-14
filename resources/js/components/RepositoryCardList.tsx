@@ -1,18 +1,13 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright (C) 2025  Bruno Bernard
 
+import { useAutoAnimate } from "@formkit/auto-animate/react";
+import { usePage } from "@inertiajs/react";
 import { SearchOff as SearchOffIcon } from "@mui/icons-material";
-import { Box, styled, Typography } from "@mui/material";
-import { memo, useCallback } from "react";
-import RepositoryCard, {
-	type RepositoryMeta,
-} from "~/components/RepositoryCard";
-
-interface RepositoryCardListProps {
-	repositories: RepositoryMeta[];
-	onUntaggedClick?: (repo: RepositoryMeta) => void;
-	sourceHost?: string;
-}
+import { Box, CircularProgress, styled, Typography } from "@mui/material";
+import { memo } from "react";
+import RepositoryCard from "~/components/RepositoryCard";
+import type { ExploreProps, Repository } from "~/types";
 
 const GridContainer = styled(Box)(({ theme }) => ({
 	display: "grid",
@@ -46,7 +41,6 @@ const EmptyStateMessage = styled(Typography)({
 	maxWidth: 400,
 });
 
-// Extract EmptyState as a separate memoized component
 const EmptyState = memo(() => (
 	<EmptyStateContainer>
 		<EmptyStateIcon />
@@ -63,38 +57,28 @@ const EmptyState = memo(() => (
 EmptyState.displayName = "EmptyState";
 
 // Helper function to generate unique repository keys
-const getRepositoryKey = (repo: RepositoryMeta): string => {
-	const source = repo.source || "default";
+const getRepositoryKey = (repo: Repository): string => {
 	const namespace = repo.namespace || "";
-	return `${source}:${namespace}/${repo.name}`;
+	return `${repo.registry}:${namespace}/${repo.name}`;
 };
 
-function RepositoryCardList({
-	repositories,
-	onUntaggedClick,
-	sourceHost,
-}: RepositoryCardListProps) {
-	// Memoize the click handler to prevent unnecessary re-renders
-	const handleUntaggedClick = useCallback(
-		(repo: RepositoryMeta) => {
-			onUntaggedClick?.(repo);
-		},
-		[onUntaggedClick],
-	);
+function RepositoryCardList() {
+	const { repositories } = usePage().props as ExploreProps;
+	const [parent] = useAutoAnimate();
 
-	const isEmpty = repositories.length === 0;
+	const repoList = repositories ?? [];
 
 	return (
-		<GridContainer>
-			{isEmpty ? (
+		<GridContainer ref={parent}>
+			{!repositories ? (
+				<CircularProgress size={16} />
+			) : repoList.length === 0 ? (
 				<EmptyState />
 			) : (
-				repositories.map((repo) => (
+				repoList.map((repository: Repository) => (
 					<RepositoryCard
-						key={getRepositoryKey(repo)}
-						repository={repo}
-						onUntaggedClick={handleUntaggedClick}
-						sourceHost={sourceHost}
+						key={getRepositoryKey(repository)}
+						repository={repository}
 					/>
 				))
 			)}

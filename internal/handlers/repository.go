@@ -3,8 +3,17 @@
 
 package handlers
 
-import "net/http"
+import (
+	"net/http"
+
+	"github.com/romsar/gonertia/v2"
+)
 
 func (h *handler) RepositoryDetail(w http.ResponseWriter, r *http.Request) {
-	h.inertia.Render(w, r, "Repository")
+	if err := h.inertia.Render(w, r, "Repository", gonertia.Props{
+		"repository": h.models.Repository.FindRepository("docker.io", nil, "busybox"),
+		"tags":       h.models.Repository.ListTags(),
+	}); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
 }

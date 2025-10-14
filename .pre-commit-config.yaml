@@ -21,4 +21,10 @@ repos:
         entry: bash -c 'bun run lint'
         language: system
         stages: [pre-commit]
+        
+      - id: golangci-lint
+        name: Run golangci-lint
+        entry: bash -c 'golangci-lint run ./...'
+        language: system
+        stages: [pre-commit]
 

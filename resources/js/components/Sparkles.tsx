@@ -32,8 +32,7 @@ const Sparkles = ({
 }: {
 	color?: string;
 	children?: React.ReactNode;
-	[key: string]: any;
-}) => {
+} & React.HTMLAttributes<HTMLSpanElement>) => {
 	const [sparkles, setSparkles] = React.useState(() => {
 		return range(3).map(() => generateSparkle(color));
 	});

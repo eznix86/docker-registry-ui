@@ -13,6 +13,7 @@ import {
 import { memo, type ReactNode, useCallback } from "react";
 import Footer from "~/components/Footer";
 import SearchInput from "~/components/SearchInput";
+import { useSearch } from "~/contexts/SearchContext";
 
 interface LayoutProps {
 	children: ReactNode;
@@ -72,6 +73,8 @@ const RefreshButton = styled(IconButton)(({ theme }) => ({
 }));
 
 function Layout({ children, onRefresh }: LayoutProps) {
+	const { searchValue, onSearchChange } = useSearch();
+
 	const handleRefresh = useCallback(() => {
 		onRefresh?.();
 	}, [onRefresh]);
@@ -93,7 +96,7 @@ function Layout({ children, onRefresh }: LayoutProps) {
 						ContainerHub
 					</Title>
 					<SearchContainer>
-						<SearchInput />
+						<SearchInput value={searchValue} onChange={onSearchChange} />
 					</SearchContainer>
 					<RefreshButton
 						size="large"

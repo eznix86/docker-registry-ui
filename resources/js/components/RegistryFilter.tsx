@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright (C) 2025  Bruno Bernard
 
+import { useAutoAnimate } from "@formkit/auto-animate/react";
 import { usePage } from "@inertiajs/react";
 import { Box, styled, Tooltip } from "@mui/material";
 import { memo, useCallback } from "react";
@@ -86,18 +87,21 @@ RegistryItemCheckbox.displayName = "RegistryItemCheckbox";
 function RegistryFilter() {
 	const { registries = [] } = usePage().props as ExploreProps;
 	const { filters, toggleRegistry } = useExploreFilters();
+	const [parent] = useAutoAnimate();
 
 	return (
 		<Box>
 			<FilterItemTitle variant="h6">Registries</FilterItemTitle>
-			{registries.map((registry: Registry) => (
-				<RegistryItemCheckbox
-					key={registry.name}
-					registry={registry}
-					checked={filters.registries.includes(registry.name)}
-					onToggle={toggleRegistry}
-				/>
-			))}
+			<Box ref={parent}>
+				{registries.map((registry) => (
+					<RegistryItemCheckbox
+						key={registry.name}
+						registry={registry}
+						checked={filters.registries.includes(registry.name)}
+						onToggle={toggleRegistry}
+					/>
+				))}
+			</Box>
 		</Box>
 	);
 }

@@ -5,7 +5,7 @@ import React from "react";
 import { random } from "../utils";
 
 export const useRandomInterval = (
-	callback: () => any,
+	callback: () => void,
 	minDelay: number | null,
 	maxDelay: number | null,
 ) => {

@@ -1,29 +1,21 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright (C) 2025  Bruno Bernard
 
-import { memo, useCallback } from "react";
+import { memo } from "react";
 import { Checkbox, FormControlLabel, Label } from "~/components/ui";
+import { useExploreFilters } from "~/hooks/useExploreFilters";
 
-interface ShowUntaggedFilterProps {
-	checked?: boolean;
-	onChange?: (checked: boolean) => void;
-}
-
-function ShowUntaggedFilter({
-	checked = false,
-	onChange,
-}: ShowUntaggedFilterProps) {
-	const handleChange = useCallback(
-		(event: React.ChangeEvent<HTMLInputElement>) => {
-			onChange?.(event.target.checked);
-		},
-		[onChange],
-	);
+function ShowUntaggedFilter() {
+	const { filters, toggleShowUntagged } = useExploreFilters();
 
 	return (
 		<FormControlLabel
 			control={
-				<Checkbox checked={checked} size="small" onChange={handleChange} />
+				<Checkbox
+					checked={filters.showUntagged}
+					size="small"
+					onChange={toggleShowUntagged}
+				/>
 			}
 			label={<Label variant="body2">Show untagged repositories</Label>}
 		/>

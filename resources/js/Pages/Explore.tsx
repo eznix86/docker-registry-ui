@@ -1,112 +1,30 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright (C) 2025  Bruno Bernard
 
-import { FilterList as FilterListIcon } from "@mui/icons-material";
+import {
+	FilterList as FilterListIcon,
+	Settings as SettingsIcon,
+} from "@mui/icons-material";
 import {
 	Box,
-	Button,
-	CircularProgress,
 	IconButton,
 	SwipeableDrawer,
 	styled,
-	Typography,
 	useMediaQuery,
 	useTheme,
 } from "@mui/material";
-import { memo, useCallback, useState } from "react";
+import React, { memo, useCallback, useState } from "react";
 import ArchitecturesFilter from "~/components/ArchitecturesFilter";
-import type { RepositoryMeta } from "~/components/RepositoryCard";
+import ExploreStatusAvailable from "~/components/ExploreStatusAvailable";
+import RegistryFilter from "~/components/RegistryFilter";
 import RepositoryCardList from "~/components/RepositoryCardList";
 import ShowUntaggedFilter from "~/components/ShowUntaggedFilter";
-import SourcesFilter from "~/components/SourcesFilter";
-import {
-	CommandBox,
-	Dialog,
-	FilterTitle,
-	InfoBox,
-	WarningBox,
-} from "~/components/ui";
-
-// Static mock data
-const mockRepositories: RepositoryMeta[] = [
-	{
-		name: "busybox",
-		source: "local-registry",
-		tagCount: 1,
-		architectures: [
-			"amd64",
-			"armv5",
-			"arm/v6",
-			"arm/v7",
-			"arm64/v8",
-			"386",
-			"ppc64le",
-			"riscv64",
-			"s390x",
-		],
-		totalSizeFormatted: "16.46 MB",
-	},
-	{
-		name: "nginx",
-		namespace: "library",
-		source: "docker-hub",
-		tagCount: 156,
-		architectures: ["amd64", "arm64", "arm/v7", "386"],
-		totalSizeFormatted: "245 MB",
-	},
-	{
-		name: "postgres",
-		namespace: "library",
-		source: "docker-hub",
-		tagCount: 89,
-		architectures: ["amd64", "arm64"],
-		totalSizeFormatted: "412 MB",
-	},
-	{
-		name: "redis",
-		namespace: "library",
-		source: "docker-hub",
-		tagCount: 124,
-		architectures: ["amd64", "arm64", "arm/v7", "386", "ppc64le"],
-		totalSizeFormatted: "178 MB",
-	},
-	{
-		name: "alpine",
-		source: "local-registry",
-		tagCount: 45,
-		architectures: [
-			"amd64",
-			"arm64",
-			"arm/v6",
-			"arm/v7",
-			"386",
-			"ppc64le",
-			"s390x",
-		],
-		totalSizeFormatted: "89 MB",
-	},
-	{
-		name: "my-app",
-		namespace: "myorg",
-		source: "local-registry",
-		tagCount: 12,
-		architectures: ["amd64"],
-		totalSizeFormatted: "523 MB",
-	},
-	{
-		name: "old-build",
-		namespace: "legacy",
-		source: "local-registry",
-		tagCount: 0,
-		architectures: [],
-		totalSizeFormatted: "0 B",
-	},
-];
-
-const mockSources = [
-	{ key: "local-registry", host: "registry.brunobernard.dev" },
-	{ key: "docker-hub", host: "registry.hub.docker.com" },
-];
+import UntagDialog from "~/components/UntagDialog";
+import { FilterTitle, FormControlLabel, Label } from "~/components/ui";
+import { useSearch } from "~/contexts/SearchContext";
+import { useTheme as useThemeContext } from "~/contexts/ThemeContext";
+import { UntagDialogProvider } from "~/contexts/UntagDialogContext";
+import { useExploreFilters } from "~/hooks/useExploreFilters";
 
 // Styled Components
 const Container = styled(Box)(({ theme }) => ({
@@ -126,6 +44,16 @@ const Sidebar = styled(Box)(({ theme }) => ({
 	padding: theme.spacing(4),
 	backgroundColor: theme.palette.background.default,
 	overflowY: "auto",
+	display: "flex",
+	flexDirection: "column",
+}));
+
+const FilterContentWrapper = styled(Box)({
+	flexGrow: 1,
+});
+
+const SettingsButtonContainer = styled(Box)(({ theme }) => ({
+	marginTop: theme.spacing(2),
 }));
 
 const MainContent = styled(Box)(({ theme }) => ({
@@ -155,12 +83,6 @@ const HeaderLeft = styled(Box)(({ theme }) => ({
 	alignItems: "center",
 }));
 
-const ResultsText = styled(Typography)(({ theme }) => ({
-	display: "flex",
-	alignItems: "center",
-	gap: theme.spacing(2),
-}));
-
 const MobileFilterButton = styled(IconButton)(({ theme }) => ({
 	color: theme.palette.primary.main,
 	border: "1px solid",
@@ -173,25 +95,48 @@ const DrawerPaper = styled(Box)(({ theme }) => ({
 	backgroundColor: theme.palette.background.default,
 }));
 
-const FilterContent = memo(() => {
+interface FilterContentProps {
+	showSettings?: boolean;
+}
+
+const FilterContent = memo(({ showSettings = false }: FilterContentProps) => {
+	const { openSettings } = useThemeContext();
+
 	return (
 		<>
-			<FilterTitle variant="h6">Filter by</FilterTitle>
+			<FilterContentWrapper>
+				<FilterTitle variant="h1">Filter by</FilterTitle>
 
-			<FilterSection>
-				<SourcesFilter
-					sources={mockSources}
-					selected={["registry.brunobernard.dev"]}
-				/>
-			</FilterSection>
+				<FilterSection>
+					<RegistryFilter />
+				</FilterSection>
 
-			<FilterSection>
-				<ArchitecturesFilter />
-			</FilterSection>
+				<FilterSection>
+					<ArchitecturesFilter />
+				</FilterSection>
 
-			<FilterSection>
-				<ShowUntaggedFilter checked={true} />
-			</FilterSection>
+				<FilterSection>
+					<ShowUntaggedFilter />
+				</FilterSection>
+			</FilterContentWrapper>
+
+			{showSettings && (
+				<SettingsButtonContainer>
+					<FormControlLabel
+						control={
+							<IconButton
+								size="small"
+								onClick={openSettings}
+								aria-label="Settings"
+								sx={{ p: 0, mr: 1 }}
+							>
+								<SettingsIcon fontSize="small" />
+							</IconButton>
+						}
+						label={<Label variant="body2">Settings</Label>}
+					/>
+				</SettingsButtonContainer>
+			)}
 		</>
 	);
 });
@@ -199,17 +144,17 @@ const FilterContent = memo(() => {
 FilterContent.displayName = "FilterContent";
 
 function ExplorePage() {
-	const untaggedDialogOpen = false;
-	const untaggedRepositoryName = "example/untagged-repo";
-	const loading = false;
-
 	const [drawerOpen, setDrawerOpen] = useState(false);
 	const theme = useTheme();
 	const isMobile = useMediaQuery(theme.breakpoints.down("md"));
+	const { filters, setSearch } = useExploreFilters();
+	const { setSearchValue, setOnSearchChange } = useSearch();
 
-	const handleUntaggedClick = useCallback((repo: RepositoryMeta) => {
-		console.log("Clicked untagged repo:", repo);
-	}, []);
+	// Sync search value from filters to context
+	React.useEffect(() => {
+		setSearchValue(filters.search);
+		setOnSearchChange(() => setSearch);
+	}, [filters.search, setSearch, setSearchValue, setOnSearchChange]);
 
 	const handleDrawerOpen = useCallback(() => {
 		setDrawerOpen(true);
@@ -220,106 +165,54 @@ function ExplorePage() {
 	}, []);
 
 	return (
-		<Container>
-			{/* Desktop Sidebar */}
-			{!isMobile && (
-				<Sidebar>
-					<FilterContent />
-				</Sidebar>
-			)}
+		<UntagDialogProvider>
+			<Container>
+				{/* Desktop Sidebar */}
+				{!isMobile && (
+					<Sidebar>
+						<FilterContent showSettings />
+					</Sidebar>
+				)}
 
-			{/* Mobile Drawer */}
-			<SwipeableDrawer
-				anchor="left"
-				open={drawerOpen}
-				onClose={handleDrawerClose}
-				onOpen={handleDrawerOpen}
-				sx={{
-					display: { xs: "block", md: "none" },
-				}}
-				PaperProps={{
-					component: DrawerPaper,
-				}}
-			>
-				<FilterContent />
-			</SwipeableDrawer>
+				{/* Mobile Drawer */}
+				<SwipeableDrawer
+					anchor="left"
+					open={drawerOpen}
+					onClose={handleDrawerClose}
+					onOpen={handleDrawerOpen}
+					sx={{
+						display: { xs: "block", md: "none" },
+					}}
+					PaperProps={{
+						component: DrawerPaper,
+					}}
+				>
+					<FilterContent showSettings />
+				</SwipeableDrawer>
 
-			<MainContent>
-				<HeaderContainer>
-					<HeaderLeft>
-						{/* Mobile Filter Button */}
-						{isMobile && (
-							<MobileFilterButton
-								onClick={handleDrawerOpen}
-								aria-label="Open filters"
-							>
-								<FilterListIcon />
-							</MobileFilterButton>
-						)}
-						<ResultsText variant="body2" color="text.secondary">
-							{mockRepositories.length} of {mockRepositories.length} available
-							results.
-							{loading && <CircularProgress size={16} />}
-						</ResultsText>
-					</HeaderLeft>
-				</HeaderContainer>
+				<MainContent>
+					<HeaderContainer>
+						<HeaderLeft>
+							{/* Mobile Filter Button */}
+							{isMobile && (
+								<MobileFilterButton
+									onClick={handleDrawerOpen}
+									aria-label="Open filters"
+								>
+									<FilterListIcon />
+								</MobileFilterButton>
+							)}
+							<ExploreStatusAvailable />
+						</HeaderLeft>
+					</HeaderContainer>
 
-				{/* Repository Cards */}
-				<RepositoryCardList
-					repositories={mockRepositories}
-					onUntaggedClick={handleUntaggedClick}
-					sourceHost="registry.brunobernard.dev"
-				/>
-			</MainContent>
+					{/* Repository Cards */}
+					<RepositoryCardList />
+				</MainContent>
 
-			{/* Untagged Repository Dialog */}
-			<Dialog open={untaggedDialogOpen} maxWidth="md" fullWidth>
-				<Dialog.Header>Untagged Repository</Dialog.Header>
-				<Dialog.Body>
-					<WarningBox>
-						<WarningBox.Text>
-							This repository exists in the registry but contains no tagged
-							images. Repositories without tags cannot be pulled or accessed
-							through standard Docker commands.
-						</WarningBox.Text>
-					</WarningBox>
-
-					<WarningBox>
-						<WarningBox.Title>Cleanup Instructions</WarningBox.Title>
-						<WarningBox.Text>
-							To remove this repository from the filesystem, execute the
-							following command:
-						</WarningBox.Text>
-
-						<CommandBox>
-							<CommandBox.Text>
-								rm -rf /var/lib/registry/docker/registry/v2/repositories/
-								{untaggedRepositoryName}
-							</CommandBox.Text>
-						</CommandBox>
-					</WarningBox>
-
-					<InfoBox>
-						<InfoBox.Title>Additional Information</InfoBox.Title>
-						<WarningBox.Text>
-							After removing repositories, run garbage collection to reclaim
-							storage space:
-						</WarningBox.Text>
-
-						<CommandBox>
-							<CommandBox.Text>
-								registry garbage-collect /path/to/config.yml
-							</CommandBox.Text>
-						</CommandBox>
-					</InfoBox>
-				</Dialog.Body>
-				<Dialog.Footer>
-					<Button variant="contained" autoFocus>
-						Close
-					</Button>
-				</Dialog.Footer>
-			</Dialog>
-		</Container>
+				<UntagDialog />
+			</Container>
+		</UntagDialogProvider>
 	);
 }
 

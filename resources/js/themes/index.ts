@@ -22,8 +22,9 @@ const themeFactories: Record<ThemeName, () => Promise<Theme>> = {
 const themeCache = new Map<ThemeName, Theme>();
 
 export async function withTheme(themeName: ThemeName): Promise<Theme> {
-	if (themeCache.has(themeName)) {
-		return themeCache.get(themeName)!;
+	const cachedTheme = themeCache.get(themeName);
+	if (cachedTheme) {
+		return cachedTheme;
 	}
 
 	const theme = await themeFactories[themeName]();
