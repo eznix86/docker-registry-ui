@@ -162,10 +162,6 @@ Further reading:
 
 ---
 
-Got it — here’s the same **“How to Contribute”** section without emojis or decorative symbols, keeping a clean and professional tone:
-
----
-
 ## How to Contribute
 
 Contributions are welcome. Whether you want to fix a bug, improve performance, or add a new feature, here’s how to get started.
