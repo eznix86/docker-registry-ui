@@ -13,7 +13,7 @@ import {
 	useMediaQuery,
 	useTheme,
 } from "@mui/material";
-import React, { memo, useCallback, useState } from "react";
+import { memo, useCallback, useState } from "react";
 import ArchitecturesFilter from "~/components/ArchitecturesFilter";
 import ExploreStatusAvailable from "~/components/ExploreStatusAvailable";
 import RegistryFilter from "~/components/RegistryFilter";
@@ -21,10 +21,8 @@ import RepositoryCardList from "~/components/RepositoryCardList";
 import ShowUntaggedFilter from "~/components/ShowUntaggedFilter";
 import UntagDialog from "~/components/UntagDialog";
 import { FilterTitle, FormControlLabel, Label } from "~/components/ui";
-import { useSearch } from "~/contexts/SearchContext";
 import { useTheme as useThemeContext } from "~/contexts/ThemeContext";
 import { UntagDialogProvider } from "~/contexts/UntagDialogContext";
-import { useExploreFilters } from "~/hooks/useExploreFilters";
 
 // Styled Components
 const Container = styled(Box)(({ theme }) => ({
@@ -147,14 +145,6 @@ function ExplorePage() {
 	const [drawerOpen, setDrawerOpen] = useState(false);
 	const theme = useTheme();
 	const isMobile = useMediaQuery(theme.breakpoints.down("md"));
-	const { filters, setSearch } = useExploreFilters();
-	const { setSearchValue, setOnSearchChange } = useSearch();
-
-	// Sync search value from filters to context
-	React.useEffect(() => {
-		setSearchValue(filters.search);
-		setOnSearchChange(() => setSearch);
-	}, [filters.search, setSearch, setSearchValue, setOnSearchChange]);
 
 	const handleDrawerOpen = useCallback(() => {
 		setDrawerOpen(true);
@@ -216,4 +206,6 @@ function ExplorePage() {
 	);
 }
 
-export default memo(ExplorePage);
+import { withInertiaPagePropsBridge } from "~/hoc/withInertiaPagePropsBridge";
+
+export default withInertiaPagePropsBridge(memo(ExplorePage));

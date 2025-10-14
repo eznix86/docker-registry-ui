@@ -27,7 +27,16 @@ export async function withTheme(themeName: ThemeName): Promise<Theme> {
 		return cachedTheme;
 	}
 
-	const theme = await themeFactories[themeName]();
+	// Fallback to default theme if the theme name is invalid
+	const themeFactory = themeFactories[themeName];
+	if (!themeFactory) {
+		console.warn(
+			`Theme "${themeName}" not found, falling back to "the-hub-dark"`,
+		);
+		return withTheme("the-hub-dark");
+	}
+
+	const theme = await themeFactory();
 	themeCache.set(themeName, theme);
 	return theme;
 }

@@ -4,17 +4,17 @@
 	"private": true,
 	"scripts": {
 		"dev": "vite",
-		"build": "vite build",
-		"preview": "vite preview",
+		"build": "vite build && ./build.sh",
+		"preview": "./bin/dev",
 		"lint": "biome check --fix ./resources && go fmt ./... && golangci-lint run ./..."
 	},
 	"devDependencies": {
 		"@biomejs/biome": "^2.2.6",
 		"@types/react-dom": "^19.2.1",
 		"@vitejs/plugin-react": "^4.3.4",
+		"laravel-vite-plugin": "^2.0.1",
 		"typescript": "^5",
-		"vite": "^6.0.11",
-		"vite-hmr": "^1.0.2"
+		"vite": "^6.0.11"
 	},
 	"dependencies": {
 		"@emotion/react": "^11.14.0",

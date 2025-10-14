@@ -1,11 +1,13 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright (C) 2025  Bruno Bernard
 
-import { router, usePage } from "@inertiajs/react";
+import { router } from "@inertiajs/react";
+import { useInertiaProps } from "~/contexts/InertiaPagePropsContext";
 import type { ExploreFilters, ExploreProps } from "~/types";
 
 export function useExploreFilters() {
-	const { filters } = usePage().props as ExploreProps;
+	const props = useInertiaProps();
+	const { filters } = (props || {}) as ExploreProps;
 
 	const currentFilters: ExploreFilters = {
 		registries: filters?.registries || [],

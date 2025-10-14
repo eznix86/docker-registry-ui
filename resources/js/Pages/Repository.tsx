@@ -19,6 +19,7 @@ import RepositoryTagList from "~/components/RepositoryTagList";
 import SelectDeleteTagsDialog from "~/components/SelectDeleteTagsDialog";
 import { MenuItem, Select, TextField } from "~/components/ui";
 import { DeleteTagsProvider } from "~/contexts/DeleteTagsContext";
+import { withInertiaPagePropsBridge } from "~/hoc/withInertiaPagePropsBridge";
 
 const sortBy = "newest";
 const filterQuery = "";
@@ -129,4 +130,4 @@ function RepositoryPage() {
 	);
 }
 
-export default memo(RepositoryPage);
+export default withInertiaPagePropsBridge(memo(RepositoryPage));

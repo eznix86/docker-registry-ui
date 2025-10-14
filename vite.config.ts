@@ -2,12 +2,12 @@
 // Copyright (C) 2025  Bruno Bernard
 
 import react from "@vitejs/plugin-react";
+import laravel from "laravel-vite-plugin";
 import { defineConfig } from "vite";
-import hmr from "vite-hmr";
 
 export default defineConfig({
 	plugins: [
-		hmr({
+		laravel({
 			input: ["resources/js/app.tsx"],
 			refresh: true,
 		}),
@@ -30,14 +30,14 @@ export default defineConfig({
 					"ui-vendor": ["@mui/material", "@mui/icons-material"],
 				},
 			},
-			treeshake: {
-				moduleSideEffects: false,
-				propertyReadSideEffects: false
-			}
+			// treeshake: {
+			// 	moduleSideEffects: false,
+			// 	propertyReadSideEffects: false,
+			// },
 		},
 	},
-	optimizeDeps: {
-		include: ['react', 'react-dom', 'react-router-dom'],
-		exclude: ['@mui/icons-material']
-	},
+	// optimizeDeps: {
+	// 	include: ["react", "react-dom", "react-router-dom"],
+	// 	exclude: ["@mui/icons-material"],
+	// },
 });

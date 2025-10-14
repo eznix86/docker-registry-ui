@@ -4,6 +4,7 @@
 package data
 
 import (
+	"slices"
 	"strings"
 	"time"
 
@@ -74,12 +75,7 @@ func matchesRegistries(repo Repository, registries []string) bool {
 		return true
 	}
 
-	for _, reg := range registries {
-		if repo.Registry == reg {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(registries, repo.Registry)
 }
 
 func matchesArchitectures(repo Repository, architectures []string) bool {
@@ -88,10 +84,8 @@ func matchesArchitectures(repo Repository, architectures []string) bool {
 	}
 
 	for _, arch := range architectures {
-		for _, repoArch := range repo.Architectures {
-			if repoArch == arch {
-				return true
-			}
+		if slices.Contains(repo.Architectures, arch) {
+			return true
 		}
 	}
 	return false

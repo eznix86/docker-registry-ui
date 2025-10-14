@@ -12,4 +12,4 @@ echo "Build Timestamp: ${BUILD_TIMESTAMP}"
 
 echo "Building dev binary..."
 
-go build -ldflags "-X main.Version=$VERSION -X main.CommitHash=$COMMIT_HASH -X main.BuildTimestamp=$BUILD_TIMESTAMP" -o ./bin/dev ./cmd/web
+go build -ldflags "-X main.Version=$VERSION -X main.CommitHash=$COMMIT_HASH -X main.BuildTimestamp=$BUILD_TIMESTAMP" -o ./bin/dev .

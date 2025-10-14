@@ -4,6 +4,8 @@
 package routes
 
 import (
+	"embed"
+	"io/fs"
 	"log"
 	"net/http"
 	"time"
@@ -15,7 +17,7 @@ import (
 	"github.com/romsar/gonertia/v2"
 )
 
-func NewRouter() *chi.Mux {
+func NewRouter(publicFS embed.FS) *chi.Mux {
 	r := chi.NewRouter()
 
 	r.Use(middleware.Logger)
@@ -26,7 +28,7 @@ func NewRouter() *chi.Mux {
 	r.Use(middleware.Recoverer)
 	r.Use(middleware.Timeout(60 * time.Second))
 
-	gi, err := gonertia.NewFromFile("resources/views/app.html")
+	gi, err := gonertia.NewFromFileFS(publicFS, "resources/views/app.html")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -39,12 +41,17 @@ func NewRouter() *chi.Mux {
 
 	h := handlers.NewHandler(i)
 
+	// Create sub filesystem for public directory
+	publicSubFS, err := fs.Sub(publicFS, "public")
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	r.Get("/", h.Explore)
 	r.Get("/r/{registry}/{repository}", h.RepositoryDetail)
 	r.Get("/r/{registry}/{namespace}/{repository}", h.RepositoryDetail)
-	r.Handle("/build/*", http.StripPrefix("/build/", http.FileServer(http.Dir("public/build"))))
-	r.Handle("/js/*", http.StripPrefix("/js/", http.FileServer(http.Dir("public/build/js"))))
-	r.Handle("/public/*", http.StripPrefix("/public/", http.FileServer(http.Dir("public"))))
+	r.Handle("/build/*", http.StripPrefix("/build/", http.FileServer(http.FS(publicSubFS))))
+	r.Handle("/public/*", http.StripPrefix("/public/", http.FileServer(http.FS(publicSubFS))))
 
 	r.NotFound(h.NotFound)
 

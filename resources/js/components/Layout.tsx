@@ -13,7 +13,7 @@ import {
 import { memo, type ReactNode, useCallback } from "react";
 import Footer from "~/components/Footer";
 import SearchInput from "~/components/SearchInput";
-import { useSearch } from "~/contexts/SearchContext";
+import { useExploreFilters } from "~/hooks/useExploreFilters";
 
 interface LayoutProps {
 	children: ReactNode;
@@ -73,7 +73,7 @@ const RefreshButton = styled(IconButton)(({ theme }) => ({
 }));
 
 function Layout({ children, onRefresh }: LayoutProps) {
-	const { searchValue, onSearchChange } = useSearch();
+	const { filters, setSearch } = useExploreFilters();
 
 	const handleRefresh = useCallback(() => {
 		onRefresh?.();
@@ -96,7 +96,7 @@ function Layout({ children, onRefresh }: LayoutProps) {
 						ContainerHub
 					</Title>
 					<SearchContainer>
-						<SearchInput value={searchValue} onChange={onSearchChange} />
+						<SearchInput value={filters.search} onChange={setSearch} />
 					</SearchContainer>
 					<RefreshButton
 						size="large"
