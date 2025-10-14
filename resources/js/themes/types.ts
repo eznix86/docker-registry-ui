@@ -9,7 +9,11 @@ export type ThemeName =
 	| "nord-light"
 	| "one-dark"
 	| "tokyo-night"
-	| "cyberpunk";
+	| "cyberpunk"
+	| "github-dark"
+	| "github-light"
+	| "catppuccin-mocha"
+	| "catppuccin-latte";
 
 type HexColor = `#${string}`;
 type RgbaColor = `rgba(${number}, ${number}, ${number}, ${number})`;

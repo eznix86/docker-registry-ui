@@ -16,6 +16,10 @@ const THEME_LABELS: Record<ThemeName, string> = {
 	"one-dark": "One Dark",
 	"tokyo-night": "Tokyo Night",
 	cyberpunk: "Cyberpunk",
+	"github-dark": "GitHub Dark",
+	"github-light": "GitHub Light",
+	"catppuccin-mocha": "Catppuccin Mocha",
+	"catppuccin-latte": "Catppuccin Latte",
 };
 
 function SettingsDialog() {

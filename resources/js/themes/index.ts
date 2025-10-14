@@ -17,6 +17,13 @@ const themeFactories: Record<ThemeName, () => Promise<Theme>> = {
 	"one-dark": () => import("~/themes/one-dark").then((m) => m.BaseTheme),
 	"tokyo-night": () => import("~/themes/tokyo-night").then((m) => m.BaseTheme),
 	cyberpunk: () => import("~/themes/cyberpunk").then((m) => m.BaseTheme),
+	"github-dark": () => import("~/themes/github-dark").then((m) => m.BaseTheme),
+	"github-light": () =>
+		import("~/themes/github-light").then((m) => m.BaseTheme),
+	"catppuccin-mocha": () =>
+		import("~/themes/catppuccin-mocha").then((m) => m.BaseTheme),
+	"catppuccin-latte": () =>
+		import("~/themes/catppuccin-latte").then((m) => m.BaseTheme),
 };
 
 const themeCache = new Map<ThemeName, Theme>();
