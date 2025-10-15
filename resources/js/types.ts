@@ -48,7 +48,17 @@ export type Tag = {
 	alias: string[];
 };
 
+export type RepositoryFilters = {
+	sortBy: "newest" | "oldest" | "name" | "size";
+	filter: string;
+};
+
+export type TagScroll = {
+	data: Tag[];
+};
+
 export type RepositoryProps = {
 	repository?: Repository;
-	tags?: Tag[];
+	tags?: TagScroll;
+	filters?: RepositoryFilters;
 };

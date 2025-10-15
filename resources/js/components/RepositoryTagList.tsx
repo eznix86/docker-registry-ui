@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright (C) 2025  Bruno Bernard
 
-import { usePage } from "@inertiajs/react";
+import { useAutoAnimate } from "@formkit/auto-animate/react";
+import { InfiniteScroll, usePage } from "@inertiajs/react";
 import { Delete as DeleteIcon } from "@mui/icons-material";
 import {
 	Box,
@@ -103,70 +104,81 @@ const DetailsCardContent = styled(CardContent)(({ theme }) => ({
 }));
 
 function RepositoryTagList() {
-	const { repository, tags } = usePage().props as RepositoryProps;
+	const {
+		repository,
+		tags = {
+			data: [],
+		},
+	} = usePage().props as RepositoryProps;
 	const { openConfirmDialog } = useDeleteTags();
+	const [parent] = useAutoAnimate({
+		duration: 200,
+		easing: "ease-in-out",
+	});
 
 	return (
-		<Box sx={{ bgcolor: "background.default" }}>
-			{tags?.map((tag) => (
-				<TagCard key={tag.name}>
-					{/* Tag Header */}
-					<TagHeader>
-						<TagHeaderLeft>
-							<TagMetaContainer>
-								<TagName variant="h6">{tag.name}</TagName>
-								<TagTimestamp variant="body2">
-									Last updated {getRelativeTime(tag.createdAt)}
-								</TagTimestamp>
-								<TagDeleteButton
-									size="small"
-									aria-label={`Delete tag ${tag.name}`}
-									onClick={() => openConfirmDialog(tag)}
-								>
-									<DeleteIcon fontSize="small" />
-								</TagDeleteButton>
-							</TagMetaContainer>
-						</TagHeaderLeft>
-						<CommandBox.Copyable
-							aria-label={`Copy docker pull command for ${tag.name}`}
-							title={`Click to copy: ${pullCommand(repository as Repository, tag.name)}`}
-						>
-							<CommandBox.Copyable.Text variant="body2">
-								{pullCommand(repository as Repository, tag.name)}
-							</CommandBox.Copyable.Text>
-							<CommandBox.Copyable.Hint variant="body2" className="copy-hint">
-								Copy
-							</CommandBox.Copyable.Hint>
-						</CommandBox.Copyable>
-					</TagHeader>
+		<Box ref={parent} sx={{ bgcolor: "background.default" }}>
+			<InfiniteScroll data="tags" buffer={500}>
+				{tags.data?.map((tag) => (
+					<TagCard key={`${tag.name}-${tag.digest}`}>
+						{/* Tag Header */}
+						<TagHeader>
+							<TagHeaderLeft>
+								<TagMetaContainer>
+									<TagName variant="h6">{tag.name}</TagName>
+									<TagTimestamp variant="body2">
+										Last updated {getRelativeTime(tag.createdAt)}
+									</TagTimestamp>
+									<TagDeleteButton
+										size="small"
+										aria-label={`Delete tag ${tag.name}`}
+										onClick={() => openConfirmDialog(tag)}
+									>
+										<DeleteIcon fontSize="small" />
+									</TagDeleteButton>
+								</TagMetaContainer>
+							</TagHeaderLeft>
+							<CommandBox.Copyable
+								aria-label={`Copy docker pull command for ${tag.name}`}
+								title={`Click to copy: ${pullCommand(repository as Repository, tag.name)}`}
+							>
+								<CommandBox.Copyable.Text variant="body2">
+									{pullCommand(repository as Repository, tag.name)}
+								</CommandBox.Copyable.Text>
+								<CommandBox.Copyable.Hint variant="body2" className="copy-hint">
+									Copy
+								</CommandBox.Copyable.Hint>
+							</CommandBox.Copyable>
+						</TagHeader>
 
-					{/* Tag Details Table */}
-					<DetailsCard elevation={0} variant="outlined">
-						<DetailsCardContent>
-							<Table.Container>
-								<Table size="small">
-									<Table.Head>
-										<Table.Row>
-											<Table.HeaderCell>Digest</Table.HeaderCell>
-											<Table.HeaderCell>OS/ARCH</Table.HeaderCell>
-											<Table.HeaderCell>Size</Table.HeaderCell>
-										</Table.Row>
-									</Table.Head>
-									<Table.Body>
-										{tag?.images?.map((image, index) => (
-											<RepositoryImageItem
-												key={`${image.digest}-${image.os}-${image.architecture}-${image.variant}`}
-												image={image}
-												last={index === tag.images.length - 1}
-											/>
-										))}
-									</Table.Body>
-								</Table>
-							</Table.Container>
-						</DetailsCardContent>
-					</DetailsCard>
-				</TagCard>
-			))}
+						{/* Tag Details Table */}
+						<DetailsCard elevation={0} variant="outlined">
+							<DetailsCardContent>
+								<Table.Container>
+									<Table size="small">
+										<Table.Head>
+											<Table.Row>
+												<Table.HeaderCell>Digest</Table.HeaderCell>
+												<Table.HeaderCell>OS/ARCH</Table.HeaderCell>
+												<Table.HeaderCell>Size</Table.HeaderCell>
+											</Table.Row>
+										</Table.Head>
+										<Table.Body>
+											{tag?.images?.map((image, index) => (
+												<RepositoryImageItem
+													key={`${image.digest}-${image.os}-${image.architecture}-${image.variant}`}
+													image={image}
+													last={index === tag.images.length - 1}
+												/>
+											))}
+										</Table.Body>
+									</Table>
+								</Table.Container>
+							</DetailsCardContent>
+						</DetailsCard>
+					</TagCard>
+				))}
+			</InfiniteScroll>
 		</Box>
 	);
 }

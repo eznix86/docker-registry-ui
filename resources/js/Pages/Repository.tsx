@@ -1,28 +1,18 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright (C) 2025  Bruno Bernard
 
-import { Search as SearchIcon } from "@mui/icons-material";
-import {
-	Box,
-	Divider,
-	FormControl,
-	InputAdornment,
-	styled,
-	Typography,
-} from "@mui/material";
+import { Box, Divider, styled } from "@mui/material";
 import { memo } from "react";
 import ConfirmDeleteDialog from "~/components/ConfirmDeleteDialog";
 import RepositoryBreadcrumbs from "~/components/RepositoryBreadcrumbs";
 import RepositoryHeader from "~/components/RepositoryHeader";
 import RepositoryResultsCount from "~/components/RepositoryResultsCount";
+import RepositorySearchFilter from "~/components/RepositorySearchFilter";
+import RepositorySortBy from "~/components/RepositorySortBy";
 import RepositoryTagList from "~/components/RepositoryTagList";
 import SelectDeleteTagsDialog from "~/components/SelectDeleteTagsDialog";
-import { MenuItem, Select, TextField } from "~/components/ui";
 import { DeleteTagsProvider } from "~/contexts/DeleteTagsContext";
 import { withInertiaPagePropsBridge } from "~/hoc/withInertiaPagePropsBridge";
-
-const sortBy = "newest";
-const filterQuery = "";
 
 // Styled Components
 const PageContainer = styled(Box)(({ theme }) => ({
@@ -45,21 +35,6 @@ const FilterSection = styled(Box)(({ theme }) => ({
 	flexWrap: "wrap",
 }));
 
-const SortContainer = styled(Box)(({ theme }) => ({
-	display: "flex",
-	alignItems: "center",
-	gap: theme.spacing(1),
-	flexWrap: "wrap",
-}));
-
-const SortLabel = styled(Typography)(({ theme }) => ({
-	color: theme.palette.text.secondary,
-	minWidth: "auto",
-	[theme.breakpoints.up("sm")]: {
-		minWidth: theme.custom.spacing.sortLabelMinWidth,
-	},
-}));
-
 function RepositoryPage() {
 	return (
 		<DeleteTagsProvider>
@@ -76,45 +51,8 @@ function RepositoryPage() {
 
 					{/* Tags Filter and Sort Section */}
 					<FilterSection>
-						{/* Sort by dropdown */}
-						<SortContainer>
-							<SortLabel variant="body2">Sort by</SortLabel>
-							<FormControl size="small" sx={{ minWidth: 120 }}>
-								<Select value={sortBy}>
-									<MenuItem value="newest">Newest</MenuItem>
-									<MenuItem value="oldest">Oldest</MenuItem>
-									<MenuItem value="name">Name</MenuItem>
-									<MenuItem value="size">Size</MenuItem>
-								</Select>
-							</FormControl>
-						</SortContainer>
-
-						{/* Filter tags input */}
-						<TextField
-							placeholder="Filter tags"
-							value={filterQuery}
-							size="small"
-							sx={{
-								flexGrow: 1,
-								maxWidth: { xs: "100%", sm: 300 },
-							}}
-							slotProps={{
-								input: {
-									startAdornment: (
-										<InputAdornment position="start">
-											<SearchIcon
-												sx={(theme) => ({
-													color: theme.palette.text.secondary,
-													fontSize: theme.custom.typography.fontSizes.xl,
-												})}
-											/>
-										</InputAdornment>
-									),
-								},
-							}}
-						/>
-
-						{/* Results count */}
+						<RepositorySortBy />
+						<RepositorySearchFilter />
 						<RepositoryResultsCount />
 					</FilterSection>
 

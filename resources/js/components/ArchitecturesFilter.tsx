@@ -10,7 +10,7 @@ import type { ExploreProps } from "~/types";
 
 function ArchitecturesFilter() {
 	const { architectures = [] } = usePage().props as ExploreProps;
-	const { filters, setArchitecture } = useExploreFilters();
+	const { localArchitectures, setArchitecture } = useExploreFilters();
 
 	const handleChange = useCallback(
 		(event: SelectChangeEvent<string>) => {
@@ -21,7 +21,7 @@ function ArchitecturesFilter() {
 	);
 
 	const selectedValue =
-		filters.architectures.length === 1 ? filters.architectures[0] : "all";
+		localArchitectures.length === 1 ? localArchitectures[0] : "all";
 
 	return (
 		<>

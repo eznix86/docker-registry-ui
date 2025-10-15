@@ -86,7 +86,7 @@ RegistryItemCheckbox.displayName = "RegistryItemCheckbox";
 
 function RegistryFilter() {
 	const { registries = [] } = usePage().props as ExploreProps;
-	const { filters, toggleRegistry } = useExploreFilters();
+	const { localRegistries, toggleRegistry } = useExploreFilters();
 	const [parent] = useAutoAnimate();
 
 	return (
@@ -97,7 +97,7 @@ function RegistryFilter() {
 					<RegistryItemCheckbox
 						key={registry.name}
 						registry={registry}
-						checked={filters.registries.includes(registry.name)}
+						checked={localRegistries.includes(registry.name)}
 						onToggle={toggleRegistry}
 					/>
 				))}

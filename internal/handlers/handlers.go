@@ -4,18 +4,18 @@
 package handlers
 
 import (
-	"github.com/eznix86/docker-registry-ui/internal/data"
-	"github.com/eznix86/docker-registry-ui/pkg/inertia"
+	"github.com/eznix86/docker-registry-ui/internal/service"
+	"github.com/romsar/gonertia/v2"
 )
 
-func NewHandler(i *inertia.ViteInstance) *handler {
-	return &handler{
-		inertia: i,
-		models:  &data.Models{},
+func NewHandler(i *gonertia.ViteInstance, services *service.Services) *Handler {
+	return &Handler{
+		inertia:  i,
+		services: services,
 	}
 }
 
-type handler struct {
-	inertia *inertia.ViteInstance
-	models  *data.Models
+type Handler struct {
+	inertia  *gonertia.ViteInstance
+	services *service.Services
 }

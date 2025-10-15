@@ -3,7 +3,7 @@ testdata_dir = "testdata"
 tmp_dir = "bin"
 
 [build]
-  args_bin = []
+  args_bin = ["serve"]
   bin = "./bin/dev"
   cmd = "./build.sh"
   delay = 1000

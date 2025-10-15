@@ -53,7 +53,11 @@ const TagMeta = styled(Typography)(({ theme }) => ({
 }));
 
 function SelectDeleteTagsDialog() {
-	const { tags = [] } = usePage().props as RepositoryProps;
+	const {
+		tags = {
+			data: [],
+		},
+	} = usePage().props as RepositoryProps;
 	const { isSelectDialogOpen, closeSelectDialog } = useDeleteTags();
 	const [selectedTagNames, setSelectedTagNames] = useState<Set<string>>(
 		new Set(),
@@ -72,15 +76,17 @@ function SelectDeleteTagsDialog() {
 	}, []);
 
 	const handleSelectAll = useCallback(() => {
-		if (selectedTagNames.size === tags.length) {
+		if (selectedTagNames.size === tags?.data.length) {
 			setSelectedTagNames(new Set());
 		} else {
-			setSelectedTagNames(new Set(tags.map((tag) => tag.name)));
+			setSelectedTagNames(new Set(tags?.data.map((tag) => tag.name)));
 		}
 	}, [selectedTagNames.size, tags]);
 
 	const handleDelete = useCallback(() => {
-		const tagsToDelete = tags.filter((tag) => selectedTagNames.has(tag.name));
+		const tagsToDelete = tags?.data.filter((tag) =>
+			selectedTagNames.has(tag.name),
+		);
 		// TODO: Implement actual bulk delete logic
 		console.log("Bulk deleting tags:", tagsToDelete);
 		setSelectedTagNames(new Set());
@@ -92,7 +98,7 @@ function SelectDeleteTagsDialog() {
 		closeSelectDialog();
 	}, [closeSelectDialog]);
 
-	const getTotalSize = (tag: (typeof tags)[0]) => {
+	const getTotalSize = (tag: (typeof tags.data)[0]) => {
 		return tag.images.reduce((sum, img) => sum + (img.size || 0), 0);
 	};
 
@@ -122,22 +128,23 @@ function SelectDeleteTagsDialog() {
 				<FormControlLabel
 					control={
 						<Checkbox
-							checked={selectedTagNames.size === tags.length}
+							checked={selectedTagNames.size === tags?.data.length}
 							indeterminate={
-								selectedTagNames.size > 0 && selectedTagNames.size < tags.length
+								selectedTagNames.size > 0 &&
+								selectedTagNames.size < tags?.data.length
 							}
 							onChange={handleSelectAll}
 						/>
 					}
 					label={
 						<Typography variant="body2" fontWeight={600}>
-							Select All ({tags.length} tags)
+							Select All ({tags?.data.length} tags)
 						</Typography>
 					}
 				/>
 
 				<TagList>
-					{tags.map((tag) => (
+					{tags?.data.map((tag) => (
 						<TagItem key={tag.name}>
 							<Checkbox
 								checked={selectedTagNames.has(tag.name)}

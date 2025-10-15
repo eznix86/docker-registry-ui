@@ -6,14 +6,16 @@ package main
 import (
 	"embed"
 	"fmt"
-	"net/http"
-	"time"
+	"log"
 
-	"github.com/eznix86/docker-registry-ui/internal/routes"
+	"github.com/spf13/cobra"
 )
 
-//go:embed public/* resources/views/app.html
+//go:embed all:public resources/views/app.html
 var publicFS embed.FS
+
+//go:embed database/migrations/*.sql
+var migrationsFS embed.FS
 
 var (
 	Version        = "dev"
@@ -25,18 +27,26 @@ func BuildVersion() string {
 	return fmt.Sprintf("%s-%s (%s)", Version, CommitHash, BuildTimestamp)
 }
 
+var rootCmd = &cobra.Command{
+	Use:   "register-ui",
+	Short: "Docker Registry UI",
+	Long:  `A beautiful web interface for managing Docker registries.`,
+	Run: func(cmd *cobra.Command, args []string) {
+		fmt.Println(BuildVersion())
+		err := cmd.Help()
+		if err != nil {
+			log.Fatal("failed to show help")
+		}
+	},
+}
+
+func init() {
+	rootCmd.AddCommand(serveCmd)
+	rootCmd.AddCommand(seedCmd)
+}
+
 func main() {
-	fmt.Println(BuildVersion())
-	r := routes.NewRouter(publicFS)
-	fmt.Println("Starting server on port http://localhost:3000/")
-
-	server := &http.Server{
-		Addr:              ":3000",
-		Handler:           r,
-		ReadHeaderTimeout: 5 * time.Second,
-	}
-
-	if err := server.ListenAndServe(); err != nil {
-		fmt.Printf("Server failed: %v\n", err)
+	if err := rootCmd.Execute(); err != nil {
+		log.Fatal(err)
 	}
 }

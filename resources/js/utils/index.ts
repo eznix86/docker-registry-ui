@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright (C) 2025  Bruno Bernard
 
+import { useCallback, useRef } from "react";
 import type { Repository } from "~/types";
 
 export const random = (min: number, max: number) =>
@@ -54,3 +55,21 @@ export const getRelativeTime = (dateString: string): string => {
 export const pullCommand = (repo: Repository, tag: string) => {
 	return `docker pull ${repo.registry}/${getDisplayName(repo)}:${tag}`;
 };
+
+// biome-ignore lint/suspicious/noExplicitAny: Generic function
+export function useDebounce<T extends (...args: any[]) => void>(
+	fn: T,
+	delay = 300,
+) {
+	const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+	const debouncedFn = useCallback(
+		(...args: Parameters<T>) => {
+			if (timeoutRef.current) clearTimeout(timeoutRef.current);
+			timeoutRef.current = setTimeout(() => fn(...args), delay);
+		},
+		[fn, delay],
+	);
+
+	return debouncedFn;
+}

@@ -43,22 +43,31 @@ const ArchitecturesContainer = styled(Box)(({ theme }) => ({
 const FooterContainer = styled(Box)(({ theme }) => ({
 	display: "flex",
 	justifyContent: "space-between",
-	alignItems: "center",
+	alignItems: "flex-start",
 	color: theme.palette.text.secondary,
 	fontSize: theme.custom.typography.fontSizes.xl,
 	marginTop: "auto",
+	gap: theme.spacing(1),
 }));
 
 const SizeContainer = styled(Box)(({ theme }) => ({
 	display: "flex",
 	alignItems: "center",
 	gap: theme.spacing(0.5),
+	flex: "0 0 auto",
+	minWidth: "fit-content",
 }));
 
 const SourceText = styled(Typography)(({ theme }) => ({
 	fontSize: theme.custom.typography.fontSizes.md,
 	color: theme.palette.text.disabled,
 	fontStyle: "italic",
+	textAlign: "right",
+	flex: "0 1 auto",
+	minWidth: 0,
+	overflow: "hidden",
+	textOverflow: "ellipsis",
+	whiteSpace: "nowrap",
 }));
 
 const NoArchText = styled(Typography)(({ theme }) => ({

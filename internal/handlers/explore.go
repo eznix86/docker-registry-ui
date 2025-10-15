@@ -38,21 +38,42 @@ func parseExploreFilters(r *http.Request) ExploreFilters {
 	return filters
 }
 
-func (h *handler) Explore(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) Explore(w http.ResponseWriter, r *http.Request) {
 	filters := parseExploreFilters(r)
 
-	// Apply filters to repositories
-	repositories := h.models.Repository.Filter(
+	repositories, err := h.services.Repository.Filter(
 		filters.Registries,
 		filters.Architectures,
 		filters.ShowUntagged,
 		filters.Search,
 	)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	totalRepositories, err := h.services.Repository.Count()
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	architectures, err := h.services.Repository.GetAllArchitectures()
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	registries, err := h.services.Registry.GetAll()
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 
 	if err := h.inertia.Render(w, r, "Explore", gonertia.Props{
-		"architectures":     h.models.Repository.GetAllArchitectures(),
-		"totalRepositories": len(repositories),
-		"registries":        h.models.Registry.GetAll(),
+		"architectures":     architectures,
+		"totalRepositories": totalRepositories,
+		"registries":        registries,
 		"repositories":      repositories,
 		"filters":           filters,
 	}); err != nil {

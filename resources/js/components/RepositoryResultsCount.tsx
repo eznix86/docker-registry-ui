@@ -16,10 +16,15 @@ const ResultsCount = styled(Typography)(({ theme }) => ({
 }));
 
 function RepositoryResultCount() {
-	const { repository, tags = [] } = usePage().props as RepositoryProps;
+	const {
+		repository,
+		tags = {
+			data: [],
+		},
+	} = usePage().props as RepositoryProps;
 	return (
 		<ResultsCount variant="body2">
-			{tags.length} of {repository?.tagsCount} tags
+			{tags.data.length} of {repository?.tagsCount} tags
 		</ResultsCount>
 	);
 }

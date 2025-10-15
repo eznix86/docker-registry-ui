@@ -24,7 +24,7 @@ repos:
         
       - id: golangci-lint
         name: Run golangci-lint
-        entry: bash -c 'golangci-lint run ./...'
+        entry: bash -c 'golangci-lint run -c .golangci.yml ./... '
         language: system
         stages: [pre-commit]
 

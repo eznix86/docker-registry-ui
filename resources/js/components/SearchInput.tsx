@@ -5,6 +5,7 @@ import { Search as SearchIcon } from "@mui/icons-material";
 import { InputBase } from "@mui/material";
 import { alpha, styled } from "@mui/material/styles";
 import { memo, useMemo } from "react";
+import { useExploreFilters } from "~/hooks/useExploreFilters";
 
 const Search = styled("div")(({ theme }) => ({
 	position: "relative",
@@ -47,9 +48,7 @@ const InputBaseRoot = styled(InputBase)(({ theme }) => ({
 }));
 
 interface SearchInputProps {
-	value?: string;
 	placeholder?: string;
-	onChange?: (value: string) => void;
 }
 
 const FormWrapper = styled("form")({
@@ -83,15 +82,15 @@ const getOnMobile = (): boolean => {
 };
 
 function SearchInput({
-	value = "",
 	placeholder = "Search repositories...",
-	onChange,
 }: SearchInputProps) {
 	const shortcutText = useMemo(() => getShortcutText(), []);
 	const isOnMobile = useMemo(() => getOnMobile(), []);
 
+	const { localSearch, setSearch } = useExploreFilters();
+
 	const handleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-		onChange?.(event.target.value);
+		setSearch(event.target.value);
 	};
 
 	return (
@@ -104,7 +103,7 @@ function SearchInput({
 					name="search"
 					placeholder={placeholder}
 					inputProps={{ "aria-label": "search", autoComplete: "off" }}
-					value={value}
+					value={localSearch}
 					onChange={handleChange}
 					sx={{ width: "100%", pr: 6 }}
 				/>

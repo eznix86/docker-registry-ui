@@ -4,9 +4,10 @@
 	"private": true,
 	"scripts": {
 		"dev": "vite",
-		"build": "vite build && ./build.sh",
-		"preview": "./bin/dev",
-		"lint": "biome check --fix ./resources && go fmt ./... && golangci-lint run ./..."
+		"build": "vite build",
+		"build:dev": "vite build && ./build.sh",
+		"preview": "./bin/dev serve",
+		"lint": "biome check --fix ./resources && go fmt ./... && golangci-lint run -c .golangci.yml ./..."
 	},
 	"devDependencies": {
 		"@biomejs/biome": "^2.2.6",

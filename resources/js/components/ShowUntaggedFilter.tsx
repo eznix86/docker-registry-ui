@@ -6,13 +6,13 @@ import { Checkbox, FormControlLabel, Label } from "~/components/ui";
 import { useExploreFilters } from "~/hooks/useExploreFilters";
 
 function ShowUntaggedFilter() {
-	const { filters, toggleShowUntagged } = useExploreFilters();
+	const { localShowUntagged, toggleShowUntagged } = useExploreFilters();
 
 	return (
 		<FormControlLabel
 			control={
 				<Checkbox
-					checked={filters.showUntagged}
+					checked={localShowUntagged}
 					size="small"
 					onChange={toggleShowUntagged}
 				/>
