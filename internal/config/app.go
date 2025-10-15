@@ -168,7 +168,7 @@ func (app *Application) Shutdown(ctx context.Context) error {
 
 func DefaultConfig() *Config {
 
-	if !utils.InContainer() {
+	if !utils.IsInContainerContext() {
 		err := godotenv.Load()
 		if err != nil {
 			log.Fatalf("unable to load .env file: %e", err)

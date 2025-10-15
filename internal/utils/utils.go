@@ -14,7 +14,7 @@ func StrPtr(s string) *string {
 	return &s
 }
 
-func InContainer() bool {
+func IsInContainerContext() bool {
 	// Docker/Podman markers
 	if fileExists("/.dockerenv") || fileExists("/run/.containerenv") {
 		return true
