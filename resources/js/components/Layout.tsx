@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright (C) 2025  Bruno Bernard
 
+import { Link } from "@inertiajs/react";
 import { Refresh as RefreshIcon } from "@mui/icons-material";
 import {
 	AppBar,
@@ -33,7 +34,7 @@ const Logo = styled("img")({
 const Title = styled(Typography)(({ theme }) => ({
 	marginRight: theme.spacing(2),
 	fontWeight: theme.custom.typography.fontWeights.black,
-	color: "inherit",
+	color: theme.custom.colors.text.white,
 	textDecoration: "none",
 	fontFamily: theme.typography.fontFamily,
 	[theme.breakpoints.down("sm")]: {
@@ -80,15 +81,17 @@ function Layout({ children, onRefresh }: LayoutProps) {
 		<Box sx={{ flexGrow: 1 }}>
 			<AppBarRoot position="static">
 				<Toolbar>
-					<IconButton
-						size="large"
-						edge="start"
-						color="inherit"
-						aria-label="docker hub"
-						sx={{ mr: { xs: 1, sm: 2 } }}
-					>
-						<Logo src="/public/container-hub.svg" alt="Container Hub" />
-					</IconButton>
+					<Link href="/" as={"div"} prefetch={["hover"]}>
+						<IconButton
+							size="large"
+							edge="start"
+							color="inherit"
+							aria-label="docker hub"
+							sx={{ mr: { xs: 1, sm: 2 } }}
+						>
+							<Logo src="/public/container-hub.svg" alt="Container Hub" />
+						</IconButton>
+					</Link>
 					<Title variant="h6" noWrap>
 						ContainerHub
 					</Title>

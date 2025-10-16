@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/caarlos0/env/v6"
@@ -28,6 +29,9 @@ type Config struct {
 	DatabasePath      string        `env:"DATABASE_PATH" envDefault:"database/database.db"`
 	ReadHeaderTimeout time.Duration `env:"READ_HEADER_TIMEOUT" envDefault:"5s"`
 	ShutdownTimeout   time.Duration `env:"SHUTDOWN_TIMEOUT" envDefault:"30s"`
+	EnableTLS         bool          `env:"ENABLE_TLS" envDefault:"false"`
+	TLSCertFile       string        `env:"TLS_CERT_FILE" envDefault:"certs/localhost.pem"`
+	TLSKeyFile        string        `env:"TLS_KEY_FILE" envDefault:"certs/localhost-key.pem"`
 }
 
 type Application struct {
@@ -136,8 +140,31 @@ func (app *Application) initServices() {
 	app.Services = service.NewServices(app.DB)
 }
 
+func (app *Application) tlsEnabled() bool {
+	if !app.Config.EnableTLS {
+		return false
+	}
+	certExists := fileExists(app.Config.TLSCertFile)
+	keyExists := fileExists(app.Config.TLSKeyFile)
+	return certExists && keyExists
+}
+
+func fileExists(filename string) bool {
+	info, err := os.Stat(filename)
+	if os.IsNotExist(err) {
+		return false
+	}
+	return !info.IsDir()
+}
+
 func (app *Application) Start() error {
 	addr := app.Server.Addr
+
+	if app.tlsEnabled() {
+		fmt.Printf("Starting server with TLS on https://%s/\n", addr)
+		return app.Server.ListenAndServeTLS(app.Config.TLSCertFile, app.Config.TLSKeyFile)
+	}
+
 	fmt.Printf("Starting server on http://%s/\n", addr)
 	return app.Server.ListenAndServe()
 }

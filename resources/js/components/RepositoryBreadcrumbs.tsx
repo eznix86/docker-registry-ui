@@ -13,7 +13,7 @@ function RepositoryBreadcrumbs() {
 
 	return (
 		<Breadcrumbs sx={{ mb: 3 }}>
-			<Link href="/" as={"div"}>
+			<Link href="/" as={"div"} prefetch={["hover"]}>
 				<MuiLink color="primary" sx={{ cursor: "pointer" }}>
 					Explore
 				</MuiLink>

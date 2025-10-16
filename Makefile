@@ -38,6 +38,25 @@ preview: ## Build project like a production build and preview
 	bun run build:dev
 	bun run preview
 
+generate-certs: ## Generate TLS certificates with mkcert
+	@mkdir -p certs
+	@if [ ! -f certs/localhost.pem ] || [ ! -f certs/localhost-key.pem ]; then \
+		echo "Generating TLS certificates with mkcert..."; \
+		mkcert -cert-file certs/localhost.pem -key-file certs/localhost-key.pem localhost 127.0.0.1 ::1; \
+		echo "Certificates generated in certs/"; \
+	else \
+		echo "Certificates already exist in certs/"; \
+	fi
+
+preview-tls: ## Build project and preview with TLS
+	@$(MAKE) generate-certs
+	bun run build:dev
+	ENABLE_TLS=true bun run preview
+
+dev-tls: ## Run development server with TLS
+	@$(MAKE) generate-certs
+	ENABLE_TLS=true bunx concurrently 'air' 'bun run dev'
+
 install: # Install dependencies
 	go mod tidy
 	bun install

@@ -5,3 +5,7 @@ public/build
 public/hot
 .env
 stats.html
+
+# TLS certificates (keep the directory structure)
+certs/*
+!certs/.gitkeep
