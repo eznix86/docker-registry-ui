@@ -7,11 +7,15 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/eznix86/docker-registry-ui/internal/utils/servertiming"
 	"github.com/go-chi/chi/v5"
 	"github.com/romsar/gonertia/v2"
 )
 
 func (h *Handler) RepositoryDetail(w http.ResponseWriter, r *http.Request) {
+	t := servertiming.FromContext(r.Context())
+
+	db := t.NewMetric("db").Start()
 	registryName := chi.URLParam(r, "registry")
 	namespace := chi.URLParam(r, "namespace")
 	repositoryName := chi.URLParam(r, "repository")
@@ -45,6 +49,11 @@ func (h *Handler) RepositoryDetail(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+
+	db.Stop()
+
+	render := t.NewMetric("render").Start()
+	defer render.Stop()
 
 	if err := h.inertia.Render(w, r, "Repository", gonertia.Props{
 		"repository": repository,

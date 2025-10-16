@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/eznix86/docker-registry-ui/internal/utils/servertiming"
 	"github.com/romsar/gonertia/v2"
 )
 
@@ -39,18 +40,15 @@ func parseExploreFilters(r *http.Request) ExploreFilters {
 }
 
 func (h *Handler) Explore(w http.ResponseWriter, r *http.Request) {
+	t := servertiming.FromContext(r.Context())
+
+	f := t.NewMetric("filters").Start()
+
 	filters := parseExploreFilters(r)
 
-	repositories, err := h.services.Repository.Filter(
-		filters.Registries,
-		filters.Architectures,
-		filters.ShowUntagged,
-		filters.Search,
-	)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
+	f.Stop()
+
+	db := t.NewMetric("db").Start()
 
 	totalRepositories, err := h.services.Repository.Count()
 	if err != nil {
@@ -69,13 +67,29 @@ func (h *Handler) Explore(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+	db.Stop()
+
+	res := t.NewMetric("render").Start()
+	defer res.Stop()
 
 	if err := h.inertia.Render(w, r, "Explore", gonertia.Props{
 		"architectures":     architectures,
 		"totalRepositories": totalRepositories,
 		"registries":        registries,
-		"repositories":      repositories,
-		"filters":           filters,
+		"repositories": gonertia.Defer(func() (any, error) {
+
+			repotime := t.NewMetric("repositories").Start()
+			defer repotime.Stop()
+
+			repositories, err := h.services.Repository.Filter(
+				filters.Registries,
+				filters.Architectures,
+				filters.ShowUntagged,
+				filters.Search,
+			)
+			return repositories, err
+		}),
+		"filters": filters,
 	}); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}

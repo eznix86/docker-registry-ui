@@ -153,7 +153,6 @@ function ExplorePage() {
 		setDrawerOpen(false);
 	}, []);
 
-	// Memoize drawer props to prevent re-renders
 	const drawerSx = useMemo(
 		() => ({
 			display: { xs: "block", md: "none" },
@@ -176,7 +175,6 @@ function ExplorePage() {
 					<FilterContent showSettings />
 				</Sidebar>
 			)}
-
 			{/* Mobile Drawer */}
 			<SwipeableDrawer
 				anchor="left"
@@ -184,11 +182,12 @@ function ExplorePage() {
 				onClose={handleDrawerClose}
 				onOpen={handleDrawerOpen}
 				sx={drawerSx}
-				PaperProps={drawerPaperProps}
+				slotProps={{
+					paper: drawerPaperProps,
+				}}
 			>
 				<FilterContent showSettings />
 			</SwipeableDrawer>
-
 			<MainContent>
 				<HeaderContainer>
 					<HeaderLeft>
@@ -208,7 +207,6 @@ function ExplorePage() {
 				{/* Repository Cards */}
 				<RepositoryCardList />
 			</MainContent>
-
 			<UntagDialog />
 		</Container>
 	);

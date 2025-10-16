@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/eznix86/docker-registry-ui/internal/handlers"
+	"github.com/eznix86/docker-registry-ui/internal/utils/servertiming"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 )
@@ -23,6 +24,9 @@ func NewRouter(publicFS embed.FS, h *handlers.Handler) (*chi.Mux, error) {
 	r.Use(middleware.RealIP)
 	r.Use(middleware.Recoverer)
 	r.Use(middleware.Timeout(60 * time.Second))
+	r.Use(servertiming.ServerTiming(&servertiming.Config{
+		TimingAllowOrigin: "*",
+	}))
 
 	// Create sub filesystem for public directory
 	publicSubFS, err := fs.Sub(publicFS, "public")

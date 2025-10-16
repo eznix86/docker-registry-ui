@@ -2,8 +2,9 @@
 // Copyright (C) 2025  Bruno Bernard
 
 import { useAutoAnimate } from "@formkit/auto-animate/react";
+import { Deferred } from "@inertiajs/react";
 import { SearchOff as SearchOffIcon } from "@mui/icons-material";
-import { Box, styled, Typography } from "@mui/material";
+import { Box, CircularProgress, styled, Typography } from "@mui/material";
 import { memo } from "react";
 import RepositoryCard from "~/components/RepositoryCard";
 import { useExploreStore } from "~/stores/exploreStore";
@@ -71,12 +72,14 @@ function RepositoryCardList() {
 			{repositories.length === 0 ? (
 				<EmptyState />
 			) : (
-				repositories.map((repository: Repository) => (
-					<RepositoryCard
-						key={getRepositoryKey(repository)}
-						repository={repository}
-					/>
-				))
+				<Deferred data="repositories" fallback={<CircularProgress size={16} />}>
+					{repositories.map((repository: Repository) => (
+						<RepositoryCard
+							key={getRepositoryKey(repository)}
+							repository={repository}
+						/>
+					))}
+				</Deferred>
 			)}
 		</GridContainer>
 	);
