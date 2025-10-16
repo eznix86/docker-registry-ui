@@ -165,7 +165,7 @@ cat "$SOURCES_FILE"
 
 echo ""
 echo "Generated nginx configuration:"
-cat "$NGINX_CONFIG"
+cat $NGINX_CONFIG | sed -E 's/(Basic|Bearer) [A-Za-z0-9+\/=]+/\1 \*\*\*/g'
 
 echo ""
 echo "✅ Sources generated!"
