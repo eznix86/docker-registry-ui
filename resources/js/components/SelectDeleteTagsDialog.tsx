@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright (C) 2025  Bruno Bernard
 
-import { usePage } from "@inertiajs/react";
 import {
 	Box,
 	Button,
@@ -12,8 +11,11 @@ import {
 } from "@mui/material";
 import { memo, useCallback, useState } from "react";
 import { Dialog } from "~/components/ui";
-import { useDeleteTags } from "~/contexts/DeleteTagsContext";
-import type { RepositoryProps } from "~/types";
+import {
+	useCloseSelectDialog,
+	useIsSelectDialogOpen,
+} from "~/stores/deleteTagsStore";
+import { useTags } from "~/stores/pagePropsStore";
 import { formatBytes } from "~/utils";
 
 const TagList = styled(Box)(({ theme }) => ({
@@ -53,12 +55,9 @@ const TagMeta = styled(Typography)(({ theme }) => ({
 }));
 
 function SelectDeleteTagsDialog() {
-	const {
-		tags = {
-			data: [],
-		},
-	} = usePage().props as RepositoryProps;
-	const { isSelectDialogOpen, closeSelectDialog } = useDeleteTags();
+	const tags = useTags();
+	const isSelectDialogOpen = useIsSelectDialogOpen();
+	const closeSelectDialog = useCloseSelectDialog();
 	const [selectedTagNames, setSelectedTagNames] = useState<Set<string>>(
 		new Set(),
 	);

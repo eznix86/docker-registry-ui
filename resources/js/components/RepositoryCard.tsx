@@ -5,7 +5,7 @@ import { Link } from "@inertiajs/react";
 import { Box, styled, Typography } from "@mui/material";
 import { memo } from "react";
 import { Card, Chip } from "~/components/ui";
-import { useUntagDialog } from "~/contexts/UntagDialogContext";
+import { useOpenUntagDialog } from "~/stores/untagDialogStore";
 import type { Repository } from "~/types";
 import { formatBytes, getDisplayName } from "~/utils";
 
@@ -78,7 +78,7 @@ const NoArchText = styled(Typography)(({ theme }) => ({
 }));
 
 const UntaggedRepositoryCard = memo(({ repository }: RepositoryCardProps) => {
-	const { openDialog } = useUntagDialog();
+	const openDialog = useOpenUntagDialog();
 
 	return (
 		<Card elevation={0} variant="outlined">

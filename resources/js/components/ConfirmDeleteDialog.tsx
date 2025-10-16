@@ -2,20 +2,25 @@
 // Copyright (C) 2025  Bruno Bernard
 
 import { Box, Button, Typography } from "@mui/material";
-import { memo, useCallback } from "react";
+import { memo } from "react";
 import { Dialog } from "~/components/ui";
-import { useDeleteTags } from "~/contexts/DeleteTagsContext";
+import {
+	useCloseConfirmDialog,
+	useIsConfirmDialogOpen,
+	useSelectedTag,
+} from "~/stores/deleteTagsStore";
 import { formatBytes } from "~/utils";
 
 function ConfirmDeleteDialog() {
-	const { isConfirmDialogOpen, selectedTag, closeConfirmDialog } =
-		useDeleteTags();
+	const isConfirmDialogOpen = useIsConfirmDialogOpen();
+	const selectedTag = useSelectedTag();
+	const closeConfirmDialog = useCloseConfirmDialog();
 
-	const handleDelete = useCallback(() => {
+	const handleDelete = () => {
 		// TODO: Implement actual delete logic
 		console.log("Deleting tag:", selectedTag);
 		closeConfirmDialog();
-	}, [selectedTag, closeConfirmDialog]);
+	};
 
 	if (!selectedTag) return null;
 

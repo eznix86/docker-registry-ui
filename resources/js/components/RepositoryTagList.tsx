@@ -2,7 +2,7 @@
 // Copyright (C) 2025  Bruno Bernard
 
 import { useAutoAnimate } from "@formkit/auto-animate/react";
-import { InfiniteScroll, usePage } from "@inertiajs/react";
+import { InfiniteScroll } from "@inertiajs/react";
 import { Delete as DeleteIcon } from "@mui/icons-material";
 import {
 	Box,
@@ -14,8 +14,9 @@ import {
 } from "@mui/material";
 import RepositoryImageItem from "~/components/RepositoryImageItem";
 import { CommandBox, Table } from "~/components/ui";
-import { useDeleteTags } from "~/contexts/DeleteTagsContext";
-import type { Repository, RepositoryProps } from "~/types";
+import { useOpenConfirmDialog } from "~/stores/deleteTagsStore";
+import { useRepository, useTags } from "~/stores/pagePropsStore";
+import type { Repository } from "~/types";
 import { getRelativeTime, pullCommand } from "~/utils";
 
 const TagCard = styled(Box)(({ theme }) => ({
@@ -104,13 +105,9 @@ const DetailsCardContent = styled(CardContent)(({ theme }) => ({
 }));
 
 function RepositoryTagList() {
-	const {
-		repository,
-		tags = {
-			data: [],
-		},
-	} = usePage().props as RepositoryProps;
-	const { openConfirmDialog } = useDeleteTags();
+	const repository = useRepository();
+	const tags = useTags();
+	const openConfirmDialog = useOpenConfirmDialog();
 	const [parent] = useAutoAnimate({
 		duration: 200,
 		easing: "ease-in-out",
@@ -139,6 +136,7 @@ function RepositoryTagList() {
 								</TagMetaContainer>
 							</TagHeaderLeft>
 							<CommandBox.Copyable
+								copyableText={pullCommand(repository as Repository, tag.name)}
 								aria-label={`Copy docker pull command for ${tag.name}`}
 								title={`Click to copy: ${pullCommand(repository as Repository, tag.name)}`}
 							>
@@ -182,5 +180,7 @@ function RepositoryTagList() {
 		</Box>
 	);
 }
+
+RepositoryTagList.displayName = "RepositoryTagList";
 
 export default RepositoryTagList;

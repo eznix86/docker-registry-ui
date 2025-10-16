@@ -7,7 +7,14 @@ import {
 	Box as MuiBox,
 	styled,
 	Typography,
+	type TypographyProps,
 } from "@mui/material";
+import {
+	cloneElement,
+	type ReactElement,
+	type ReactNode,
+	useState,
+} from "react";
 
 const CommandBoxRoot = styled(MuiBox)(({ theme }) => ({
 	backgroundColor: alpha(theme.palette.common.black, 0.2),
@@ -75,7 +82,9 @@ const CopyableText = styled(Typography)(({ theme }) => ({
 	},
 }));
 
-const CopyHint = styled(Typography)(({ theme }) => ({
+const CopyHint = styled(Typography, {
+	shouldForwardProp: (prop) => prop !== "copied",
+})<{ copied?: boolean }>(({ theme, copied }) => ({
 	display: "none",
 	position: "absolute",
 	right: theme.custom.spacing.commandBoxOffset,
@@ -84,9 +93,13 @@ const CopyHint = styled(Typography)(({ theme }) => ({
 	color: theme.palette.common.white,
 	fontSize: theme.custom.typography.fontSizes.md,
 	fontWeight: theme.custom.typography.fontWeights.medium,
-	opacity: theme.custom.animations.opacity.hidden,
+	opacity: copied
+		? theme.custom.animations.opacity.visible
+		: theme.custom.animations.opacity.hidden,
 	transition: theme.custom.animations.transition.opacity,
-	backgroundColor: theme.palette.primary.main,
+	backgroundColor: copied
+		? theme.palette.success.main
+		: theme.palette.primary.main,
 	paddingLeft: theme.spacing(1),
 	paddingRight: theme.spacing(1),
 	paddingTop: theme.spacing(0.5),
@@ -97,10 +110,70 @@ const CopyHint = styled(Typography)(({ theme }) => ({
 	},
 }));
 
+interface CopyableProps {
+	children: ReactNode;
+	copyableText: string;
+	"aria-label"?: string;
+	title?: string;
+}
+
+function Copyable({
+	children,
+	copyableText,
+	"aria-label": ariaLabel,
+	title,
+}: CopyableProps) {
+	const [copied, setCopied] = useState(false);
+
+	const handleCopy = async () => {
+		try {
+			await navigator.clipboard.writeText(copyableText);
+			setCopied(true);
+			setTimeout(() => setCopied(false), 2000);
+		} catch (err) {
+			console.error("Failed to copy:", err);
+		}
+	};
+
+	// Clone children and pass copied state to Hint component
+	const childrenWithProps = Array.isArray(children)
+		? children.map((child) => {
+				if (child?.type === Hint) {
+					return cloneElement(child as ReactElement, { copied });
+				}
+				return child;
+			})
+		: children;
+
+	return (
+		<CopyableButton onClick={handleCopy} aria-label={ariaLabel} title={title}>
+			{childrenWithProps}
+		</CopyableButton>
+	);
+}
+
+// Text component for use inside Copyable
+function Text(props: TypographyProps) {
+	return <CopyableText {...props} />;
+}
+
+// Hint component for use inside Copyable
+interface HintProps extends TypographyProps {
+	copied?: boolean;
+}
+
+function Hint({ copied, ...props }: HintProps) {
+	return (
+		<CopyHint {...props} copied={copied} className="copy-hint">
+			{copied ? "Copied!" : props.children}
+		</CopyHint>
+	);
+}
+
 export const CommandBox = Object.assign(CommandBoxRoot, {
 	Text: CommandBoxText,
-	Copyable: Object.assign(CopyableButton, {
-		Text: CopyableText,
-		Hint: CopyHint,
+	Copyable: Object.assign(Copyable, {
+		Text,
+		Hint,
 	}),
 });

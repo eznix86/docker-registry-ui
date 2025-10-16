@@ -13,7 +13,7 @@ import {
 	useMediaQuery,
 	useTheme,
 } from "@mui/material";
-import { memo, useCallback, useState } from "react";
+import { memo, useCallback, useMemo, useState } from "react";
 import ArchitecturesFilter from "~/components/ArchitecturesFilter";
 import ExploreStatusAvailable from "~/components/ExploreStatusAvailable";
 import RegistryFilter from "~/components/RegistryFilter";
@@ -21,8 +21,7 @@ import RepositoryCardList from "~/components/RepositoryCardList";
 import ShowUntaggedFilter from "~/components/ShowUntaggedFilter";
 import UntagDialog from "~/components/UntagDialog";
 import { FilterTitle, FormControlLabel, Label } from "~/components/ui";
-import { useTheme as useThemeContext } from "~/contexts/ThemeContext";
-import { UntagDialogProvider } from "~/contexts/UntagDialogContext";
+import { useOpenSettings } from "~/stores/themeStore";
 
 // Styled Components
 const Container = styled(Box)(({ theme }) => ({
@@ -98,7 +97,7 @@ interface FilterContentProps {
 }
 
 const FilterContent = memo(({ showSettings = false }: FilterContentProps) => {
-	const { openSettings } = useThemeContext();
+	const openSettings = useOpenSettings();
 
 	return (
 		<>
@@ -154,58 +153,65 @@ function ExplorePage() {
 		setDrawerOpen(false);
 	}, []);
 
+	// Memoize drawer props to prevent re-renders
+	const drawerSx = useMemo(
+		() => ({
+			display: { xs: "block", md: "none" },
+		}),
+		[],
+	);
+
+	const drawerPaperProps = useMemo(
+		() => ({
+			component: DrawerPaper,
+		}),
+		[],
+	);
+
 	return (
-		<UntagDialogProvider>
-			<Container>
-				{/* Desktop Sidebar */}
-				{!isMobile && (
-					<Sidebar>
-						<FilterContent showSettings />
-					</Sidebar>
-				)}
-
-				{/* Mobile Drawer */}
-				<SwipeableDrawer
-					anchor="left"
-					open={drawerOpen}
-					onClose={handleDrawerClose}
-					onOpen={handleDrawerOpen}
-					sx={{
-						display: { xs: "block", md: "none" },
-					}}
-					PaperProps={{
-						component: DrawerPaper,
-					}}
-				>
+		<Container>
+			{/* Desktop Sidebar */}
+			{!isMobile && (
+				<Sidebar>
 					<FilterContent showSettings />
-				</SwipeableDrawer>
+				</Sidebar>
+			)}
 
-				<MainContent>
-					<HeaderContainer>
-						<HeaderLeft>
-							{/* Mobile Filter Button */}
-							{isMobile && (
-								<MobileFilterButton
-									onClick={handleDrawerOpen}
-									aria-label="Open filters"
-								>
-									<FilterListIcon />
-								</MobileFilterButton>
-							)}
-							<ExploreStatusAvailable />
-						</HeaderLeft>
-					</HeaderContainer>
+			{/* Mobile Drawer */}
+			<SwipeableDrawer
+				anchor="left"
+				open={drawerOpen}
+				onClose={handleDrawerClose}
+				onOpen={handleDrawerOpen}
+				sx={drawerSx}
+				PaperProps={drawerPaperProps}
+			>
+				<FilterContent showSettings />
+			</SwipeableDrawer>
 
-					{/* Repository Cards */}
-					<RepositoryCardList />
-				</MainContent>
+			<MainContent>
+				<HeaderContainer>
+					<HeaderLeft>
+						{/* Mobile Filter Button */}
+						{isMobile && (
+							<MobileFilterButton
+								onClick={handleDrawerOpen}
+								aria-label="Open filters"
+							>
+								<FilterListIcon />
+							</MobileFilterButton>
+						)}
+						<ExploreStatusAvailable />
+					</HeaderLeft>
+				</HeaderContainer>
 
-				<UntagDialog />
-			</Container>
-		</UntagDialogProvider>
+				{/* Repository Cards */}
+				<RepositoryCardList />
+			</MainContent>
+
+			<UntagDialog />
+		</Container>
 	);
 }
 
-import { withInertiaPagePropsBridge } from "~/hoc/withInertiaPagePropsBridge";
-
-export default withInertiaPagePropsBridge(memo(ExplorePage));
+export default memo(ExplorePage);

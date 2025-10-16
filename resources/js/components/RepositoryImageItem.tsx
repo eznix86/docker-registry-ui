@@ -2,6 +2,7 @@
 // Copyright (C) 2025  Bruno Bernard
 
 import { styled, Typography } from "@mui/material";
+import { memo } from "react";
 import { Table } from "~/components/ui";
 import type { Image } from "~/types";
 import { formatBytes } from "~/utils";
@@ -29,7 +30,7 @@ type Props = {
 	last?: boolean;
 };
 
-function RepositoryImageItem({ image, last }: Props) {
+const RepositoryImageItem = memo(({ image, last }: Props) => {
 	return (
 		<Table.Row
 			key={`${image.digest}-${image.os}-${image.architecture}-${image.variant}`}
@@ -55,6 +56,8 @@ function RepositoryImageItem({ image, last }: Props) {
 			</Table.Cell>
 		</Table.Row>
 	);
-}
+});
+
+RepositoryImageItem.displayName = "RepositoryImageItem";
 
 export default RepositoryImageItem;

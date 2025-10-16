@@ -4,7 +4,7 @@
 import { Box, FormControl, styled, Typography } from "@mui/material";
 import { memo } from "react";
 import { MenuItem, Select } from "~/components/ui";
-import { useRepositoryFilters } from "~/hooks/useRepositoryFilters";
+import { useLocalSortBy, useSetSortBy } from "~/stores/repositoryStore";
 
 const SortContainer = styled(Box)(({ theme }) => ({
 	display: "flex",
@@ -22,15 +22,16 @@ const SortLabel = styled(Typography)(({ theme }) => ({
 }));
 
 function RepositorySortBy() {
-	const { filters, setSortBy } = useRepositoryFilters();
+	const localSortBy = useLocalSortBy();
+	const setSortBy = useSetSortBy();
 
 	return (
 		<SortContainer>
 			<SortLabel variant="body2">Sort by</SortLabel>
 			<FormControl size="small" sx={{ minWidth: 120 }}>
 				<Select
-					value={filters.sortBy}
-					onChange={(e) => setSortBy(e.target.value as typeof filters.sortBy)}
+					value={localSortBy}
+					onChange={(e) => setSortBy(e.target.value as typeof localSortBy)}
 				>
 					<MenuItem value="newest">Newest</MenuItem>
 					<MenuItem value="oldest">Oldest</MenuItem>

@@ -1,13 +1,12 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright (C) 2025  Bruno Bernard
 
-import { usePage } from "@inertiajs/react";
 import { Delete as DeleteIcon } from "@mui/icons-material";
 import { alpha, Box, IconButton, styled, Typography } from "@mui/material";
 import { memo } from "react";
 import { Chip } from "~/components/ui";
-import { useDeleteTags } from "~/contexts/DeleteTagsContext";
-import type { RepositoryProps } from "~/types";
+import { useOpenSelectDialog } from "~/stores/deleteTagsStore";
+import { useRepository } from "~/stores/pagePropsStore";
 import { formatBytes, getDisplayName } from "~/utils";
 
 const HeaderSection = styled(Box)(({ theme }) => ({
@@ -130,8 +129,8 @@ const DeleteButton = styled(IconButton)(({ theme }) => ({
 }));
 
 function RepositoryHeader() {
-	const { repository } = usePage().props as RepositoryProps;
-	const { openSelectDialog } = useDeleteTags();
+	const repository = useRepository();
+	const openSelectDialog = useOpenSelectDialog();
 
 	return (
 		<HeaderSection>

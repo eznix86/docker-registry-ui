@@ -1,16 +1,19 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright (C) 2025  Bruno Bernard
 
-import { usePage } from "@inertiajs/react";
 import { FormControl, type SelectChangeEvent } from "@mui/material";
 import { memo, useCallback } from "react";
 import { FilterItemTitle, MenuItem, Select } from "~/components/ui";
-import { useExploreFilters } from "~/hooks/useExploreFilters";
-import type { ExploreProps } from "~/types";
+import { useFilterStore } from "~/stores/filterStore";
 
 function ArchitecturesFilter() {
-	const { architectures = [] } = usePage().props as ExploreProps;
-	const { localArchitectures, setArchitecture } = useExploreFilters();
+	const localArchitectures = useFilterStore(
+		(state) => state.localArchitectures,
+	);
+	const selectedArchitectures = useFilterStore(
+		(state) => state.selectedArchitectures,
+	);
+	const setArchitecture = useFilterStore((state) => state.setArchitecture);
 
 	const handleChange = useCallback(
 		(event: SelectChangeEvent<string>) => {
@@ -21,7 +24,7 @@ function ArchitecturesFilter() {
 	);
 
 	const selectedValue =
-		localArchitectures.length === 1 ? localArchitectures[0] : "all";
+		selectedArchitectures.length === 1 ? selectedArchitectures[0] : "all";
 
 	return (
 		<>
@@ -33,7 +36,7 @@ function ArchitecturesFilter() {
 					onChange={handleChange as (event: unknown) => void}
 				>
 					<MenuItem value="all">All Architectures</MenuItem>
-					{architectures.map((arch) => (
+					{localArchitectures.map((arch) => (
 						<MenuItem key={arch} value={arch}>
 							{arch}
 						</MenuItem>

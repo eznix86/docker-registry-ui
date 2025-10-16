@@ -3,16 +3,21 @@
 
 import { memo } from "react";
 import { Checkbox, FormControlLabel, Label } from "~/components/ui";
-import { useExploreFilters } from "~/hooks/useExploreFilters";
+import { useFilterStore } from "~/stores/filterStore";
 
 function ShowUntaggedFilter() {
-	const { localShowUntagged, toggleShowUntagged } = useExploreFilters();
+	const selectedShowUntagged = useFilterStore(
+		(state) => state.selectedShowUntagged,
+	);
+	const toggleShowUntagged = useFilterStore(
+		(state) => state.toggleShowUntagged,
+	);
 
 	return (
 		<FormControlLabel
 			control={
 				<Checkbox
-					checked={localShowUntagged}
+					checked={selectedShowUntagged}
 					size="small"
 					onChange={toggleShowUntagged}
 				/>

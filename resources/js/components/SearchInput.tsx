@@ -5,7 +5,7 @@ import { Search as SearchIcon } from "@mui/icons-material";
 import { InputBase } from "@mui/material";
 import { alpha, styled } from "@mui/material/styles";
 import { memo, useMemo } from "react";
-import { useExploreFilters } from "~/hooks/useExploreFilters";
+import { useFilterStore } from "~/stores/filterStore";
 
 const Search = styled("div")(({ theme }) => ({
 	position: "relative",
@@ -87,7 +87,8 @@ function SearchInput({
 	const shortcutText = useMemo(() => getShortcutText(), []);
 	const isOnMobile = useMemo(() => getOnMobile(), []);
 
-	const { localSearch, setSearch } = useExploreFilters();
+	const localSearch = useFilterStore((state) => state.localSearch);
+	const setSearch = useFilterStore((state) => state.setSearch);
 
 	const handleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
 		setSearch(event.target.value);

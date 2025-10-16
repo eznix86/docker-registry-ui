@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright (C) 2025  Bruno Bernard
 
-import react from "@vitejs/plugin-react";
 import laravel from "laravel-vite-plugin";
 import { defineConfig } from "vite";
+import { visualizer } from 'rollup-plugin-visualizer';
+import preact from "@preact/preset-vite";
 
 export default defineConfig({
 	plugins: [
@@ -11,7 +12,9 @@ export default defineConfig({
 			input: ["resources/js/app.tsx"],
 			refresh: true,
 		}),
-		react(),
+		preact(),
+		visualizer({ open: true })
+
 	],
 	server: {
 		host: "127.0.0.1",
@@ -30,14 +33,7 @@ export default defineConfig({
 					"ui-vendor": ["@mui/material", "@mui/icons-material"],
 				},
 			},
-			// treeshake: {
-			// 	moduleSideEffects: false,
-			// 	propertyReadSideEffects: false,
-			// },
+			treeshake: true,
 		},
-	},
-	// optimizeDeps: {
-	// 	include: ["react", "react-dom", "react-router-dom"],
-	// 	exclude: ["@mui/icons-material"],
-	// },
+	}
 });

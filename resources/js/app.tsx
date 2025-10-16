@@ -3,9 +3,13 @@
 
 import { createInertiaApp } from "@inertiajs/react";
 import { resolvePageComponent } from "laravel-vite-plugin/inertia-helpers";
+import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
-import { ThemeContextProvider } from "~/contexts/ThemeContext";
-import AppShell from "./components/AppShell";
+import AppShell from "~/components/AppShell";
+import { setupInertiaListeners } from "~/setup/setupInertiaListeners";
+
+// Set up Inertia event listeners
+setupInertiaListeners();
 
 createInertiaApp({
 	title: () => `ContainerHub`,
@@ -17,9 +21,9 @@ createInertiaApp({
 	setup({ el, App, props }) {
 		const root = createRoot(el);
 		root.render(
-			<ThemeContextProvider>
+			<StrictMode>
 				<AppShell App={App} props={props} />
-			</ThemeContextProvider>,
+			</StrictMode>,
 		);
 	},
 });

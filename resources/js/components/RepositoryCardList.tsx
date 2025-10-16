@@ -2,12 +2,12 @@
 // Copyright (C) 2025  Bruno Bernard
 
 import { useAutoAnimate } from "@formkit/auto-animate/react";
-import { usePage } from "@inertiajs/react";
 import { SearchOff as SearchOffIcon } from "@mui/icons-material";
-import { Box, CircularProgress, styled, Typography } from "@mui/material";
+import { Box, styled, Typography } from "@mui/material";
 import { memo } from "react";
 import RepositoryCard from "~/components/RepositoryCard";
-import type { ExploreProps, Repository } from "~/types";
+import { useExploreStore } from "~/stores/exploreStore";
+import type { Repository } from "~/types";
 
 const GridContainer = styled(Box)(({ theme }) => ({
 	display: "grid",
@@ -63,19 +63,15 @@ const getRepositoryKey = (repo: Repository): string => {
 };
 
 function RepositoryCardList() {
-	const { repositories } = usePage().props as ExploreProps;
+	const repositories = useExploreStore((state) => state.repositories);
 	const [parent] = useAutoAnimate();
-
-	const repoList = repositories ?? [];
 
 	return (
 		<GridContainer ref={parent}>
-			{!repositories ? (
-				<CircularProgress size={16} />
-			) : repoList.length === 0 ? (
+			{repositories.length === 0 ? (
 				<EmptyState />
 			) : (
-				repoList.map((repository: Repository) => (
+				repositories.map((repository: Repository) => (
 					<RepositoryCard
 						key={getRepositoryKey(repository)}
 						repository={repository}

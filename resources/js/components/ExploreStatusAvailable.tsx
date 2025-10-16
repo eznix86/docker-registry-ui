@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright (C) 2025  Bruno Bernard
 
-import { Deferred, usePage } from "@inertiajs/react";
+import { Deferred } from "@inertiajs/react";
 import { CircularProgress, styled, Typography } from "@mui/material";
 import { memo } from "react";
-import type { ExploreProps } from "~/types";
+import { useExploreStore } from "~/stores/exploreStore";
 
 const ResultsText = styled(Typography)(({ theme }) => ({
 	display: "flex",
@@ -13,8 +13,9 @@ const ResultsText = styled(Typography)(({ theme }) => ({
 }));
 
 function ExploreStatusAvailable() {
-	const { repositories = [], totalRepositories = 0 } = usePage()
-		.props as ExploreProps;
+	const repositories = useExploreStore((state) => state.repositories);
+	const totalRepositories = useExploreStore((state) => state.totalRepositories);
+
 	return (
 		<Deferred data="repositories" fallback={<CircularProgress size={16} />}>
 			<ResultsText variant="body2" color="text.secondary">

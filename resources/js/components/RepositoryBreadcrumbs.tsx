@@ -1,15 +1,15 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright (C) 2025  Bruno Bernard
 
-import { Link, usePage } from "@inertiajs/react";
+import { Link } from "@inertiajs/react";
 
 import { Breadcrumbs, Link as MuiLink, Typography } from "@mui/material";
 import { memo } from "react";
-import type { RepositoryProps } from "~/types";
+import { useRepository } from "~/stores/pagePropsStore";
 import { getDisplayName } from "~/utils";
 
 function RepositoryBreadcrumbs() {
-	const { repository } = usePage().props as RepositoryProps;
+	const repository = useRepository();
 
 	return (
 		<Breadcrumbs sx={{ mb: 3 }}>

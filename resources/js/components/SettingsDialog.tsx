@@ -2,9 +2,14 @@
 // Copyright (C) 2025  Bruno Bernard
 
 import { Box, Button, FormControl, Typography } from "@mui/material";
-import { memo, useCallback } from "react";
+import { memo } from "react";
 import { Dialog, MenuItem, Select } from "~/components/ui";
-import { useTheme } from "~/contexts/ThemeContext";
+import {
+	useCloseSettings,
+	useIsSettingsOpen,
+	useSetTheme,
+	useThemeName,
+} from "~/stores/themeStore";
 import type { ThemeName } from "~/themes/types";
 
 const THEME_LABELS: Record<ThemeName, string> = {
@@ -23,14 +28,18 @@ const THEME_LABELS: Record<ThemeName, string> = {
 };
 
 function SettingsDialog() {
-	const { themeName, setTheme, isSettingsOpen, closeSettings } = useTheme();
+	const themeName = useThemeName();
+	const setTheme = useSetTheme();
+	const isSettingsOpen = useIsSettingsOpen();
+	const closeSettings = useCloseSettings();
 
-	const handleThemeChange = useCallback(
-		(event: { target: { value: string } }) => {
-			setTheme(event.target.value as ThemeName);
-		},
-		[setTheme],
-	);
+	const handleThemeChange = (
+		event:
+			| React.ChangeEvent<HTMLInputElement>
+			| (Event & { target: { value: unknown; name: string } }),
+	) => {
+		setTheme((event.target as HTMLInputElement).value as ThemeName);
+	};
 
 	return (
 		<Dialog

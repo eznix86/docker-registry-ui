@@ -11,8 +11,6 @@ import RepositorySearchFilter from "~/components/RepositorySearchFilter";
 import RepositorySortBy from "~/components/RepositorySortBy";
 import RepositoryTagList from "~/components/RepositoryTagList";
 import SelectDeleteTagsDialog from "~/components/SelectDeleteTagsDialog";
-import { DeleteTagsProvider } from "~/contexts/DeleteTagsContext";
-import { withInertiaPagePropsBridge } from "~/hoc/withInertiaPagePropsBridge";
 
 // Styled Components
 const PageContainer = styled(Box)(({ theme }) => ({
@@ -37,35 +35,33 @@ const FilterSection = styled(Box)(({ theme }) => ({
 
 function RepositoryPage() {
 	return (
-		<DeleteTagsProvider>
-			<PageContainer>
-				<ContentWrapper>
-					{/* Breadcrumbs */}
-					<RepositoryBreadcrumbs />
+		<PageContainer>
+			<ContentWrapper>
+				{/* Breadcrumbs */}
+				<RepositoryBreadcrumbs />
 
-					{/* Repository Header */}
-					<RepositoryHeader />
+				{/* Repository Header */}
+				<RepositoryHeader />
 
-					{/* Divider between general info and tags section */}
-					<Divider sx={{ mb: 3 }} />
+				{/* Divider between general info and tags section */}
+				<Divider sx={{ mb: 3 }} />
 
-					{/* Tags Filter and Sort Section */}
-					<FilterSection>
-						<RepositorySortBy />
-						<RepositorySearchFilter />
-						<RepositoryResultsCount />
-					</FilterSection>
+				{/* Tags Filter and Sort Section */}
+				<FilterSection>
+					<RepositorySortBy />
+					<RepositorySearchFilter />
+					<RepositoryResultsCount />
+				</FilterSection>
 
-					{/* Tags Section */}
-					<RepositoryTagList />
-				</ContentWrapper>
+				{/* Tags Section */}
+				<RepositoryTagList />
+			</ContentWrapper>
 
-				{/* Delete Dialogs */}
-				<SelectDeleteTagsDialog />
-				<ConfirmDeleteDialog />
-			</PageContainer>
-		</DeleteTagsProvider>
+			{/* Delete Dialogs */}
+			<SelectDeleteTagsDialog />
+			<ConfirmDeleteDialog />
+		</PageContainer>
 	);
 }
 
-export default withInertiaPagePropsBridge(memo(RepositoryPage));
+export default memo(RepositoryPage);

@@ -54,6 +54,4 @@ function NotFound() {
 	);
 }
 
-import { withInertiaPagePropsBridge } from "~/hoc/withInertiaPagePropsBridge";
-
-export default withInertiaPagePropsBridge(memo(NotFound));
+export default memo(NotFound);

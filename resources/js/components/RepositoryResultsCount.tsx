@@ -1,10 +1,9 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright (C) 2025  Bruno Bernard
 
-import { usePage } from "@inertiajs/react";
 import { styled, Typography } from "@mui/material";
 import { memo } from "react";
-import type { RepositoryProps } from "~/types";
+import { useRepository, useTags } from "~/stores/pagePropsStore";
 
 const ResultsCount = styled(Typography)(({ theme }) => ({
 	color: theme.palette.text.secondary,
@@ -16,12 +15,9 @@ const ResultsCount = styled(Typography)(({ theme }) => ({
 }));
 
 function RepositoryResultCount() {
-	const {
-		repository,
-		tags = {
-			data: [],
-		},
-	} = usePage().props as RepositoryProps;
+	const repository = useRepository();
+	const tags = useTags();
+
 	return (
 		<ResultsCount variant="body2">
 			{tags.data.length} of {repository?.tagsCount} tags

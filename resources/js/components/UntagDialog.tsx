@@ -2,24 +2,18 @@
 // Copyright (C) 2025  Bruno Bernard
 
 import { Box, Button, Typography } from "@mui/material";
-import { memo, useCallback } from "react";
+import { memo } from "react";
 import { CommandBox, Dialog, WarningBox } from "~/components/ui";
-import { useUntagDialog } from "~/contexts/UntagDialogContext";
+import {
+	useCloseUntagDialog,
+	useUntagDialogIsOpen,
+	useUntagDialogRepositoryName,
+} from "~/stores/untagDialogStore";
 
 function UntagDialog() {
-	const { isOpen, repositoryName, closeDialog } = useUntagDialog();
-
-	const handleCopyCleanup = useCallback(() => {
-		navigator.clipboard.writeText(
-			`rm -rf /var/lib/registry/docker/registry/v2/repositories/${repositoryName}`,
-		);
-	}, [repositoryName]);
-
-	const handleCopyGarbageCollect = useCallback(() => {
-		navigator.clipboard.writeText(
-			"registry garbage-collect /path/to/config.yml",
-		);
-	}, []);
+	const isOpen = useUntagDialogIsOpen();
+	const repositoryName = useUntagDialogRepositoryName();
+	const closeDialog = useCloseUntagDialog();
 
 	return (
 		<Dialog open={isOpen} maxWidth="md" fullWidth onClose={closeDialog}>
@@ -50,7 +44,11 @@ function UntagDialog() {
 						command:
 					</WarningBox.Text>
 
-					<CommandBox.Copyable onClick={handleCopyCleanup}>
+					<CommandBox.Copyable
+						copyableText={`rm -rf /var/lib/registry/docker/registry/v2/repositories/${repositoryName}`}
+						aria-label="Copy cleanup command"
+						title={`Click to copy: rm -rf /var/lib/registry/docker/registry/v2/repositories/${repositoryName}`}
+					>
 						<CommandBox.Copyable.Text>
 							rm -rf /var/lib/registry/docker/registry/v2/repositories/
 							{repositoryName}
@@ -65,7 +63,11 @@ function UntagDialog() {
 						storage space:
 					</WarningBox.Text>
 
-					<CommandBox.Copyable onClick={handleCopyGarbageCollect}>
+					<CommandBox.Copyable
+						copyableText="registry garbage-collect /path/to/config.yml"
+						aria-label="Copy garbage collect command"
+						title="Click to copy: registry garbage-collect /path/to/config.yml"
+					>
 						<CommandBox.Copyable.Text>
 							registry garbage-collect /path/to/config.yml
 						</CommandBox.Copyable.Text>

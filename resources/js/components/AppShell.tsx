@@ -5,8 +5,7 @@ import { CssBaseline } from "@mui/material";
 import { ThemeProvider } from "@mui/material/styles";
 import Layout from "~/components/Layout";
 import SettingsDialog from "~/components/SettingsDialog";
-import { InertiaPagePropsProvider } from "~/contexts/InertiaPagePropsContext";
-import { useTheme } from "~/contexts/ThemeContext";
+import { useTheme } from "~/stores/themeStore";
 
 interface AppShellProps {
 	// biome-ignore lint: Inertia app type
@@ -16,23 +15,21 @@ interface AppShellProps {
 }
 
 export default function AppShell({ App, props }: AppShellProps) {
-	const { theme } = useTheme();
+	const theme = useTheme();
 
 	if (!theme) return null;
 
 	return (
 		<ThemeProvider theme={theme}>
 			<CssBaseline />
-			<InertiaPagePropsProvider>
-				<Layout
-					onRefresh={() => {
-						console.log("Refreshing repositories...");
-					}}
-				>
-					<App {...props} />
-				</Layout>
-				<SettingsDialog />
-			</InertiaPagePropsProvider>
+			<Layout
+				onRefresh={() => {
+					console.log("Refreshing repositories...");
+				}}
+			>
+				<App {...props} />
+			</Layout>
+			<SettingsDialog />
 		</ThemeProvider>
 	);
 }

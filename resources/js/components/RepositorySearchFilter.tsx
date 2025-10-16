@@ -3,24 +3,22 @@
 
 import { Search as SearchIcon } from "@mui/icons-material";
 import { InputAdornment } from "@mui/material";
-import { memo, useCallback } from "react";
+import { memo } from "react";
 import { TextField } from "~/components/ui";
-import { useRepositoryFilters } from "~/hooks/useRepositoryFilters";
+import { useLocalFilter, useSetFilter } from "~/stores/repositoryStore";
 
 function RepositorySearchFilter() {
-	const { filters, setFilter } = useRepositoryFilters();
+	const localFilter = useLocalFilter();
+	const setFilter = useSetFilter();
 
-	const handleChange = useCallback(
-		(e: React.ChangeEvent<HTMLInputElement>) => {
-			setFilter(e.target.value);
-		},
-		[setFilter],
-	);
+	const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+		setFilter(e.target.value);
+	};
 
 	return (
 		<TextField
 			placeholder="Filter tags"
-			value={filters.filter}
+			value={localFilter}
 			onChange={handleChange}
 			size="small"
 			sx={{

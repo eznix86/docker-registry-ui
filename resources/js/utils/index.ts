@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright (C) 2025  Bruno Bernard
 
-import { useCallback, useRef } from "react";
 import type { Repository } from "~/types";
 
 export const random = (min: number, max: number) =>
@@ -56,20 +55,19 @@ export const pullCommand = (repo: Repository, tag: string) => {
 	return `docker pull ${repo.registry}/${getDisplayName(repo)}:${tag}`;
 };
 
-// biome-ignore lint/suspicious/noExplicitAny: Generic function
-export function useDebounce<T extends (...args: any[]) => void>(
+/**
+ * Debounce function that delays the execution of a function until after a specified delay
+ * @param fn - The function to debounce
+ * @param delay - The delay in milliseconds (default: 250ms)
+ * @returns A debounced version of the function
+ */
+export function debounce<T extends (...args: never[]) => void>(
 	fn: T,
-	delay = 300,
-) {
-	const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-	const debouncedFn = useCallback(
-		(...args: Parameters<T>) => {
-			if (timeoutRef.current) clearTimeout(timeoutRef.current);
-			timeoutRef.current = setTimeout(() => fn(...args), delay);
-		},
-		[fn, delay],
-	);
-
-	return debouncedFn;
+	delay = 250,
+): (...args: Parameters<T>) => void {
+	let timeoutId: ReturnType<typeof setTimeout> | null = null;
+	return (...args: Parameters<T>) => {
+		if (timeoutId) clearTimeout(timeoutId);
+		timeoutId = setTimeout(() => fn(...args), delay);
+	};
 }
