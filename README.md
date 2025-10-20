@@ -86,6 +86,24 @@ env:
 
 ---
 
+## Authentication
+
+For registries with authentication, you must add the auth environment variable as a base64 encoded value of `username:password`
+
+```bash
+echo -n "username:password" | base64
+# dXNlcm5hbWU6cGFzc3dvcmQ=
+```
+
+Afterwards, use this value through the following environment variables:
+
+```bash
+REGISTRY_URL=https://registry.test
+REGISTRY_AUTH=dXNlcm5hbWU6cGFzc3dvcmQ=
+```
+
+---
+
 ## Multiple Registry Support
 
 The UI supports connections to multiple registries. Configure them via environment variables with suffixes:
