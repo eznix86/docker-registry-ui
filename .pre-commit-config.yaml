@@ -16,8 +16,8 @@ repos:
         pass_filenames: false
         stages: [pre-commit]
 
-      - id: biome-lint
-        name: Run biome lint
+      - id: lint
+        name: Run lint
         entry: bash -c 'bun run lint'
         language: system
         stages: [pre-commit]
