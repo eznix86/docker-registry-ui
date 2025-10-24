@@ -18,12 +18,11 @@
 
     {{ .inertiaHead }}
 
-    {{ viteRefresh }}
+    {{ viteAssets "resources/js/app.tsx" }}
 
 </head>
 <body>
     {{ .inertia }}
 
-    <script type="module" src='{{ vite "resources/js/app.tsx" }}'></script>
 </body>
 </html>

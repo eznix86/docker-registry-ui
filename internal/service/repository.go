@@ -4,7 +4,6 @@
 package service
 
 import (
-	"slices"
 	"strings"
 	"time"
 
@@ -33,48 +32,32 @@ func NewRepositoryService(
 	}
 }
 
-func (s *RepositoryService) Filter(registries []string, architectures []string, showUntagged bool, search string) ([]Repository, error) {
-	stats, err := s.repoRepo.FindAllStats()
+func (s *RepositoryService) Filter(registries []string, architectures []string, showUntagged bool, search string) (*RepositoryFilterResult, error) {
+	statsFilters := repository.StatsFilters{
+		RegistryNames: registries,
+		Architectures: architectures,
+		ShowUntagged:  showUntagged,
+		Search:        search,
+	}
+
+	stats, total, err := s.repoRepo.ListStats(statsFilters, repository.PaginationParams{Page: 1, PageSize: 0}, "name ASC")
 	if err != nil {
 		return nil, err
 	}
 
-	result := make([]Repository, 0)
+	result := make([]Repository, 0, len(stats))
 	for _, stat := range stats {
-		dto := s.statsToDTO(&stat)
-
-		if !matchesRegistries(dto, registries) {
-			continue
-		}
-
-		if !matchesArchitectures(dto, architectures) {
-			continue
-		}
-
-		if !matchesUntaggedFilter(dto, showUntagged) {
-			continue
-		}
-
-		if !matchesSearch(dto, search) {
-			continue
-		}
-
-		result = append(result, dto)
+		result = append(result, s.statsToDTO(&stat))
 	}
 
-	return result, nil
+	return &RepositoryFilterResult{
+		Repositories: result,
+		Total:        total,
+	}, nil
 }
 
 func (s *RepositoryService) GetAllArchitectures() ([]string, error) {
 	return s.manifestRepo.GetAllArchitectures()
-}
-
-func (s *RepositoryService) Count() (int, error) {
-	stats, err := s.repoRepo.FindAllStats()
-	if err != nil {
-		return 0, err
-	}
-	return len(stats), nil
 }
 
 func (s *RepositoryService) FindRepository(registryName string, namespace *string, repositoryName string) (*Repository, error) {
@@ -97,7 +80,10 @@ func (s *RepositoryService) FindRepository(registryName string, namespace *strin
 }
 
 func (s *RepositoryService) ListTags(repoID uint) ([]Tag, error) {
-	result, err := s.ListTagsWithFilters(repoID, "newest", "", 1)
+	result, err := s.ListTagsWithFilters(repoID, TagFilterParams{
+		SortBy: "newest",
+		Page:   1,
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -113,10 +99,20 @@ type PaginatedTagsResult struct {
 	TotalCount   int64
 }
 
-func (s *RepositoryService) ListTagsWithFilters(repoID uint, sortBy string, search string, page int) (*PaginatedTagsResult, error) {
-	paginatedTags, err := s.tagRepo.FindTagDetailsWithPagination(repoID, sortBy, search, repository.PaginationParams{
+func (s *RepositoryService) ListTagsWithFilters(repoID uint, params TagFilterParams) (*PaginatedTagsResult, error) {
+	page := params.Page
+	if page <= 0 {
+		page = 1
+	}
+
+	pageSize := params.PageSize
+	if pageSize <= 0 {
+		pageSize = 5
+	}
+
+	paginatedTags, err := s.tagRepo.FindTagDetailsWithPagination(repoID, params.SortBy, params.Search, repository.PaginationParams{
 		Page:     page,
-		PageSize: 5,
+		PageSize: pageSize,
 	})
 	if err != nil {
 		return nil, err
@@ -138,7 +134,7 @@ func (s *RepositoryService) ListTagsWithFilters(repoID uint, sortBy string, sear
 
 	return &PaginatedTagsResult{
 		Tags:         serviceTags,
-		CurrentPage:  paginatedTags.CurrentPage,
+		CurrentPage:  page,
 		NextPage:     paginatedTags.NextPage,
 		PreviousPage: paginatedTags.PreviousPage,
 		TotalPages:   paginatedTags.TotalPages,
@@ -195,30 +191,16 @@ func (s *RepositoryService) toRepositoryDTO(repo *models.Repository) (*Repositor
 		name = parts[1]
 	}
 
-	stats, err := s.repoRepo.FindStatsByID(repo.ID)
-	if err != nil {
-		return nil, err
-	}
-
-	var architectures []string
-	if stats.Architectures != "" {
-		for _, arch := range strings.Split(stats.Architectures, ",") {
-			arch = strings.TrimSpace(arch)
-			if arch != "" {
-				architectures = append(architectures, arch)
-			}
+	stats := repo.Stats
+	var err error
+	if stats == nil {
+		stats, err = s.repoRepo.FindStatsByID(repo.ID)
+		if err != nil {
+			return nil, err
 		}
 	}
 
-	return &Repository{
-		ID:            repo.ID,
-		Name:          name,
-		Registry:      repo.Registry.Name,
-		Namespace:     namespace,
-		Size:          stats.TotalSize,
-		Architectures: architectures,
-		TagsCount:     int(stats.TagsCount),
-	}, nil
+	return s.repositoryFromStats(name, namespace, repo.Registry.Name, stats), nil
 }
 
 func (s *RepositoryService) statsToDTO(stats *models.RepositoryStats) Repository {
@@ -254,44 +236,24 @@ func (s *RepositoryService) statsToDTO(stats *models.RepositoryStats) Repository
 	}
 }
 
-func matchesRegistries(repo Repository, registries []string) bool {
-	if len(registries) == 0 {
-		return true
-	}
-	return slices.Contains(registries, repo.Registry)
-}
-
-func matchesArchitectures(repo Repository, architectures []string) bool {
-	if len(architectures) == 0 {
-		return true
-	}
-	for _, arch := range architectures {
-		if slices.Contains(repo.Architectures, arch) {
-			return true
+func (s *RepositoryService) repositoryFromStats(name string, namespace *string, registryName string, stats *models.RepositoryStats) *Repository {
+	var architectures []string
+	if stats.Architectures != "" {
+		for _, arch := range strings.Split(stats.Architectures, ",") {
+			arch = strings.TrimSpace(arch)
+			if arch != "" {
+				architectures = append(architectures, arch)
+			}
 		}
 	}
-	return false
-}
 
-func matchesUntaggedFilter(repo Repository, showUntagged bool) bool {
-	if !showUntagged && repo.TagsCount == 0 {
-		return false
+	return &Repository{
+		ID:            stats.ID,
+		Name:          name,
+		Registry:      registryName,
+		Namespace:     namespace,
+		Size:          stats.TotalSize,
+		Architectures: architectures,
+		TagsCount:     int(stats.TagsCount),
 	}
-	return true
-}
-
-func matchesSearch(repo Repository, search string) bool {
-	if search == "" {
-		return true
-	}
-
-	searchLower := strings.ToLower(search)
-	repoName := strings.ToLower(repo.Name)
-	namespace := ""
-	if repo.Namespace != nil {
-		namespace = strings.ToLower(*repo.Namespace)
-	}
-
-	return strings.Contains(repoName, searchLower) ||
-		strings.Contains(namespace, searchLower)
 }

@@ -27,4 +27,4 @@ require (
 	golang.org/x/text v0.30.0 // indirect
 )
 
-replace github.com/romsar/gonertia/v2 => github.com/eznix86/gonertia/v2 v2.0.0-20251016132736-7427b22e0ec5
+replace github.com/romsar/gonertia/v2 => github.com/eznix86/gonertia/v2 v2.0.0-20251021100922-3440dbce18a2

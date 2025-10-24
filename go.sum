@@ -7,8 +7,8 @@ github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/dustin/go-humanize v1.0.1 h1:GzkhY7T5VNhEkwH0PVJgjz+fX1rhBrR7pRT3mDkpeCY=
 github.com/dustin/go-humanize v1.0.1/go.mod h1:Mu1zIs6XwVuF/gI1OepvI0qD18qycQx+mFykh5fBlto=
-github.com/eznix86/gonertia/v2 v2.0.0-20251016132736-7427b22e0ec5 h1:KRoSOyHjJLU9SC3S9abIWQDXdMRTUmL0UWVbt8sx6pE=
-github.com/eznix86/gonertia/v2 v2.0.0-20251016132736-7427b22e0ec5/go.mod h1:qNGIXJli42+1FXcCUtbOOZ22/lixfBU9JcMSrMgtc1s=
+github.com/eznix86/gonertia/v2 v2.0.0-20251021100922-3440dbce18a2 h1:GtI70XiZung0le2zHRxvl5O0xeE3cKHvUm8JhLQdIzA=
+github.com/eznix86/gonertia/v2 v2.0.0-20251021100922-3440dbce18a2/go.mod h1:qNGIXJli42+1FXcCUtbOOZ22/lixfBU9JcMSrMgtc1s=
 github.com/go-chi/chi/v5 v5.2.3 h1:WQIt9uxdsAbgIYgid+BpYc+liqQZGMHRaUwp0JUcvdE=
 github.com/go-chi/chi/v5 v5.2.3/go.mod h1:L2yAIGWB3H+phAw1NxKwWM+7eUH/lU8pOMm5hHcoops=
 github.com/google/uuid v1.6.0 h1:NIvaJDMOsjHA8n1jAhLSgzrAzy1Hgr+hNrb57e+94F0=

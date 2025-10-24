@@ -9,8 +9,9 @@ type Repository struct {
 	Name       string `gorm:"column:name;type:text;not null"`
 
 	// Relationships
-	Registry *Registry `gorm:"foreignKey:RegistryID;references:ID"`
-	Tags     []Tag     `gorm:"foreignKey:RepoID;references:ID"`
+	Registry *Registry        `gorm:"foreignKey:RegistryID;references:ID"`
+	Tags     []Tag            `gorm:"foreignKey:RepoID;references:ID"`
+	Stats    *RepositoryStats `gorm:"foreignKey:ID;references:ID"`
 }
 
 func (Repository) TableName() string {

@@ -30,7 +30,10 @@ func Paginate(params PaginationParams) func(db *gorm.DB) *gorm.DB {
 
 		pageSize := params.PageSize
 		if pageSize <= 0 {
-			pageSize = 20
+			// Allow callers to skip pagination by providing a non-positive
+			// page size. This keeps existing behavior for zero/negative values
+			// but ensures we do not add LIMIT/OFFSET in that case.
+			return db
 		}
 
 		offset := (page - 1) * pageSize

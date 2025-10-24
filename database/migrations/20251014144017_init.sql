@@ -64,7 +64,7 @@ CREATE TABLE IF NOT EXISTS tag_details (
     earliest_created TEXT,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (id) REFERENCES tags(id) ON DELETE CASCADE,
-    FOREIGN KEY (repo_id) REFERENCES repositories(repo_id) ON DELETE CASCADE
+    FOREIGN KEY (repo_id) REFERENCES repositories(id) ON DELETE CASCADE
 );
 
 CREATE INDEX idx_tag_details_repo ON tag_details(repo_id);

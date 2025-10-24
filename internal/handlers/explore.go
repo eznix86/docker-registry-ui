@@ -50,12 +50,6 @@ func (h *Handler) Explore(w http.ResponseWriter, r *http.Request) {
 
 	db := t.NewMetric("db").Start()
 
-	totalRepositories, err := h.services.Repository.Count()
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
 	architectures, err := h.services.Repository.GetAllArchitectures()
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -69,25 +63,29 @@ func (h *Handler) Explore(w http.ResponseWriter, r *http.Request) {
 	}
 	db.Stop()
 
+	repoMetric := t.NewMetric("repositories").Start()
+	repoResult, err := h.services.Repository.Filter(
+		filters.Registries,
+		filters.Architectures,
+		filters.ShowUntagged,
+		filters.Search,
+	)
+	repoMetric.Stop()
+
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
 	res := t.NewMetric("render").Start()
 	defer res.Stop()
 
 	if err := h.inertia.Render(w, r, "Explore", gonertia.Props{
 		"architectures":     architectures,
-		"totalRepositories": totalRepositories,
+		"totalRepositories": int(repoResult.Total),
 		"registries":        registries,
 		"repositories": gonertia.Defer(func() (any, error) {
-
-			repotime := t.NewMetric("repositories").Start()
-			defer repotime.Stop()
-
-			repositories, err := h.services.Repository.Filter(
-				filters.Registries,
-				filters.Architectures,
-				filters.ShowUntagged,
-				filters.Search,
-			)
-			return repositories, err
+			return repoResult.Repositories, nil
 		}),
 		"filters": filters,
 	}); err != nil {

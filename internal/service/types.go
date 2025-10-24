@@ -21,6 +21,18 @@ type Repository struct {
 	TagsCount     int      `json:"tagsCount"`
 }
 
+type RepositoryFilterResult struct {
+	Repositories []Repository
+	Total        int64
+}
+
+type TagFilterParams struct {
+	SortBy   string
+	Search   string
+	Page     int
+	PageSize int
+}
+
 type Image struct {
 	Digest       string    `json:"digest"`
 	CreatedAt    time.Time `json:"createdAt"`

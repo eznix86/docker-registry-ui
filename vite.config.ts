@@ -4,8 +4,8 @@
 import fs from "node:fs";
 import preact from "@preact/preset-vite";
 import laravel from "laravel-vite-plugin";
-import { visualizer } from "rollup-plugin-visualizer";
 import { defineConfig, type ServerOptions } from "vite";
+import sri from "vite-plugin-manifest-sri";
 
 type httpsOptions = ServerOptions["https"];
 
@@ -16,7 +16,8 @@ export default defineConfig({
 			refresh: true,
 		}),
 		preact(),
-		visualizer({ open: true }),
+		sri(),
+		// visualizer({ open: true }),
 	],
 	server: {
 		host: "127.0.0.1",

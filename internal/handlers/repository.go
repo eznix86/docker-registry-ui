@@ -7,10 +7,38 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/eznix86/docker-registry-ui/internal/service"
 	"github.com/eznix86/docker-registry-ui/internal/utils/servertiming"
 	"github.com/go-chi/chi/v5"
 	"github.com/romsar/gonertia/v2"
 )
+
+type TagFilters struct {
+	SortBy string `json:"sortBy"`
+	Filter string `json:"filter"`
+	Page   int    `json:"-"`
+}
+
+func parseTagFilters(r *http.Request) TagFilters {
+	filters := TagFilters{
+		SortBy: "newest",
+	}
+
+	if sortBy := r.URL.Query().Get("sortBy"); sortBy != "" {
+		filters.SortBy = sortBy
+	}
+
+	filters.Filter = r.URL.Query().Get("filter")
+
+	filters.Page = 1
+	if pageStr := r.URL.Query().Get("page"); pageStr != "" {
+		if parsedPage, err := strconv.Atoi(pageStr); err == nil && parsedPage > 0 {
+			filters.Page = parsedPage
+		}
+	}
+
+	return filters
+}
 
 func (h *Handler) RepositoryDetail(w http.ResponseWriter, r *http.Request) {
 	t := servertiming.FromContext(r.Context())
@@ -31,20 +59,14 @@ func (h *Handler) RepositoryDetail(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	sortBy := r.URL.Query().Get("sortBy")
-	if sortBy == "" {
-		sortBy = "newest"
-	}
-	filter := r.URL.Query().Get("filter")
+	filters := parseTagFilters(r)
 
-	page := 1
-	if pageStr := r.URL.Query().Get("page"); pageStr != "" {
-		if parsedPage, err := strconv.Atoi(pageStr); err == nil && parsedPage > 0 {
-			page = parsedPage
-		}
-	}
-
-	paginatedTags, err := h.services.Repository.ListTagsWithFilters(repository.ID, sortBy, filter, page)
+	paginatedTags, err := h.services.Repository.ListTagsWithFilters(repository.ID, service.TagFilterParams{
+		SortBy:   filters.SortBy,
+		Search:   filters.Filter,
+		Page:     filters.Page,
+		PageSize: 5,
+	})
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -63,10 +85,7 @@ func (h *Handler) RepositoryDetail(w http.ResponseWriter, r *http.Request) {
 			NextPage:     paginatedTags.NextPage,
 			PreviousPage: paginatedTags.PreviousPage,
 		})),
-		"filters": map[string]string{
-			"sortBy": sortBy,
-			"filter": filter,
-		},
+		"filters": filters,
 	}); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
