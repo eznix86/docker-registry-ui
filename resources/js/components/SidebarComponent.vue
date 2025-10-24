@@ -14,7 +14,7 @@
 						v-for="registry in registries"
 						:id="`registry-${registry.host}`"
 						:key="registry.host"
-						v-model="filterStore.selectedRegistries"
+						v-model="selectedRegistries"
 						:value="registry.host"
 						:label="registry.host"
 						:status-code="registry.status"
@@ -83,6 +83,21 @@ const preferencesStore = useAppPreferencesStore()
 
 const registries = computed(() => page.props.registries || [])
 const architectures = computed(() => page.props.architectures || [])
+
+const selectedRegistries = computed({
+	get: () => filterStore.selectedRegistries,
+	set: (value: string[]) => {
+		const added = value.filter(v => !filterStore.selectedRegistries.includes(v))
+		const removed = filterStore.selectedRegistries.filter(v => !value.includes(v))
+
+		if (added.length > 0) {
+			filterStore.toggleRegistry(added[0])
+		}
+		else if (removed.length > 0) {
+			filterStore.toggleRegistry(removed[0])
+		}
+	},
+})
 
 const selectedArchitecture = computed(() => {
 	return filterStore.selectedArchitectures[0] || "all"

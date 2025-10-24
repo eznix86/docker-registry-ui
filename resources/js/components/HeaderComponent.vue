@@ -1,7 +1,6 @@
 <template>
 	<header class="bg-gradient-to-r from-primary to-accent flex items-center justify-between shadow-md h-16">
 		<div class="flex items-center flex-1 md:pl-6 pl-4">
-			<!-- ContainerHub Logo Button -->
 			<a
 				v-ripple
 				href="/"
@@ -9,8 +8,8 @@
 				aria-label="ContainerHub home"
 				title="Go to home"
 			>
-				<svg class="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-					<path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z" />
+				<svg class="w-6 h-6" viewBox="0 0 240 130" aria-hidden="true">
+					<path fill="white" stroke="white" stroke-width="38" d="m198 111h42m-92 0h42m-91 0h42m-91 0h41m-91 0h42m8-46h41m8 0h42m7 0h42m-42-46h42" />
 				</svg>
 			</a>
 

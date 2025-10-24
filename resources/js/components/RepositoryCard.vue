@@ -51,6 +51,7 @@ import type { Repository } from "~/types"
 import { Link } from "@inertiajs/vue3"
 import { computed } from "vue"
 import { Card, CardBody, CardFooter, CardHeader, Chip } from "~/components/ui"
+import { formatBytes } from "~/lib/utils"
 import { useUntaggedDialogStore } from "~/stores/useUntaggedDialogStore"
 
 const props = defineProps<{
@@ -59,14 +60,11 @@ const props = defineProps<{
 
 const untaggedDialogStore = useUntaggedDialogStore()
 
-// A repository is untagged if it has 0 tags
 const isUntagged = computed(() => props.repository.tagsCount === 0)
 
-// Build the repository URL based on namespace
 function getRepositoryUrl(): string {
 	const { registry, namespace, name } = props.repository
 
-	// Registry is required - if missing, log error and return fallback
 	if (!registry || registry.trim() === "") {
 		console.error(
 			`Repository "${name}" has empty registry:`,
@@ -75,22 +73,10 @@ function getRepositoryUrl(): string {
 		return "#"
 	}
 
-	// If namespace exists and is different from name, use /r/{registry}/{namespace}/{repository}
 	if (namespace && namespace.trim() !== "" && namespace !== name) {
 		return `/r/${registry}/${namespace}/${name}`
 	}
 
-	// Otherwise use /r/{registry}/{repository}
 	return `/r/${registry}/${name}`
-}
-
-// Utility function to format bytes
-function formatBytes(bytes: number): string {
-	if (bytes === 0)
-		return "0 B"
-	const k = 1024
-	const sizes = ["B", "KB", "MB", "GB", "TB"]
-	const i = Math.floor(Math.log(bytes) / Math.log(k))
-	return `${Number.parseFloat((bytes / k ** i).toFixed(2))} ${sizes[i]}`
 }
 </script>

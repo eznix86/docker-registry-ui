@@ -66,6 +66,7 @@ import RepositoryMetadata from "~/components/RepositoryMetadata.vue"
 import RepositorySortFilter from "~/components/RepositorySortFilter.vue"
 import RepositoryTagCard from "~/components/RepositoryTagCard.vue"
 import VersionFooter from "~/components/VersionFooter.vue"
+import { useRepositoryName } from "~/composables/useRepositoryName"
 import { useRepositoryFilterStore } from "~/stores/useRepositoryFilterStore"
 
 const page = usePage<RepositoryProps>()
@@ -73,16 +74,7 @@ const repositoryStore = useRepositoryFilterStore()
 
 const repository = computed(() => page.props.repository)
 const tags = computed(() => page.props.tags?.data || [])
-
-const repositoryName = computed(() => {
-	const repo = repository.value
-	if (!repo)
-		return ""
-	if (repo.namespace && repo.namespace !== repo.name) {
-		return `${repo.namespace}/${repo.name}`
-	}
-	return repo.name
-})
+const repositoryName = useRepositoryName(repository)
 
 const registryHost = computed(() => repository.value?.registry || "")
 const currentUrl = computed(() => page.url.split("?")[0])

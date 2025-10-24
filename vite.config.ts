@@ -6,6 +6,7 @@ import fs from "node:fs"
 import tailwindcss from "@tailwindcss/vite"
 import vue from "@vitejs/plugin-vue"
 import laravel from "laravel-vite-plugin"
+import { visualizer } from "rollup-plugin-visualizer"
 import { defineConfig } from "vite"
 import sri from "vite-plugin-manifest-sri"
 
@@ -20,8 +21,9 @@ export default defineConfig({
 		vue(),
 		tailwindcss(),
 		sri(),
-		// visualizer({ open: true }),
+		visualizer({ open: true }),
 	],
+	publicDir: false,
 	server: {
 		host: "127.0.0.1",
 		port: 5173,
@@ -39,6 +41,14 @@ export default defineConfig({
 				preset: "recommended",
 				propertyReadSideEffects: false,
 				moduleSideEffects: false,
+			},
+			output: {
+				manualChunks: {
+					"vue-vendor": ["vue", "@inertiajs/vue3", "pinia"],
+					"vueuse": ["@vueuse/core"],
+					"ui-vendor": ["@headlessui/vue", "@formkit/auto-animate"],
+					"tailwind-utils": ["tailwind-merge", "tailwind-variants"],
+				},
 			},
 		},
 		minify: "esbuild",

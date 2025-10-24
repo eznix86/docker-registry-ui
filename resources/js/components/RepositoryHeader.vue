@@ -21,6 +21,7 @@
 import type { RepositoryProps } from "~/types"
 import { usePage } from "@inertiajs/vue3"
 import { computed } from "vue"
+import { useRepositoryName } from "~/composables/useRepositoryName"
 
 const emit = defineEmits<{
 	openBulkDelete: []
@@ -28,14 +29,5 @@ const emit = defineEmits<{
 
 const page = usePage<RepositoryProps>()
 const repository = computed(() => page.props.repository)
-
-const repositoryName = computed(() => {
-	const repo = repository.value
-	if (!repo)
-		return ""
-	if (repo.namespace && repo.namespace !== repo.name) {
-		return `${repo.namespace}/${repo.name}`
-	}
-	return repo.name
-})
+const repositoryName = useRepositoryName(repository)
 </script>

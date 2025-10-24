@@ -5,20 +5,7 @@ import type { Repository, RepositoryFilters, TagScroll } from "~/types"
 import { router } from "@inertiajs/vue3"
 import { defineStore } from "pinia"
 import { ref } from "vue"
-
-function buildFilterParams(filters: RepositoryFilters): Record<string, string> {
-	const params: Record<string, string> = {}
-
-	if (filters.sortBy !== "newest") {
-		params.sortBy = filters.sortBy
-	}
-
-	if (filters.filter) {
-		params.filter = filters.filter
-	}
-
-	return params
-}
+import { buildFilterParams } from "~/lib/filterParams"
 
 export const useRepositoryFilterStore = defineStore("repositoryFilter", () => {
 	const repository = ref<Repository | null>(null)
@@ -64,7 +51,10 @@ export const useRepositoryFilterStore = defineStore("repositoryFilter", () => {
 	}
 
 	function performFilterRequest(url: string) {
-		const params = buildFilterParams(filters.value)
+		const params = buildFilterParams({
+			sortBy: filters.value.sortBy === "newest" ? undefined : filters.value.sortBy,
+			filter: filters.value.filter,
+		})
 
 		router.get(url, params, {
 			preserveScroll: true,

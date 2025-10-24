@@ -1,8 +1,14 @@
 <template>
 	<nav class="mb-4 sm:mb-6">
-		<ol class="flex flex-wrap items-center gap-2 text-xs sm:text-sm md:text-base text-muted-foreground">
+		<ol
+			class="flex flex-wrap items-center gap-2 text-xs sm:text-sm md:text-base text-muted-foreground"
+		>
 			<li>
-				<Link href="/" class="text-primary hover:underline">
+				<Link
+					href="/"
+					class="text-primary hover:underline"
+					:prefetch="['hover']"
+				>
 					Explore
 				</Link>
 			</li>
@@ -20,19 +26,11 @@
 import type { RepositoryProps } from "~/types"
 import { Link, usePage } from "@inertiajs/vue3"
 import { computed } from "vue"
+import { useRepositoryName } from "~/composables/useRepositoryName"
 
 const page = usePage<RepositoryProps>()
 const repository = computed(() => page.props.repository)
 
 const registryHost = computed(() => repository.value?.registry || "")
-
-const repositoryName = computed(() => {
-	const repo = repository.value
-	if (!repo)
-		return ""
-	if (repo.namespace && repo.namespace !== repo.name) {
-		return `${repo.namespace}/${repo.name}`
-	}
-	return repo.name
-})
+const repositoryName = useRepositoryName(repository)
 </script>

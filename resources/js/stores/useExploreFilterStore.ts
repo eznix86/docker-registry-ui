@@ -5,33 +5,7 @@ import { router } from "@inertiajs/vue3"
 import { useDebounceFn } from "@vueuse/core"
 import { defineStore } from "pinia"
 import { computed, ref } from "vue"
-
-function buildFilterParams(
-	registries: string[],
-	architectures: string[],
-	showUntagged: boolean,
-	search: string,
-): Record<string, string> {
-	const params: Record<string, string> = {}
-
-	if (registries.length > 0) {
-		params.registries = registries.join(",")
-	}
-
-	if (architectures.length > 0) {
-		params.architectures = architectures.join(",")
-	}
-
-	if (showUntagged) {
-		params.untagged = "true"
-	}
-
-	if (search) {
-		params.search = search
-	}
-
-	return params
-}
+import { buildFilterParams } from "~/lib/filterParams"
 
 export const useExploreFilterStore = defineStore("exploreFilter", () => {
 	const selectedRegistries = ref<string[]>([])
@@ -50,12 +24,12 @@ export const useExploreFilterStore = defineStore("exploreFilter", () => {
 	})
 
 	function performFilterRequest() {
-		const params = buildFilterParams(
-			selectedRegistries.value,
-			selectedArchitectures.value,
-			selectedShowUntagged.value,
-			selectedSearch.value,
-		)
+		const params = buildFilterParams({
+			registries: selectedRegistries.value,
+			architectures: selectedArchitectures.value,
+			untagged: selectedShowUntagged.value,
+			search: selectedSearch.value,
+		})
 
 		router.get("/", params, {
 			preserveScroll: true,
