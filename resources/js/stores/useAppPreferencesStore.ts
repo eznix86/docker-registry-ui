@@ -5,8 +5,6 @@ import { useLocalStorage } from "@vueuse/core"
 import { defineStore } from "pinia"
 import { computed, ref, watch } from "vue"
 
-// ========== TYPES ==========
-
 export type Theme
 	= | "the-hub-light"
 		| "the-hub-dark"
@@ -59,8 +57,6 @@ export interface RuntimeOption {
 	label: string
 	command: string
 }
-
-// ========== CONSTANTS ==========
 
 export const THEME_OPTIONS: ThemeOption[] = [
 	{ value: "the-hub-dark", label: "The Hub Dark" },
@@ -130,8 +126,6 @@ export const RUNTIME_OPTIONS: RuntimeOption[] = [
 	{ value: "none", label: "None (image reference only)", command: "" },
 ]
 
-// ========== HELPER FUNCTIONS (outside store) ==========
-
 function applyTheme(theme: Theme) {
 	document.documentElement.setAttribute("data-theme", theme)
 }
@@ -145,15 +139,9 @@ function applyRuntime(runtime: ContainerRuntime) {
 	document.documentElement.setAttribute("data-runtime", runtime)
 }
 
-// ========== STORE ==========
-
 export const useAppPreferencesStore = defineStore("appPreferences", () => {
-	// ========== STATE ==========
-
-	// Dialog state (settings dialog)
 	const isSettingsDialogOpen = ref(false)
 
-	// Preferences with automatic localStorage persistence via VueUse
 	const theme = useLocalStorage<Theme>("containerhub-theme", "the-hub-light")
 	const fontSans = useLocalStorage<FontSans>("containerhub-font-sans", "roboto")
 	const fontMono = useLocalStorage<FontMono>(
@@ -165,22 +153,14 @@ export const useAppPreferencesStore = defineStore("appPreferences", () => {
 		"docker",
 	)
 
-	// ========== INITIALIZATION ==========
-
-	// Apply all preferences immediately (before Vue renders)
 	applyTheme(theme.value)
 	applyFonts(fontSans.value, fontMono.value)
 	applyRuntime(containerRuntime.value)
 
-	// ========== WATCHERS (for DOM updates) ==========
-
-	// Note: localStorage persistence is handled automatically by useLocalStorage
 	watch(theme, newTheme => applyTheme(newTheme))
 	watch([fontSans, fontMono], ([newSans, newMono]) =>
 		applyFonts(newSans, newMono))
 	watch(containerRuntime, newRuntime => applyRuntime(newRuntime))
-
-	// ========== GETTERS ==========
 
 	const themeLabel = computed(() => {
 		return THEME_OPTIONS.find(t => t.value === theme.value)?.label || theme.value
@@ -214,9 +194,6 @@ export const useAppPreferencesStore = defineStore("appPreferences", () => {
 		return option !== undefined ? option.command : "docker pull"
 	})
 
-	// ========== ACTIONS ==========
-
-	// Dialog actions
 	function openSettingsDialog() {
 		isSettingsDialogOpen.value = true
 	}
@@ -229,7 +206,6 @@ export const useAppPreferencesStore = defineStore("appPreferences", () => {
 		isSettingsDialogOpen.value = !isSettingsDialogOpen.value
 	}
 
-	// Theme actions
 	function setTheme(newTheme: Theme) {
 		theme.value = newTheme
 	}
@@ -238,7 +214,6 @@ export const useAppPreferencesStore = defineStore("appPreferences", () => {
 		return THEME_OPTIONS.find(t => t.value === themeValue)?.label || themeValue
 	}
 
-	// Font actions
 	function setFontSans(font: FontSans) {
 		fontSans.value = font
 	}
@@ -255,7 +230,6 @@ export const useAppPreferencesStore = defineStore("appPreferences", () => {
 		return FONT_MONO_OPTIONS.find(f => f.value === font)?.label || font
 	}
 
-	// Runtime actions
 	function setContainerRuntime(runtime: ContainerRuntime) {
 		containerRuntime.value = runtime
 	}
@@ -280,42 +254,29 @@ export const useAppPreferencesStore = defineStore("appPreferences", () => {
 	}
 
 	return {
-		// State
 		isSettingsDialogOpen,
 		theme,
 		fontSans,
 		fontMono,
 		containerRuntime,
-
-		// Getters
 		themeLabel,
 		fontSansLabel,
 		fontMonoLabel,
 		runtimeLabel,
 		runtimeCommand,
-
-		// Actions - Dialog
 		openSettingsDialog,
 		closeSettingsDialog,
 		toggleSettingsDialog,
-
-		// Actions - Theme
 		setTheme,
 		getThemeLabel,
-
-		// Actions - Fonts
 		setFontSans,
 		setFontMono,
 		getFontSansLabel,
 		getFontMonoLabel,
-
-		// Actions - Runtime
 		setContainerRuntime,
 		getRuntimeLabel,
 		getRuntimeCommand,
 		getPullCommand,
-
-		// Constants (for options)
 		themeOptions: THEME_OPTIONS,
 		fontSansOptions: FONT_SANS_OPTIONS,
 		fontMonoOptions: FONT_MONO_OPTIONS,

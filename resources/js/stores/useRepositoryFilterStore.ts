@@ -6,11 +6,6 @@ import { router } from "@inertiajs/vue3"
 import { defineStore } from "pinia"
 import { ref } from "vue"
 
-// ========== HELPER FUNCTIONS (outside store) ==========
-
-/**
- * Build query params from current filter state
- */
 function buildFilterParams(filters: RepositoryFilters): Record<string, string> {
 	const params: Record<string, string> = {}
 
@@ -25,22 +20,14 @@ function buildFilterParams(filters: RepositoryFilters): Record<string, string> {
 	return params
 }
 
-// ========== STORE ==========
-
 export const useRepositoryFilterStore = defineStore("repositoryFilter", () => {
-	// ========== STATE ==========
-
 	const repository = ref<Repository | null>(null)
 	const tags = ref<TagScroll>({ data: [] })
 	const filters = ref<RepositoryFilters>({
 		sortBy: "newest",
 		filter: "",
 	})
-
-	// Local state for immediate UI updates
 	const localFilter = ref("")
-
-	// ========== ACTIONS ==========
 
 	function setRepository(repo: Repository | null) {
 		repository.value = repo
@@ -76,9 +63,6 @@ export const useRepositoryFilterStore = defineStore("repositoryFilter", () => {
 		localFilter.value = filter
 	}
 
-	/**
-	 * Perform Inertia router.get with current filters
-	 */
 	function performFilterRequest(url: string) {
 		const params = buildFilterParams(filters.value)
 
@@ -91,13 +75,10 @@ export const useRepositoryFilterStore = defineStore("repositoryFilter", () => {
 	}
 
 	return {
-		// State
 		repository,
 		tags,
 		filters,
 		localFilter,
-
-		// Actions
 		setRepository,
 		setTags,
 		setFilters,

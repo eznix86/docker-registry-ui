@@ -6,11 +6,6 @@ import { useDebounceFn } from "@vueuse/core"
 import { defineStore } from "pinia"
 import { computed, ref } from "vue"
 
-// ========== HELPER FUNCTIONS (outside store) ==========
-
-/**
- * Build query params from current filter state
- */
 function buildFilterParams(
 	registries: string[],
 	architectures: string[],
@@ -38,20 +33,12 @@ function buildFilterParams(
 	return params
 }
 
-// ========== STORE ==========
-
 export const useExploreFilterStore = defineStore("exploreFilter", () => {
-	// ========== STATE ==========
-
 	const selectedRegistries = ref<string[]>([])
 	const selectedArchitectures = ref<string[]>([])
 	const selectedShowUntagged = ref(false)
 	const selectedSearch = ref("")
-
-	// Local state for immediate UI updates
 	const localSearch = ref("")
-
-	// ========== GETTERS ==========
 
 	const hasActiveFilters = computed(() => {
 		return (
@@ -62,11 +49,6 @@ export const useExploreFilterStore = defineStore("exploreFilter", () => {
 		)
 	})
 
-	// ========== ACTIONS ==========
-
-	/**
-	 * Perform Inertia router.get with current filters
-	 */
 	function performFilterRequest() {
 		const params = buildFilterParams(
 			selectedRegistries.value,
@@ -83,9 +65,6 @@ export const useExploreFilterStore = defineStore("exploreFilter", () => {
 		})
 	}
 
-	/**
-	 * Debounced version of performFilterRequest for search (using VueUse)
-	 */
 	const debouncedFilterRequest = useDebounceFn(performFilterRequest, 300)
 
 	function toggleRegistry(registry: string) {
@@ -137,17 +116,12 @@ export const useExploreFilterStore = defineStore("exploreFilter", () => {
 	}
 
 	return {
-		// State
 		selectedRegistries,
 		selectedArchitectures,
 		selectedShowUntagged,
 		selectedSearch,
 		localSearch,
-
-		// Getters
 		hasActiveFilters,
-
-		// Actions
 		toggleRegistry,
 		setArchitecture,
 		toggleShowUntagged,

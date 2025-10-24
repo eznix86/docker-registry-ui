@@ -6,12 +6,8 @@ import { defineStore } from "pinia"
 import { ref } from "vue"
 
 export const useUntaggedDialogStore = defineStore("untaggedDialog", () => {
-	// ========== STATE ==========
-
 	const isOpen = ref(false)
 	const selectedRepository = ref<Repository | null>(null)
-
-	// ========== ACTIONS ==========
 
 	function openDialog(repository: Repository) {
 		selectedRepository.value = repository
@@ -24,11 +20,8 @@ export const useUntaggedDialogStore = defineStore("untaggedDialog", () => {
 	}
 
 	return {
-		// State
 		isOpen,
 		selectedRepository,
-
-		// Actions
 		openDialog,
 		closeDialog,
 	}

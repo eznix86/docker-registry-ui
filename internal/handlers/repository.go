@@ -55,7 +55,7 @@ func (h *Handler) RepositoryDetail(w http.ResponseWriter, r *http.Request) {
 
 	repository, err := h.services.Repository.FindRepository(registryName, namespacePtr, repositoryName)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusNotFound)
+		h.inertia.Redirect(w, r, "/404")
 		return
 	}
 
