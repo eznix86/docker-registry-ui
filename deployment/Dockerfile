@@ -1,4 +1,4 @@
-FROM oven/bun:1.3.0-alpine AS builder
+FROM oven/bun:1.3.1-alpine AS builder
 
 LABEL org.opencontainers.image.source=https://github.com/eznix86/docker-registry-ui
 LABEL org.opencontainers.image.description="Container for Docker Registry UI"
