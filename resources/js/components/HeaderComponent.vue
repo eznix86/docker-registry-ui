@@ -52,9 +52,9 @@
 
 <script setup lang="ts">
 import { ref, watch } from "vue"
-import { useFilterStore } from "~/stores/useFilterStore"
+import { useExploreFilterStore } from "~/stores/useExploreFilterStore"
 
-const filterStore = useFilterStore()
+const filterStore = useExploreFilterStore()
 
 // Local search state synced with store
 const localSearch = ref(filterStore.localSearch)

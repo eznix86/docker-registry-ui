@@ -1,5 +1,5 @@
 <template>
-	<Dialog v-model="settingsStore.dialogOpen">
+	<Dialog v-model="preferencesStore.isSettingsDialogOpen">
 		<DialogTitle>Settings</DialogTitle>
 
 		<div class="mt-4">
@@ -12,7 +12,7 @@
 
 					<SelectContent>
 						<SelectItem
-							v-for="theme in themeOptions"
+							v-for="theme in preferencesStore.themeOptions"
 							:key="theme.value"
 							:value="theme.value"
 							:label="theme.label"
@@ -32,7 +32,7 @@
 
 					<SelectContent>
 						<SelectItem
-							v-for="font in fontSansOptions"
+							v-for="font in preferencesStore.fontSansOptions"
 							:key="font.value"
 							:value="font.value"
 							:label="font.label"
@@ -52,7 +52,7 @@
 
 					<SelectContent>
 						<SelectItem
-							v-for="font in fontMonoOptions"
+							v-for="font in preferencesStore.fontMonoOptions"
 							:key="font.value"
 							:value="font.value"
 							:label="font.label"
@@ -72,7 +72,7 @@
 
 					<SelectContent>
 						<SelectItem
-							v-for="runtime in runtimeOptions"
+							v-for="runtime in preferencesStore.runtimeOptions"
 							:key="runtime.value"
 							:value="runtime.value"
 							:label="runtime.label"
@@ -101,67 +101,42 @@ import {
 	SelectItem,
 	SelectTrigger,
 } from "~/components/ui"
-import { useContainerRuntime } from "~/composables/useContainerRuntime"
-import { useFonts } from "~/composables/useFonts"
-import { useTheme } from "~/composables/useTheme"
-import { useSettingsStore } from "~/stores/useSettingsStore"
+import { useAppPreferencesStore } from "~/stores/useAppPreferencesStore"
 
 // Use Pinia store
-const settingsStore = useSettingsStore()
+const preferencesStore = useAppPreferencesStore()
 
 // Theme management
-const { currentTheme, setTheme, getThemeLabel, themeOptions } = useTheme()
-
 const selectedTheme = computed({
-	get: () => currentTheme.value,
-	set: value => setTheme(value),
+	get: () => preferencesStore.theme,
+	set: value => preferencesStore.setTheme(value),
 })
 
-const currentThemeLabel = computed(() => getThemeLabel(currentTheme.value))
+const currentThemeLabel = computed(() => preferencesStore.themeLabel)
 
 // Font management
-const {
-	currentFontSans,
-	currentFontMono,
-	setFontSans,
-	setFontMono,
-	getFontSansLabel,
-	getFontMonoLabel,
-	fontSansOptions,
-	fontMonoOptions,
-} = useFonts()
-
 const selectedFontSans = computed({
-	get: () => currentFontSans.value,
-	set: value => setFontSans(value),
+	get: () => preferencesStore.fontSans,
+	set: value => preferencesStore.setFontSans(value),
 })
 
 const selectedFontMono = computed({
-	get: () => currentFontMono.value,
-	set: value => setFontMono(value),
+	get: () => preferencesStore.fontMono,
+	set: value => preferencesStore.setFontMono(value),
 })
 
-const currentFontSansLabel = computed(() =>
-	getFontSansLabel(currentFontSans.value),
-)
-const currentFontMonoLabel = computed(() =>
-	getFontMonoLabel(currentFontMono.value),
-)
+const currentFontSansLabel = computed(() => preferencesStore.fontSansLabel)
+const currentFontMonoLabel = computed(() => preferencesStore.fontMonoLabel)
 
 // Container runtime management
-const { currentRuntime, setRuntime, getRuntimeLabel, runtimeOptions }
-	= useContainerRuntime()
-
 const selectedRuntime = computed({
-	get: () => currentRuntime.value,
-	set: value => setRuntime(value),
+	get: () => preferencesStore.containerRuntime,
+	set: value => preferencesStore.setContainerRuntime(value),
 })
 
-const currentRuntimeLabel = computed(() =>
-	getRuntimeLabel(currentRuntime.value),
-)
+const currentRuntimeLabel = computed(() => preferencesStore.runtimeLabel)
 
 function handleClose() {
-	settingsStore.closeSettings()
+	preferencesStore.closeSettingsDialog()
 }
 </script>

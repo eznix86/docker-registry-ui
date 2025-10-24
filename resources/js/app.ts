@@ -9,10 +9,7 @@ import { resolvePageComponent } from "laravel-vite-plugin/inertia-helpers"
 import { createPinia } from "pinia"
 import { createApp, h } from "vue"
 import { vRipple } from "~/directives/ripple"
-// Initialize theme and fonts FIRST (before any other imports)
-import "~/composables/useTheme"
-import "~/composables/useFonts"
-import "~/composables/useContainerRuntime"
+
 import "../css/app.css"
 
 createInertiaApp({

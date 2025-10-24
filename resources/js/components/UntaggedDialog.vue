@@ -2,14 +2,14 @@
 	<Teleport to="body">
 		<Transition name="fade">
 			<div
-				v-if="isOpen"
+				v-if="untaggedDialogStore.isOpen"
 				role="button"
 				tabindex="0"
 				class="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
 				aria-label="Close dialog"
-				@click="close"
-				@keydown.escape="close"
-				@keydown.enter="close"
+				@click="untaggedDialogStore.closeDialog"
+				@keydown.escape="untaggedDialogStore.closeDialog"
+				@keydown.enter="untaggedDialogStore.closeDialog"
 			>
 				<div
 					class="bg-background rounded-xl shadow-lg max-w-[900px] w-full mx-4 p-6"
@@ -38,8 +38,8 @@
 						</p>
 
 						<CopyCommand
-							:command="`rm -rf /var/lib/registry/docker/registry/v2/repositories/${repositoryName}`"
-							:aria-label="`Copy cleanup command for ${repositoryName}`"
+							:command="`rm -rf /var/lib/registry/docker/registry/v2/repositories/${untaggedDialogStore.selectedRepository?.name || ''}`"
+							:aria-label="`Copy cleanup command for ${untaggedDialogStore.selectedRepository?.name || ''}`"
 							class="mb-4"
 						/>
 
@@ -55,7 +55,7 @@
 					</div>
 
 					<div class="flex justify-end">
-						<Button @click="close">
+						<Button @click="untaggedDialogStore.closeDialog">
 							CLOSE
 						</Button>
 					</div>
@@ -67,21 +67,9 @@
 
 <script setup lang="ts">
 import { Button, CopyCommand } from "~/components/ui"
+import { useUntaggedDialogStore } from "~/stores/useUntaggedDialogStore"
 
-interface UntaggedDialogProps {
-	isOpen: boolean
-	repositoryName: string
-}
-
-defineProps<UntaggedDialogProps>()
-
-const emit = defineEmits<{
-	close: []
-}>()
-
-function close() {
-	emit("close")
-}
+const untaggedDialogStore = useUntaggedDialogStore()
 </script>
 
 <style scoped>

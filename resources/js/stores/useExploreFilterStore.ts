@@ -2,27 +2,47 @@
 // Copyright (C) 2025  Bruno Bernard
 
 import { router } from "@inertiajs/vue3"
+import { useDebounceFn } from "@vueuse/core"
 import { defineStore } from "pinia"
 import { computed, ref } from "vue"
 
+// ========== HELPER FUNCTIONS (outside store) ==========
+
 /**
- * Debounce helper function
+ * Build query params from current filter state
  */
-function debounce<T extends (...args: any[]) => void>(
-	fn: T,
-	delay: number,
-): (...args: Parameters<T>) => void {
-	let timeoutId: ReturnType<typeof setTimeout> | null = null
-	return (...args: Parameters<T>) => {
-		if (timeoutId !== null) {
-			clearTimeout(timeoutId)
-		}
-		timeoutId = setTimeout(() => fn(...args), delay)
+function buildFilterParams(
+	registries: string[],
+	architectures: string[],
+	showUntagged: boolean,
+	search: string,
+): Record<string, string> {
+	const params: Record<string, string> = {}
+
+	if (registries.length > 0) {
+		params.registries = registries.join(",")
 	}
+
+	if (architectures.length > 0) {
+		params.architectures = architectures.join(",")
+	}
+
+	if (showUntagged) {
+		params.untagged = "true"
+	}
+
+	if (search) {
+		params.search = search
+	}
+
+	return params
 }
 
-export const useFilterStore = defineStore("filter", () => {
-	// Selected filters (user selection)
+// ========== STORE ==========
+
+export const useExploreFilterStore = defineStore("exploreFilter", () => {
+	// ========== STATE ==========
+
 	const selectedRegistries = ref<string[]>([])
 	const selectedArchitectures = ref<string[]>([])
 	const selectedShowUntagged = ref(false)
@@ -31,36 +51,29 @@ export const useFilterStore = defineStore("filter", () => {
 	// Local state for immediate UI updates
 	const localSearch = ref("")
 
-	/**
-	 * Build query params from current filter state
-	 */
-	function buildFilterParams(): Record<string, string> {
-		const params: Record<string, string> = {}
+	// ========== GETTERS ==========
 
-		if (selectedRegistries.value.length > 0) {
-			params.registries = selectedRegistries.value.join(",")
-		}
+	const hasActiveFilters = computed(() => {
+		return (
+			selectedRegistries.value.length > 0
+			|| selectedArchitectures.value.length > 0
+			|| selectedShowUntagged.value
+			|| selectedSearch.value !== ""
+		)
+	})
 
-		if (selectedArchitectures.value.length > 0) {
-			params.architectures = selectedArchitectures.value.join(",")
-		}
-
-		if (selectedShowUntagged.value) {
-			params.untagged = "true"
-		}
-
-		if (selectedSearch.value) {
-			params.search = selectedSearch.value
-		}
-
-		return params
-	}
+	// ========== ACTIONS ==========
 
 	/**
 	 * Perform Inertia router.get with current filters
 	 */
 	function performFilterRequest() {
-		const params = buildFilterParams()
+		const params = buildFilterParams(
+			selectedRegistries.value,
+			selectedArchitectures.value,
+			selectedShowUntagged.value,
+			selectedSearch.value,
+		)
 
 		router.get("/", params, {
 			preserveScroll: true,
@@ -71,11 +84,10 @@ export const useFilterStore = defineStore("filter", () => {
 	}
 
 	/**
-	 * Debounced version of performFilterRequest for search
+	 * Debounced version of performFilterRequest for search (using VueUse)
 	 */
-	const debouncedFilterRequest = debounce(performFilterRequest, 300)
+	const debouncedFilterRequest = useDebounceFn(performFilterRequest, 300)
 
-	// Actions
 	function toggleRegistry(registry: string) {
 		if (selectedRegistries.value.includes(registry)) {
 			selectedRegistries.value = selectedRegistries.value.filter(
@@ -104,15 +116,15 @@ export const useFilterStore = defineStore("filter", () => {
 		debouncedFilterRequest()
 	}
 
-	function setSelectedRegistries(registries: string[]) {
+	function setRegistries(registries: string[]) {
 		selectedRegistries.value = registries
 	}
 
-	function setSelectedArchitectures(architectures: string[]) {
+	function setArchitectures(architectures: string[]) {
 		selectedArchitectures.value = architectures
 	}
 
-	function setSelectedShowUntagged(showUntagged: boolean) {
+	function setShowUntagged(showUntagged: boolean) {
 		selectedShowUntagged.value = showUntagged
 	}
 
@@ -124,16 +136,6 @@ export const useFilterStore = defineStore("filter", () => {
 		localSearch.value = search
 	}
 
-	// Computed
-	const hasActiveFilters = computed(() => {
-		return (
-			selectedRegistries.value.length > 0
-			|| selectedArchitectures.value.length > 0
-			|| selectedShowUntagged.value
-			|| selectedSearch.value !== ""
-		)
-	})
-
 	return {
 		// State
 		selectedRegistries,
@@ -141,17 +143,19 @@ export const useFilterStore = defineStore("filter", () => {
 		selectedShowUntagged,
 		selectedSearch,
 		localSearch,
+
+		// Getters
+		hasActiveFilters,
+
 		// Actions
 		toggleRegistry,
 		setArchitecture,
 		toggleShowUntagged,
 		setSearch,
-		setSelectedRegistries,
-		setSelectedArchitectures,
-		setSelectedShowUntagged,
+		setRegistries,
+		setArchitectures,
+		setShowUntagged,
 		setSelectedSearch,
 		setLocalSearch,
-		// Computed
-		hasActiveFilters,
 	}
 })

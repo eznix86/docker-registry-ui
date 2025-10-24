@@ -1,154 +1,54 @@
-# ContainerHub UI - React to Vue Migration
+### State Management Architecture
 
-## Project Status
+**Context-Based Stores:** Organize stores by feature/domain, not technical layer
 
-**Current Phase:** Planning Complete - Ready for Migration
-**Detailed Plan:** See [PLAN.md](./PLAN.md)
+**Store Organization:**
+- `useExploreFilterStore` - Explore page filters (registries, architectures, search, showUntagged, sidebarOpen)
+- `useUntaggedDialogStore` - Untagged repository dialog state
+- `useSettingsStore` - Settings dialog state
+- `useRepositoryFilterStore` - Repository page filters (sortBy, filter)
+- `useTagDeleteStore` - Single tag deletion dialog
+- `useTagBulkDeleteStore` - Bulk tag deletion dialog and selection
 
-## Key Highlights
+**Pattern:**
+- ✅ **Use Stores for:** Global state, dialogs, cross-component state
+- ✅ **Direct Store Access:** Components call store actions directly (no emits for global state)
+- ✅ **Direct Binding:** Use `@click="store.action"` instead of wrapping in component methods
+- ❌ **Avoid Local State:** Don't use local `ref()` for state that could be global
+- ❌ **Avoid Prop Drilling:** Don't emit events up for global actions
+- ❌ **Avoid Wrapper Functions:** Don't create component methods that just call store actions
 
-### Migration Overview
-- **From:** React 19 + Material UI + Zustand + @inertiajs/react + Biome
-- **To:** Vue 3 + Tailwind CSS v4 + Pinia + @inertiajs/vue3 + ESLint
-- **Strategy:** Direct integration into `resources/js/` with Inertia.js server props
-- **Safety:** All React code preserved in `resources/js-react-tmp/` (not deleted)
-
-### Technical Benefits
-✅ **Simpler State Management** - Vue's reactivity eliminates custom Inertia listeners
-✅ **Native Two-Way Binding** - No more manual event synchronization
-✅ **Smaller Bundle** - Tailwind CSS replaces heavy Material UI
-✅ **Better DX** - Composition API + `usePage()` simplifies data flow
-✅ **No Re-render Issues** - Vue handles reactivity natively (no custom prevention needed)
-✅ **Better Linting** - ESLint with Vue support (Biome doesn't work with Vue)
-
-### Architecture Changes
-- **Inertia Integration:** Use `usePage<T>()` composable instead of custom event listeners
-- **Store Pattern:** Pinia composition stores with computed props from Inertia
-- **Component Style:** HeadlessUI + Tailwind utilities (template-based)
-- **Type Safety:** Full TypeScript with proper Inertia prop types
-- **Linting:** ESLint with @antfu/eslint-config + Vue accessibility rules
-
-## Migration Checklist
-
-### ✅ Done
-- [x] Research existing React structure
-- [x] Analyze template Vue implementation
-- [x] Create comprehensive migration plan
-- [x] Document key decisions and architecture
-
-### 🔄 Doing
-- [ ] None (awaiting plan approval)
-
-### 📋 Todo
-
-#### Phase 1: Setup & Dependencies
-- [ ] Install Vue dependencies via `bun add`
-- [ ] Install Vue dev dependencies via `bun add -d`
-- [ ] Install ESLint dependencies via `bun add -d` (@antfu/eslint-config, eslint-plugin-vuejs-accessibility, oxlint)
-- [ ] Update vite.config.ts (Vue plugin, Tailwind plugin)
-- [ ] Copy `eslint.config.js` from template
-- [ ] Update package.json scripts (remove biome, add eslint from template)
-- [ ] Create `resources/css/app.css` with Tailwind directives
-
-#### Phase 2: Backup & Core Infrastructure
-- [ ] Move `resources/js/` → `resources/js-react-tmp/`
-- [ ] Create new directory structure for Vue app
-- [ ] Create `resources/js/app.ts` (Vue + Inertia entry point)
-- [ ] Setup Pinia, auto-animate, ripple directive
-
-#### Phase 3: Copy Template Files
-- [ ] Copy UI components from `template/src/components/ui/`
-- [ ] Copy page components (Header, Sidebar, RepositoryCard, etc.)
-- [ ] Copy composables (useFonts, useTheme, useContainerRuntime, useRipple)
-- [ ] Copy directives (ripple.ts)
-- [ ] Copy lib utilities (utils.ts)
-
-#### Phase 4: Store Migration (Zustand → Pinia)
-- [ ] Create `useFilterStore.ts` (registries, architectures, search, showUntagged)
-- [ ] Create `useRepositoryStore.ts` (repository details, tags)
-- [ ] Create `useSettingsStore.ts` (theme/settings)
-- [ ] Remove custom Inertia listener logic
-
-#### Phase 5: Type Definitions
-- [ ] Copy and adapt types from React version
-- [ ] Create `types/index.ts`
-- [ ] Create `types/repository.ts`
-- [ ] Create `types/registry.ts`
-
-#### Phase 6: Pages Implementation
-- [ ] Create `Pages/Explore.vue` (integrate with Inertia props)
-- [ ] Create `Pages/Repository.vue` (integrate with Inertia props)
-- [ ] Create `Pages/NotFound.vue`
-
-#### Phase 7: Component Integration
-- [ ] Update HeaderComponent.vue (connect to stores/props)
-- [ ] Update SidebarComponent.vue (connect to filters)
-- [ ] Update RepositoryCard.vue (proper props/emits)
-- [ ] Update SettingsDialog.vue (settings store)
-- [ ] Update UntaggedDialog.vue (props/emits)
-
-#### Phase 8: Views Update & Config
-- [ ] Update `resources/views/app.html` (@vite directives)
-- [ ] Ensure proper asset references
-
-#### Phase 9: Testing & Validation
-- [ ] Test ESLint runs without errors (`bun run lint`)
-- [ ] Test Vite build
-- [ ] Test page navigation
-- [ ] Test filters and search
-- [ ] Test dialogs
-- [ ] Test settings persistence
-- [ ] Test mobile responsive behavior
-- [ ] Cross-browser testing
-
-## Key Technical Details
-
-### Inertia Integration Pattern
-
-**React (OLD - Complex):**
-```typescript
-// Custom event listeners sync stores manually
-setupInertiaListeners()
-router.on("success", (event) => {
-	syncStores(event.detail.page.props)
-})
-```
-
-**Vue (NEW - Simple):**
+**Example:**
 ```vue
-<script setup lang="ts">
-// Automatic reactivity via computed
-const page = usePage<ExploreProps>()
-const repositories = computed(() => page.props.repositories)
+<!-- Good: Direct store action -->
+<button @click="dialogStore.openDialog(repository)">
+Open
+</button>
+
+<!-- Bad: Unnecessary wrapper function -->
+<button @click="handleClick">
+Open
+</button>
+
+<script>
+function handleClick() {
+	dialogStore.openDialog(repository) // Just wrapping, no added logic
+}
+</script>
+
+<!-- Exception: Wrapper OK when adding logic -->
+<button @click="handleClickWithValidation">
+Open
+</button>
+
+<script>
+function handleClickWithValidation() {
+  if (!repository.isValid) return // Added logic
+  dialogStore.openDialog(repository)
+}
 </script>
 ```
-
-### Store Pattern
-
-**React (Zustand):**
-- Manual sync between Inertia and store
-- Separate "remote" and "local" state
-- Custom debouncing for filters
-
-**Vue (Pinia):**
-- Computed values from `usePage()`
-- Single source of truth
-- Vue's reactivity handles updates
-
-### Component Communication
-
-**Props Down:** Parent → Child data flow
-**Emits Up:** Child → Parent event flow
-**Stores:** Shared state (filters, settings, repository)
-**Inertia Props:** Server data via `usePage()`
-
-### Linting Configuration
-
-**Old (Biome):**
-- `@biomejs/biome` - doesn't support Vue
-- Script: `biome check --fix ./resources`
-
-**New (ESLint from template):**
+**ESLint**
 - `@antfu/eslint-config` - comprehensive Vue support
 - `eslint-plugin-vuejs-accessibility` - a11y checking
 - `oxlint` - fast linting
@@ -172,7 +72,6 @@ resources/
 │   ├── directives/              # Vue directives
 │   ├── lib/                     # Utilities
 │   └── types/                   # TypeScript types
-├── js-react-tmp/                # Backed up React code
 └── css/
     └── app.css                  # Tailwind entry
 ```
@@ -189,14 +88,6 @@ resources/
 - Test incrementally after each phase
 - Run ESLint before committing
 
-### Never Do
-- Don't delete files (move to `-tmp` directory)
-- Don't copy-paste original design directly
-- Don't skip type definitions
-- Don't create dummy/no-op tests
-- Don't run unsafe commands
-- Don't use Biome (doesn't work with Vue)
-
 ## Commands
 
 ```bash
@@ -209,9 +100,95 @@ bun run lint             # Lint code (ESLint)
 bun run lint:fix         # Lint and auto-fix
 ```
 
-## Reference
+## State Management Architecture
 
-- **Migration Plan:** [PLAN.md](./PLAN.md)
-- **Template Structure:** `template/` directory
-- **React Backup:** `resources/js-react-tmp/` (after Phase 2)
-- **Original React:** `resources/js/` (current)
+### Store Organization Pattern
+
+Stores are organized by **context/domain** rather than technical layers. Each store manages related state for a specific feature area.
+
+#### Current Stores:
+
+**`useAppPreferencesStore`** - User preferences and settings
+- Theme selection (with `useLocalStorage` from VueUse)
+- Font preferences (sans, mono)
+- Container runtime preference
+- Settings dialog state
+- **Why combined:** All user preferences share the same lifecycle (localStorage persistence, applied on init)
+
+**`useExploreFilterStore`** - Explore page filters
+- Selected registries, architectures
+- Search query (with `useDebounceFn` from VueUse)
+- Show untagged toggle
+- **Context:** Explore page filtering
+
+**`useRepositoryFilterStore`** - Repository page filters
+- Tag sorting, filtering
+- Repository metadata
+- **Context:** Repository page state
+
+**`useUntaggedDialogStore`** - Untagged repository dialog
+- Dialog open/close state
+- Selected repository for dialog
+- **Context:** Untagged repository feature
+
+### Pinia Best Practices Applied
+
+✅ **Helper functions extracted** - `buildFilterParams()`, `applyTheme()`, etc. defined outside stores
+✅ **VueUse integration** - `useLocalStorage`, `useDebounceFn`, `useTimeAgo`, `useClipboard`
+✅ **Grouped returns** - State, Getters, Actions clearly organized
+✅ **Setup stores pattern** - Using Composition API style for flexibility
+✅ **Context-based naming** - `useExploreFilterStore` not `useFilterStore`
+
+### Direct Store Action Binding
+
+Components should call store actions **directly** without wrapper functions.
+
+**✅ Good:**
+```vue
+<button @click="store.openDialog">
+Open
+</button>
+
+<script setup>
+const store = useUntaggedDialogStore()
+</script>
+```
+
+**❌ Bad:**
+```vue
+<button @click="handleOpen">
+Open
+</button>
+
+<script setup>
+const store = useUntaggedDialogStore()
+
+// Unnecessary wrapper
+function handleOpen() {
+	store.openDialog()
+}
+</script>
+```
+
+**Exception:** Wrappers are okay when adding logic:
+```vue
+<script setup>
+function handleSubmit() {
+	if (validate()) {
+		store.submit() // Additional logic justifies wrapper
+	}
+}
+</script>
+```
+
+### Composables vs Stores
+
+**Composables** - Reusable logic with local state (per-component instances)
+- `useRipple` - DOM manipulation utilities
+- VueUse utilities - `useLocalStorage`, `useTimeAgo`, `useClipboard`, etc.
+
+**Stores** - Global shared state (singleton across app)
+- User preferences, filters, dialog state
+- Cross-component coordination
+
+**Key Rule:** If multiple unrelated components need the same state, use a store. If it's just reusable logic, use a composable.

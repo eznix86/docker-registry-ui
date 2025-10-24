@@ -270,7 +270,7 @@
 <script setup lang="ts">
 import type { RepositoryProps, Tag } from "~/types"
 import { InfiniteScroll, Link, usePage } from "@inertiajs/vue3"
-import { useDebounceFn } from "@vueuse/core"
+import { useDebounceFn, useTimeAgo } from "@vueuse/core"
 import { computed, ref, watch } from "vue"
 import HeaderComponent from "~/components/HeaderComponent.vue"
 import {
@@ -285,12 +285,13 @@ import {
 	SelectItem,
 	SelectTrigger,
 } from "~/components/ui"
-import { useContainerRuntime } from "~/composables/useContainerRuntime"
-import { useRepositoryStore } from "~/stores/useRepositoryStore"
+import { useAppPreferencesStore } from "~/stores/useAppPreferencesStore"
+import { useRepositoryFilterStore } from "~/stores/useRepositoryFilterStore"
 
 // Get Inertia page props
 const page = usePage<RepositoryProps>()
-const repositoryStore = useRepositoryStore()
+const repositoryStore = useRepositoryFilterStore()
+const preferencesStore = useAppPreferencesStore()
 
 // Computed values from Inertia props
 const repository = computed(() => page.props.repository)
@@ -334,8 +335,10 @@ const selectedTag = ref<Tag | null>(null)
 const selectedTagsForDeletion = ref<string[]>([])
 const selectAllTags = ref(false)
 
-// Use container runtime composable
-const { getPullCommand } = useContainerRuntime()
+// Pull command helper from preferences store
+function getPullCommand(registry: string, repo: string, tag: string): string {
+	return preferencesStore.getPullCommand(registry, repo, tag)
+}
 
 // Local filter for immediate UI updates
 const localFilterQuery = ref(repositoryStore.localFilter)
@@ -364,23 +367,9 @@ function formatBytes(bytes: number): string {
 	return `${Number.parseFloat((bytes / k ** i).toFixed(2))} ${sizes[i]}`
 }
 
-// Format date to relative time
+// Format date to relative time using VueUse
 function formatRelativeTime(dateString: string): string {
-	const date = new Date(dateString)
-	const now = new Date()
-	const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000)
-
-	if (diffInSeconds < 60)
-		return "just now"
-	if (diffInSeconds < 3600)
-		return `${Math.floor(diffInSeconds / 60)} minutes ago`
-	if (diffInSeconds < 86400)
-		return `${Math.floor(diffInSeconds / 3600)} hours ago`
-	if (diffInSeconds < 604800)
-		return `${Math.floor(diffInSeconds / 86400)} days ago`
-	if (diffInSeconds < 2592000)
-		return `${Math.floor(diffInSeconds / 604800)} weeks ago`
-	return `${Math.floor(diffInSeconds / 2592000)} months ago`
+	return useTimeAgo(dateString).value
 }
 
 // Calculate total size for a tag

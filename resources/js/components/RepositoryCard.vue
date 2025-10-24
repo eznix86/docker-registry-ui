@@ -4,7 +4,7 @@
 		:href="isUntagged ? undefined : getRepositoryUrl()"
 		:class="isUntagged ? 'block w-full text-left' : 'block'"
 		:aria-label="`${isUntagged ? 'Show untagged repository information for' : 'View details for'} ${repository.name} repository`"
-		@click="isUntagged ? handleUntaggedClick() : undefined"
+		@click="isUntagged ? untaggedDialogStore.openDialog(repository) : undefined"
 	>
 		<Card v-ripple variant="interactive" class="p-3 h-42" :class="[isUntagged && 'cursor-help']">
 			<CardHeader>{{ repository.name }}</CardHeader>
@@ -35,21 +35,16 @@ import type { Repository } from "~/types"
 import { Link } from "@inertiajs/vue3"
 import { computed } from "vue"
 import { Card, CardBody, CardFooter, CardHeader, Chip } from "~/components/ui"
+import { useUntaggedDialogStore } from "~/stores/useUntaggedDialogStore"
 
 const props = defineProps<{
 	repository: Repository
 }>()
 
-const emit = defineEmits<{
-	untaggedClick: [repository: Repository]
-}>()
+const untaggedDialogStore = useUntaggedDialogStore()
 
 // A repository is untagged if it has 0 tags
 const isUntagged = computed(() => props.repository.tagsCount === 0)
-
-function handleUntaggedClick() {
-	emit("untaggedClick", props.repository)
-}
 
 // Build the repository URL based on namespace
 function getRepositoryUrl(): string {

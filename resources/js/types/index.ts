@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright (C) 2025  Bruno Bernard
 
+import type { PageProps } from "@inertiajs/core"
+
 export interface Repository {
 	name: string
 	namespace: string
@@ -23,7 +25,7 @@ export interface ExploreFilters {
 	search: string
 }
 
-export interface ExploreProps {
+export type ExploreProps = PageProps & {
 	repositories?: Repository[]
 	registries?: Registry[]
 	totalRepositories?: number
@@ -57,7 +59,7 @@ export interface TagScroll {
 	data: Tag[]
 }
 
-export interface RepositoryProps {
+export type RepositoryProps = PageProps & {
 	repository?: Repository
 	tags?: TagScroll
 	filters?: RepositoryFilters

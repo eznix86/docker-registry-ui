@@ -48,7 +48,6 @@
 						v-for="repo in repositories"
 						:key="`${repo.registry}/${repo.name}`"
 						:repository="repo"
-						@untagged-click="handleUntaggedClick"
 					/>
 				</div>
 			</main>
@@ -62,16 +61,12 @@
 		</footer>
 
 		<!-- Untagged Repository Dialog -->
-		<UntaggedDialog
-			:is-open="untaggedDialogOpen"
-			:repository-name="selectedUntaggedRepository?.name || ''"
-			@close="closeUntaggedDialog"
-		/>
+		<UntaggedDialog />
 	</div>
 </template>
 
 <script setup lang="ts">
-import type { ExploreProps, Repository } from "~/types"
+import type { ExploreProps } from "~/types"
 import { usePage } from "@inertiajs/vue3"
 import { computed, ref, watch } from "vue"
 import HeaderComponent from "~/components/HeaderComponent.vue"
@@ -79,14 +74,12 @@ import RepositoryCard from "~/components/RepositoryCard.vue"
 import SidebarComponent from "~/components/SidebarComponent.vue"
 import MobileDialog from "~/components/ui/MobileDialog.vue"
 import UntaggedDialog from "~/components/UntaggedDialog.vue"
-import { useFilterStore } from "~/stores/useFilterStore"
+import { useExploreFilterStore } from "~/stores/useExploreFilterStore"
 
 const page = usePage<ExploreProps>()
-const filterStore = useFilterStore()
+const filterStore = useExploreFilterStore()
 
 const sidebarOpen = ref(false)
-const untaggedDialogOpen = ref(false)
-const selectedUntaggedRepository = ref<Repository | null>(null)
 
 // Get data from Inertia props
 const repositories = computed(() => page.props.repositories || [])
@@ -99,24 +92,13 @@ watch(
 	() => page.props.filters,
 	(filters) => {
 		if (filters) {
-			filterStore.setSelectedRegistries(filters.registries || [])
-			filterStore.setSelectedArchitectures(filters.architectures || [])
-			filterStore.setSelectedShowUntagged(filters.showUntagged || false)
+			filterStore.setRegistries(filters.registries || [])
+			filterStore.setArchitectures(filters.architectures || [])
+			filterStore.setShowUntagged(filters.showUntagged || false)
 			filterStore.setSelectedSearch(filters.search || "")
 			filterStore.setLocalSearch(filters.search || "")
 		}
 	},
 	{ immediate: true },
 )
-
-// Handle untagged repository click
-function handleUntaggedClick(repository: Repository) {
-	selectedUntaggedRepository.value = repository
-	untaggedDialogOpen.value = true
-}
-
-function closeUntaggedDialog() {
-	untaggedDialogOpen.value = false
-	selectedUntaggedRepository.value = null
-}
 </script>

@@ -6,8 +6,30 @@ import { router } from "@inertiajs/vue3"
 import { defineStore } from "pinia"
 import { ref } from "vue"
 
-export const useRepositoryStore = defineStore("repository", () => {
-	// State
+// ========== HELPER FUNCTIONS (outside store) ==========
+
+/**
+ * Build query params from current filter state
+ */
+function buildFilterParams(filters: RepositoryFilters): Record<string, string> {
+	const params: Record<string, string> = {}
+
+	if (filters.sortBy !== "newest") {
+		params.sortBy = filters.sortBy
+	}
+
+	if (filters.filter) {
+		params.filter = filters.filter
+	}
+
+	return params
+}
+
+// ========== STORE ==========
+
+export const useRepositoryFilterStore = defineStore("repositoryFilter", () => {
+	// ========== STATE ==========
+
 	const repository = ref<Repository | null>(null)
 	const tags = ref<TagScroll>({ data: [] })
 	const filters = ref<RepositoryFilters>({
@@ -18,38 +40,8 @@ export const useRepositoryStore = defineStore("repository", () => {
 	// Local state for immediate UI updates
 	const localFilter = ref("")
 
-	/**
-	 * Build query params from current filter state
-	 */
-	function buildFilterParams(): Record<string, string> {
-		const params: Record<string, string> = {}
+	// ========== ACTIONS ==========
 
-		if (filters.value.sortBy !== "newest") {
-			params.sortBy = filters.value.sortBy
-		}
-
-		if (filters.value.filter) {
-			params.filter = filters.value.filter
-		}
-
-		return params
-	}
-
-	/**
-	 * Perform Inertia router.get with current filters
-	 */
-	function performFilterRequest(url: string) {
-		const params = buildFilterParams()
-
-		router.get(url, params, {
-			preserveScroll: true,
-			preserveState: true,
-			replace: true,
-			only: ["tags", "filters"],
-		})
-	}
-
-	// Actions
 	function setRepository(repo: Repository | null) {
 		repository.value = repo
 	}
@@ -84,12 +76,27 @@ export const useRepositoryStore = defineStore("repository", () => {
 		localFilter.value = filter
 	}
 
+	/**
+	 * Perform Inertia router.get with current filters
+	 */
+	function performFilterRequest(url: string) {
+		const params = buildFilterParams(filters.value)
+
+		router.get(url, params, {
+			preserveScroll: true,
+			preserveState: true,
+			replace: true,
+			only: ["tags", "filters"],
+		})
+	}
+
 	return {
 		// State
 		repository,
 		tags,
 		filters,
 		localFilter,
+
 		// Actions
 		setRepository,
 		setTags,
