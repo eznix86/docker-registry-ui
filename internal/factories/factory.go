@@ -40,10 +40,12 @@ func (f *Factory[T]) Make() []*T {
 	return models
 }
 
-func (f *Factory[T]) Create() []*T {
+func (f *Factory[T]) Create() ([]*T, error) {
 	instances := f.Make()
 	for _, model := range instances {
-		f.db.Create(model)
+		if err := f.db.Create(model).Error; err != nil {
+			return nil, err
+		}
 	}
-	return instances
+	return instances, nil
 }

@@ -265,12 +265,12 @@ For each component copied from template:
 **Before (Biome):**
 ```json
 {
-  "devDependencies": {
-    "@biomejs/biome": "^2.2.6"
-  },
-  "scripts": {
-    "lint": "biome check --fix ./resources vite.config.ts && go fmt ./... && golangci-lint run -c .golangci.yml ./..."
-  }
+	"devDependencies": {
+		"@biomejs/biome": "^2.2.6"
+	},
+	"scripts": {
+		"lint": "biome check --fix ./resources vite.config.ts && go fmt ./... && golangci-lint run -c .golangci.yml ./..."
+	}
 }
 ```
 **Problem:** Biome doesn't support Vue files
@@ -278,16 +278,16 @@ For each component copied from template:
 **After (ESLint from template):**
 ```json
 {
-  "devDependencies": {
-    "@antfu/eslint-config": "^6.0.0",
-    "eslint": "^9.38.0",
-    "eslint-plugin-vuejs-accessibility": "^2.4.1"
-  },
-  "scripts": {
-    "lint": "eslint && go fmt ./... && golangci-lint run -c .golangci.yml ./...",
-    "lint:fix": "eslint --fix",
-    "build": "vue-tsc -b && vite build"
-  }
+	"devDependencies": {
+		"@antfu/eslint-config": "^6.0.0",
+		"eslint": "^9.38.0",
+		"eslint-plugin-vuejs-accessibility": "^2.4.1"
+	},
+	"scripts": {
+		"lint": "eslint && go fmt ./... && golangci-lint run -c .golangci.yml ./...",
+		"lint:fix": "eslint --fix",
+		"build": "vue-tsc -b && vite build"
+	}
 }
 ```
 **Benefits:** Full Vue support, a11y checking, type checking in build, better DX
@@ -299,8 +299,8 @@ For each component copied from template:
 // Custom listener syncs Zustand stores
 setupInertiaListeners()
 // Manual store updates on route changes
-router.on('success', (event) => {
-  syncStores(event.detail.page.props)
+router.on("success", (event) => {
+	syncStores(event.detail.page.props)
 })
 ```
 

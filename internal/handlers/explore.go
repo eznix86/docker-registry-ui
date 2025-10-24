@@ -84,10 +84,8 @@ func (h *Handler) Explore(w http.ResponseWriter, r *http.Request) {
 		"architectures":     architectures,
 		"totalRepositories": int(repoResult.Total),
 		"registries":        registries,
-		"repositories": gonertia.Defer(func() (any, error) {
-			return repoResult.Repositories, nil
-		}),
-		"filters": filters,
+		"repositories":      repoResult.Repositories,
+		"filters":           filters,
 	}); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}

@@ -77,7 +77,11 @@ var seedCmd = &cobra.Command{
 		}
 
 		fmt.Println("Creating registries...")
-		registries := factories.NewRegistryFactory(db).Count(5).Create()
+		registries, err := factories.NewRegistryFactory(db).Count(5).Create()
+		if err != nil {
+			fmt.Printf("Failed to create registries: %v\n", err)
+			return
+		}
 
 		fmt.Println("Creating repositories...")
 		var repositories []*models.Repository
@@ -87,29 +91,45 @@ var seedCmd = &cobra.Command{
 		for _, registry := range registries {
 			// Regular repositories with many tags
 			repoCount := gofakeit.Number(3, 6)
-			repos := factories.NewRepositoryFactory(db).
+			repos, err := factories.NewRepositoryFactory(db).
 				WithRegistry(registry.ID).
 				Count(repoCount).
 				Create()
+			if err != nil {
+				fmt.Printf("Failed to create repositories: %v\n", err)
+				return
+			}
 			repositories = append(repositories, repos...)
 
 			// Add 1-2 untagged repositories per registry (edge case testing)
-			untagged := factories.NewRepositoryFactory(db).
+			untagged, err := factories.NewRepositoryFactory(db).
 				WithRegistry(registry.ID).
 				Count(gofakeit.Number(1, 2)).
 				Create()
+			if err != nil {
+				fmt.Printf("Failed to create untagged repositories: %v\n", err)
+				return
+			}
 			untaggedRepos = append(untaggedRepos, untagged...)
 
 			// Add 1 minimal repository (1 tag, 1 arch) per registry
-			minimal := factories.NewRepositoryFactory(db).
+			minimal, err := factories.NewRepositoryFactory(db).
 				WithRegistry(registry.ID).
 				Count(1).
 				Create()
+			if err != nil {
+				fmt.Printf("Failed to create minimal repositories: %v\n", err)
+				return
+			}
 			minimalRepos = append(minimalRepos, minimal...)
 		}
 
 		fmt.Println("Creating single-arch manifests...")
-		singleArchManifests := factories.NewManifestFactory(db).Count(500).Create()
+		singleArchManifests, err := factories.NewManifestFactory(db).Count(500).Create()
+		if err != nil {
+			fmt.Printf("Failed to create single-arch manifests: %v\n", err)
+			return
+		}
 
 		fmt.Println("Creating multi-arch manifests with platform-specific manifests...")
 		var multiArchManifests []*models.Manifest
@@ -120,22 +140,36 @@ var seedCmd = &cobra.Command{
 
 		multiArchCount := 100
 		for i := 0; i < multiArchCount; i++ {
-			multiArchManifest := factories.NewMultiArchManifestFactory(db).Create()[0]
+			multiArchManifestList, err := factories.NewMultiArchManifestFactory(db).Create()
+			if err != nil {
+				fmt.Printf("Failed to create multi-arch manifest: %v\n", err)
+				return
+			}
+			multiArchManifest := multiArchManifestList[0]
 			multiArchManifests = append(multiArchManifests, multiArchManifest)
 			allManifests = append(allManifests, multiArchManifest)
 
 			platformCount := gofakeit.Number(2, 4)
 			for j := 0; j < platformCount; j++ {
-				platformManifest := factories.NewManifestFactory(db).
+				platformManifestList, err := factories.NewManifestFactory(db).
 					WithManifestList(multiArchManifest.Digest).
-					Create()[0]
+					Create()
+				if err != nil {
+					fmt.Printf("Failed to create platform manifest: %v\n", err)
+					return
+				}
+				platformManifest := platformManifestList[0]
 				allManifests = append(allManifests, platformManifest)
 			}
 		}
 
 		// Create single-arch manifests specifically for minimal repos (1 arch only)
 		fmt.Println("Creating single-arch manifests for minimal repositories...")
-		minimalManifests = factories.NewManifestFactory(db).Count(len(minimalRepos)).Create()
+		minimalManifests, err = factories.NewManifestFactory(db).Count(len(minimalRepos)).Create()
+		if err != nil {
+			fmt.Printf("Failed to create minimal manifests: %v\n", err)
+			return
+		}
 
 		fmt.Println("Creating tags...")
 		var tags []*models.Tag
@@ -143,10 +177,14 @@ var seedCmd = &cobra.Command{
 		// Regular repositories: 200-250 tags each
 		for _, repo := range repositories {
 			tagCount := gofakeit.Number(200, 250)
-			repoTags := factories.NewTagFactory(db).
+			repoTags, err := factories.NewTagFactory(db).
 				WithRepository(repo.ID).
 				Count(tagCount).
 				Create()
+			if err != nil {
+				fmt.Printf("Failed to create tags for repository %d: %v\n", repo.ID, err)
+				return
+			}
 			tags = append(tags, repoTags...)
 		}
 
@@ -154,10 +192,14 @@ var seedCmd = &cobra.Command{
 		fmt.Println("Creating minimal repositories with 1 tag each...")
 		var minimalTags []*models.Tag
 		for _, repo := range minimalRepos {
-			repoTags := factories.NewTagFactory(db).
+			repoTags, err := factories.NewTagFactory(db).
 				WithRepository(repo.ID).
 				Count(1).
 				Create()
+			if err != nil {
+				fmt.Printf("Failed to create tags for minimal repository %d: %v\n", repo.ID, err)
+				return
+			}
 			minimalTags = append(minimalTags, repoTags...)
 		}
 
@@ -183,10 +225,14 @@ var seedCmd = &cobra.Command{
 		for _, manifest := range allManifests {
 			if manifest.OS != "" && manifest.Architecture != "" {
 				layerCount := gofakeit.Number(3, 12)
-				factories.NewManifestLayerFactory(db).
+				_, err := factories.NewManifestLayerFactory(db).
 					WithManifest(manifest.Digest).
 					Count(layerCount).
 					Create()
+				if err != nil {
+					fmt.Printf("Failed to create manifest layers for %s: %v\n", manifest.Digest, err)
+					return
+				}
 			}
 		}
 
@@ -195,10 +241,14 @@ var seedCmd = &cobra.Command{
 		for _, manifest := range minimalManifests {
 			if manifest.OS != "" && manifest.Architecture != "" {
 				layerCount := gofakeit.Number(3, 8)
-				factories.NewManifestLayerFactory(db).
+				_, err := factories.NewManifestLayerFactory(db).
 					WithManifest(manifest.Digest).
 					Count(layerCount).
 					Create()
+				if err != nil {
+					fmt.Printf("Failed to create layers for minimal manifest %s: %v\n", manifest.Digest, err)
+					return
+				}
 			}
 		}
 

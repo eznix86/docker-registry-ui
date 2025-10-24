@@ -38,7 +38,7 @@ func NewRegistryFactory(db *gorm.DB) *Factory[models.Registry] {
 		return &models.Registry{
 			Name:   name,
 			Host:   host,
-			Status: 200,
+			Status: fake.RandomInt([]int{200, 502, 403}),
 		}
 	})
 }

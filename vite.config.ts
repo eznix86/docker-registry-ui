@@ -1,21 +1,24 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright (C) 2025  Bruno Bernard
 
-import fs from "node:fs";
-import preact from "@preact/preset-vite";
-import laravel from "laravel-vite-plugin";
-import { defineConfig, type ServerOptions } from "vite";
-import sri from "vite-plugin-manifest-sri";
+import type { ServerOptions } from "vite"
+import fs from "node:fs"
+import tailwindcss from "@tailwindcss/vite"
+import vue from "@vitejs/plugin-vue"
+import laravel from "laravel-vite-plugin"
+import { defineConfig } from "vite"
+import sri from "vite-plugin-manifest-sri"
 
-type httpsOptions = ServerOptions["https"];
+type httpsOptions = ServerOptions["https"]
 
 export default defineConfig({
 	plugins: [
 		laravel({
-			input: ["resources/js/app.tsx"],
+			input: ["resources/js/app.ts", "resources/css/app.css"],
 			refresh: true,
 		}),
-		preact(),
+		vue(),
+		tailwindcss(),
 		sri(),
 		// visualizer({ open: true }),
 	],
@@ -42,23 +45,23 @@ export default defineConfig({
 		target: "esnext",
 		cssMinify: true,
 	},
-});
+})
 
 function httpsConfig(): httpsOptions {
-	const enableTLS = process.env.ENABLE_TLS === "true";
-	const tlsCertFile = process.env.TLS_CERT_FILE || "certs/localhost.pem";
-	const tlsKeyFile = process.env.TLS_KEY_FILE || "certs/localhost-key.pem";
+	const enableTLS = process.env.ENABLE_TLS === "true"
+	const tlsCertFile = process.env.TLS_CERT_FILE || "certs/localhost.pem"
+	const tlsKeyFile = process.env.TLS_KEY_FILE || "certs/localhost-key.pem"
 
 	if (!enableTLS) {
-		return;
+		return
 	}
 
 	if (!fs.existsSync(tlsCertFile) || !fs.existsSync(tlsKeyFile)) {
-		return;
+		return
 	}
 
 	return {
 		key: fs.readFileSync(tlsKeyFile),
 		cert: fs.readFileSync(tlsCertFile),
-	};
+	}
 }

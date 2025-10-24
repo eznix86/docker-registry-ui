@@ -109,8 +109,8 @@
 ```typescript
 // Custom event listeners sync stores manually
 setupInertiaListeners()
-router.on('success', (event) => {
-  syncStores(event.detail.page.props)
+router.on("success", (event) => {
+	syncStores(event.detail.page.props)
 })
 ```
 
