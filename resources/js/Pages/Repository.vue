@@ -77,7 +77,7 @@ const tags = computed(() => page.props.tags?.data || [])
 const repositoryName = useRepositoryName(repository)
 
 const registryHost = computed(() => repository.value?.registry || "")
-const currentUrl = computed(() => page.url.split("?")[0])
+const currentUrl = computed(() => location.pathname)
 
 watch(
 	() => page.props.filters,
