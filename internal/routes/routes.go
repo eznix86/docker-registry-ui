@@ -24,6 +24,7 @@ func NewRouter(publicFS embed.FS, h *handlers.Handler) (*chi.Mux, error) {
 	r.Use(middleware.RealIP)
 	r.Use(middleware.Recoverer)
 	r.Use(middleware.Timeout(60 * time.Second))
+	r.Use(cspMiddleware)
 	r.Use(servertiming.ServerTiming(&servertiming.Config{
 		TimingAllowOrigin: "*",
 	}))
@@ -37,8 +38,10 @@ func NewRouter(publicFS embed.FS, h *handlers.Handler) (*chi.Mux, error) {
 	r.Get("/", h.Explore)
 	r.Get("/r/{registry}/{repository}", h.RepositoryDetail)
 	r.Get("/r/{registry}/{namespace}/{repository}", h.RepositoryDetail)
-	r.Handle("/build/*", http.FileServer(http.FS(publicSubFS)))
-	r.Handle("/public/*", http.StripPrefix("/public/", http.FileServer(http.FS(publicSubFS))))
+
+	// Serve static assets with cache headers
+	r.With(cacheControlMiddleware).Handle("/build/*", http.FileServer(http.FS(publicSubFS)))
+	r.With(cacheControlMiddleware).Handle("/public/*", http.StripPrefix("/public/", http.FileServer(http.FS(publicSubFS))))
 
 	r.NotFound(h.NotFound)
 

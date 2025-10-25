@@ -18,6 +18,7 @@
 					<RepositoryCard
 						v-for="repo in repositories"
 						:key="`${repo.registry}/${repo.name}`"
+						v-memo="[repo.name, repo.tagsCount, repo.totalSizeInBytes]"
 						:repository="repo"
 					/>
 				</div>
@@ -37,15 +38,16 @@
 <script setup lang="ts">
 import type { ExploreProps } from "~/types"
 import { usePage } from "@inertiajs/vue3"
-import { computed, ref, watch } from "vue"
+import { computed, defineAsyncComponent, ref, watch } from "vue"
 import ExploreResultsHeader from "~/components/ExploreResultsHeader.vue"
 import HeaderComponent from "~/components/HeaderComponent.vue"
 import RepositoryCard from "~/components/RepositoryCard.vue"
 import SidebarComponent from "~/components/SidebarComponent.vue"
 import MobileDialog from "~/components/ui/MobileDialog.vue"
-import UntaggedDialog from "~/components/UntaggedDialog.vue"
 import VersionFooter from "~/components/VersionFooter.vue"
 import { useExploreFilterStore } from "~/stores/useExploreFilterStore"
+
+const UntaggedDialog = defineAsyncComponent(() => import("~/components/UntaggedDialog.vue"))
 
 const page = usePage<ExploreProps>()
 const filterStore = useExploreFilterStore()

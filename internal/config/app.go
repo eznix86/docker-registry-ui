@@ -105,7 +105,12 @@ func (app *Application) initInertia() error {
 		return err
 	}
 
-	i, err := gonertia.NewViteFromFS(gi, app.PublicFS, gonertia.WithAutoNonce(), gonertia.WithIntegrity(), gonertia.WithWaterfallPreload(3))
+	i, err := gonertia.NewViteFromFS(
+		gi,
+		app.PublicFS,
+		gonertia.WithIntegrity(),
+		gonertia.WithAggressivePreload(),
+	)
 	if err != nil {
 		return err
 	}

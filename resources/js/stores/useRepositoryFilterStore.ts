@@ -28,14 +28,8 @@ export const useRepositoryFilterStore = defineStore("repositoryFilter", () => {
 		filters.value = newFilters
 	}
 
-	function setSortBy(
-		sortBy: RepositoryFilters["sortBy"],
-		url: string,
-	) {
+	function setSortBy(sortBy: RepositoryFilters["sortBy"]) {
 		filters.value.sortBy = sortBy
-		if (url) {
-			performFilterRequest(url)
-		}
 	}
 
 	function setFilter(filter: string, url: string) {
@@ -52,7 +46,8 @@ export const useRepositoryFilterStore = defineStore("repositoryFilter", () => {
 
 	function performFilterRequest(url: string) {
 		const params = buildFilterParams({
-			sortBy: filters.value.sortBy === "newest" ? undefined : filters.value.sortBy,
+			sortBy:
+        filters.value.sortBy === "newest" ? undefined : filters.value.sortBy,
 			filter: filters.value.filter,
 		})
 

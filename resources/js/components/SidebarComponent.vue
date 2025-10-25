@@ -64,8 +64,7 @@
 <script setup lang="ts">
 import type { ExploreProps } from "~/types"
 import { usePage } from "@inertiajs/vue3"
-import { computed } from "vue"
-import SettingsDialog from "~/components/SettingsDialog.vue"
+import { computed, defineAsyncComponent } from "vue"
 import {
 	Button,
 	Checkbox,
@@ -76,6 +75,8 @@ import {
 } from "~/components/ui"
 import { useAppPreferencesStore } from "~/stores/useAppPreferencesStore"
 import { useExploreFilterStore } from "~/stores/useExploreFilterStore"
+
+const SettingsDialog = defineAsyncComponent(() => import("~/components/SettingsDialog.vue"))
 
 const page = usePage<ExploreProps>()
 const filterStore = useExploreFilterStore()
