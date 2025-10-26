@@ -4,16 +4,16 @@ repos:
     hooks:
       - id: trailing-whitespace
       - id: end-of-file-fixer
-  - repo: local
+  - repo: https://github.com/eznix86/python-license
+    rev: v1.0.1
     hooks:
-      - id: spdx-header-check
-        name: Check SPDX Headers
-        entry: python3 license.py Apache-2.0 "Bruno Bernard" --fix
-        language: system
+      - id: license-headers
+        args: [--fix, Apache-2.0, Bruno Bernard]
         files: (\.(go|ts|tsx|py|js|jsx|html)|Dockerfile)$
         pass_filenames: true
         stages: [pre-commit]
-
+  - repo: local
+    hooks:
       - id: go-fmt
         name: Run go fmt
         entry: bash -c 'go fmt ./...'
