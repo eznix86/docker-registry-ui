@@ -1,0 +1,45 @@
+version: "2"
+
+run:
+  timeout: 5m
+  tests: true
+  concurrency: 4
+  allow-parallel-runners: true
+
+linters:
+  default: standard
+  enable:
+    - revive
+    - gocyclo
+    - misspell
+    - dupl
+    - gocritic
+    - gosec
+    - funlen
+    - nestif
+    - unused
+    - asciicheck
+    - bidichk
+    - bodyclose
+    - usestdlibvars
+  disable:
+    - wsl
+  settings:
+    gocyclo:
+      min-complexity: 15
+    misspell:
+      locale: US
+    revive:
+      severity: warning
+
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 3
+  uniq-by-line: false
+  new: true
+
+output:
+  formats:
+    text:
+      print-issued-lines: true
+      colors: true

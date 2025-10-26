@@ -1,0 +1,6 @@
+{
+	"$schema": "https://unpkg.com/knip@5/schema.json",
+	"entry": ["resources/js/**/*.vue", "resources/js/**/*.ts"],
+	"ignoreDependencies": ["@inertiajs/core"],
+	"ignoreBinaries": ["go", "golangci-lint"]
+}

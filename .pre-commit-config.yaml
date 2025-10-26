@@ -1,0 +1,28 @@
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+  - repo: local
+    hooks:
+      - id: spdx-header-check
+        name: Check SPDX Headers
+        entry: python3 license.py Apache-2.0 "Bruno Bernard" --fix
+        language: system
+        files: (\.(go|ts|tsx|py|js|jsx|html)|Dockerfile)$
+        pass_filenames: true
+        stages: [pre-commit]
+
+      - id: go-fmt
+        name: Run go fmt
+        entry: bash -c 'go fmt ./...'
+        language: system
+        pass_filenames: false
+        stages: [pre-commit]
+
+      - id: lint
+        name: Run lint
+        entry: bash -c 'bun run lint'
+        language: system
+        stages: [pre-commit]

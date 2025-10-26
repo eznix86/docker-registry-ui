@@ -1,0 +1,43 @@
+<!--
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (C) 2025  Bruno Bernard
+-->
+
+<!-- app.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/x-icon" href="/public/container-hub.svg">
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Instrument+Sans:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&family=Fira+Code:wght@400;500;600;700&display=swap"
+        rel="stylesheet">
+
+    <!-- Prevent FOUC by applying saved theme/fonts before page render -->
+    <script>
+        (function() {
+            const theme = localStorage.getItem('containerhub-theme') || 'the-hub-light';
+            const fontSans = localStorage.getItem('containerhub-font-sans') || 'roboto';
+            const fontMono = localStorage.getItem('containerhub-font-mono') || 'roboto-mono';
+
+            document.documentElement.setAttribute('data-theme', theme);
+            document.documentElement.setAttribute('data-font-sans', fontSans);
+            document.documentElement.setAttribute('data-font-mono', fontMono);
+        })();
+    </script>
+
+    {{ .inertiaHead }}
+
+    {{ viteAssets "resources/js/app.ts" "resources/css/app.css" }}
+
+</head>
+<body>
+    {{ .inertia }}
+
+</body>
+</html>

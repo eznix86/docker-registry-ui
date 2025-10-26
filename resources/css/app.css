@@ -1,0 +1,774 @@
+@import "tailwindcss";
+
+/* Base theme - The Hub Light (default) */
+@theme {
+	/* Semantic color tokens */
+	--color-background: #ffffff;
+	--color-foreground: #24292f;
+
+	--color-card: #f6f8fa;
+	--color-card-foreground: #24292f;
+
+	--color-popover: #f6f8fa;
+	--color-popover-foreground: #24292f;
+
+	--color-primary: #1d63ed;
+	--color-primary-foreground: #ffffff;
+
+	--color-secondary: #f6f8fa;
+	--color-secondary-foreground: #24292f;
+
+	--color-muted: #f6f8fa;
+	--color-muted-foreground: #57606a;
+
+	--color-accent: #0047c2;
+	--color-accent-foreground: #ffffff;
+
+	--color-destructive: #d32f2f;
+	--color-destructive-foreground: #ffffff;
+
+	--color-warning: #f57c00;
+	--color-warning-foreground: #ffffff;
+
+	--color-success: #2e7d32;
+	--color-success-foreground: #ffffff;
+
+	--color-info: #1d63ed;
+	--color-info-foreground: #ffffff;
+
+	--color-outline: #d0d7de;
+	--color-stroke: #d0d7de;
+	--color-field: #d0d7de;
+	--color-focus: #1d63ed;
+
+	/* Typography */
+	--font-sans: "Roboto", sans-serif;
+	--font-mono: "Roboto Mono", monospace;
+
+	/* Font sizes - Material UI scale */
+	--font-size-xs: 0.75rem; /* 12px - caption, overline */
+	--font-size-sm: 0.875rem; /* 14px - body2, button, subtitle2 */
+	--font-size-base: 1rem; /* 16px - body1, subtitle1 */
+	--font-size-lg: 1.125rem; /* 18px */
+	--font-size-xl: 1.25rem; /* 20px - h6 */
+	--font-size-2xl: 1.5rem; /* 24px - h5 */
+	--font-size-3xl: 1.875rem; /* 30px */
+	--font-size-4xl: 2.125rem; /* 34px - h4 */
+	--font-size-5xl: 3rem; /* 48px - h3 */
+}
+
+@layer base {
+	/* The Hub Dark */
+	[data-theme='the-hub-dark'] {
+		--color-background: #0d1117;
+		--color-foreground: #c9d1d9;
+
+		--color-card: #161b22;
+		--color-card-foreground: #c9d1d9;
+
+		--color-popover: #161b22;
+		--color-popover-foreground: #c9d1d9;
+
+		--color-primary: #1d63ed;
+		--color-primary-foreground: #ffffff;
+
+		--color-secondary: #161b22;
+		--color-secondary-foreground: #c9d1d9;
+
+		--color-muted: #161b22;
+		--color-muted-foreground: #8b949e;
+
+		--color-accent: #002a8c;
+		--color-accent-foreground: #ffffff;
+
+		--color-destructive: #f85149;
+		--color-destructive-foreground: #ffffff;
+
+		--color-warning: #f57c00;
+		--color-warning-foreground: #ffffff;
+
+		--color-success: #56d364;
+		--color-success-foreground: #0d1117;
+
+		--color-info: #58a6ff;
+		--color-info-foreground: #0d1117;
+
+		--color-outline: #30363d;
+		--color-stroke: #30363d;
+		--color-field: #30363d;
+		--color-focus: #1d63ed;
+
+		--font-sans: "Roboto", sans-serif;
+		--font-mono: "Roboto Mono", monospace;
+	}
+
+	/* The Hub Light */
+	[data-theme='the-hub-light'] {
+		--color-background: #ffffff;
+		--color-foreground: #24292f;
+
+		--color-card: #f6f8fa;
+		--color-card-foreground: #24292f;
+
+		--color-popover: #f6f8fa;
+		--color-popover-foreground: #24292f;
+
+		--color-primary: #1d63ed;
+		--color-primary-foreground: #ffffff;
+
+		--color-secondary: #f6f8fa;
+		--color-secondary-foreground: #24292f;
+
+		--color-muted: #f6f8fa;
+		--color-muted-foreground: #57606a;
+
+		--color-accent: #0047c2;
+		--color-accent-foreground: #ffffff;
+
+		--color-destructive: #d32f2f;
+		--color-destructive-foreground: #ffffff;
+
+		--color-warning: #f57c00;
+		--color-warning-foreground: #ffffff;
+
+		--color-success: #2e7d32;
+		--color-success-foreground: #ffffff;
+
+		--color-info: #1d63ed;
+		--color-info-foreground: #ffffff;
+
+		--color-outline: #d0d7de;
+		--color-stroke: #d0d7de;
+		--color-field: #d0d7de;
+		--color-focus: #1d63ed;
+
+		--font-sans: "Roboto", sans-serif;
+		--font-mono: "Roboto Mono", monospace;
+	}
+
+	/* Monokai */
+	[data-theme='monokai'] {
+		--color-background: #272822;
+		--color-foreground: #f8f8f2;
+
+		--color-card: #2f2f2a;
+		--color-card-foreground: #f8f8f2;
+
+		--color-popover: #2f2f2a;
+		--color-popover-foreground: #f8f8f2;
+
+		--color-primary: #f92672;
+		--color-primary-foreground: #ffffff;
+
+		--color-secondary: #2f2f2a;
+		--color-secondary-foreground: #f8f8f2;
+
+		--color-muted: #2f2f2a;
+		--color-muted-foreground: #a6a296;
+
+		--color-accent: #ae81ff;
+		--color-accent-foreground: #ffffff;
+
+		--color-destructive: #f92672;
+		--color-destructive-foreground: #ffffff;
+
+		--color-warning: #e6db74;
+		--color-warning-foreground: #272822;
+
+		--color-success: #a6e22e;
+		--color-success-foreground: #272822;
+
+		--color-info: #f92672;
+		--color-info-foreground: #ffffff;
+
+		--color-outline: #49483e;
+		--color-stroke: #49483e;
+		--color-field: #49483e;
+		--color-focus: #f92672;
+
+		--font-sans: "Instrument Sans", system-ui, sans-serif;
+		--font-mono: "Geist Mono", "Roboto Mono", monospace;
+
+		/* Monospace fonts need significantly smaller sizes */
+		--font-size-xs: 0.5625rem; /* 9px */
+		--font-size-sm: 0.6875rem; /* 11px */
+		--font-size-base: 0.75rem; /* 12px */
+		--font-size-lg: 0.875rem; /* 14px */
+		--font-size-xl: 1rem; /* 16px */
+		--font-size-2xl: 1.125rem; /* 18px */
+	}
+
+	/* Nord Dark */
+	[data-theme='nord-dark'] {
+		--color-background: #2e3440;
+		--color-foreground: #eceff4;
+
+		--color-card: #3b4252;
+		--color-card-foreground: #eceff4;
+
+		--color-popover: #3b4252;
+		--color-popover-foreground: #eceff4;
+
+		--color-primary: #88c0d0;
+		--color-primary-foreground: #2e3440;
+
+		--color-secondary: #3b4252;
+		--color-secondary-foreground: #eceff4;
+
+		--color-muted: #3b4252;
+		--color-muted-foreground: #d8dee9;
+
+		--color-accent: #5e81ac;
+		--color-accent-foreground: #ffffff;
+
+		--color-destructive: #bf616a;
+		--color-destructive-foreground: #ffffff;
+
+		--color-warning: #ebcb8b;
+		--color-warning-foreground: #2e3440;
+
+		--color-success: #a3be8c;
+		--color-success-foreground: #2e3440;
+
+		--color-info: #88c0d0;
+		--color-info-foreground: #2e3440;
+
+		--color-outline: #4c566a;
+		--color-stroke: #4c566a;
+		--color-field: #4c566a;
+		--color-focus: #88c0d0;
+
+		--font-sans: "Roboto", sans-serif;
+		--font-mono: "Roboto Mono", monospace;
+	}
+
+	/* Nord Light */
+	[data-theme='nord-light'] {
+		--color-background: #eceff4;
+		--color-foreground: #2e3440;
+
+		--color-card: #ffffff;
+		--color-card-foreground: #2e3440;
+
+		--color-popover: #ffffff;
+		--color-popover-foreground: #2e3440;
+
+		--color-primary: #5e81ac;
+		--color-primary-foreground: #ffffff;
+
+		--color-secondary: #ffffff;
+		--color-secondary-foreground: #2e3440;
+
+		--color-muted: #ffffff;
+		--color-muted-foreground: #3b4252;
+
+		--color-accent: #88c0d0;
+		--color-accent-foreground: #2e3440;
+
+		--color-destructive: #bf616a;
+		--color-destructive-foreground: #ffffff;
+
+		--color-warning: #ebcb8b;
+		--color-warning-foreground: #2e3440;
+
+		--color-success: #a3be8c;
+		--color-success-foreground: #2e3440;
+
+		--color-info: #5e81ac;
+		--color-info-foreground: #ffffff;
+
+		--color-outline: #d8dee9;
+		--color-stroke: #d8dee9;
+		--color-field: #d8dee9;
+		--color-focus: #5e81ac;
+
+		--font-sans: "Roboto", sans-serif;
+		--font-mono: "Roboto Mono", monospace;
+	}
+
+	/* One Dark */
+	[data-theme='one-dark'] {
+		--color-background: #282c34;
+		--color-foreground: #abb2bf;
+
+		--color-card: #2c313a;
+		--color-card-foreground: #abb2bf;
+
+		--color-popover: #2c313a;
+		--color-popover-foreground: #abb2bf;
+
+		--color-primary: #61afef;
+		--color-primary-foreground: #282c34;
+
+		--color-secondary: #2c313a;
+		--color-secondary-foreground: #abb2bf;
+
+		--color-muted: #2c313a;
+		--color-muted-foreground: #828997;
+
+		--color-accent: #c678dd;
+		--color-accent-foreground: #ffffff;
+
+		--color-destructive: #e06c75;
+		--color-destructive-foreground: #ffffff;
+
+		--color-warning: #e5c07b;
+		--color-warning-foreground: #282c34;
+
+		--color-success: #98c379;
+		--color-success-foreground: #282c34;
+
+		--color-info: #61afef;
+		--color-info-foreground: #282c34;
+
+		--color-outline: #3e4451;
+		--color-stroke: #3e4451;
+		--color-field: #3e4451;
+		--color-focus: #61afef;
+
+		--font-sans: "Instrument Sans", system-ui, sans-serif;
+		--font-mono: "Geist Mono", "Roboto Mono", monospace;
+
+		/* Monospace fonts need significantly smaller sizes */
+		--font-size-xs: 0.5625rem; /* 9px */
+		--font-size-sm: 0.6875rem; /* 11px */
+		--font-size-base: 0.75rem; /* 12px */
+		--font-size-lg: 0.875rem; /* 14px */
+		--font-size-xl: 1rem; /* 16px */
+		--font-size-2xl: 1.125rem; /* 18px */
+	}
+
+	/* Tokyo Night */
+	[data-theme='tokyo-night'] {
+		--color-background: #1a1b26;
+		--color-foreground: #c0caf5;
+
+		--color-card: #24283b;
+		--color-card-foreground: #c0caf5;
+
+		--color-popover: #24283b;
+		--color-popover-foreground: #c0caf5;
+
+		--color-primary: #7aa2f7;
+		--color-primary-foreground: #1a1b26;
+
+		--color-secondary: #24283b;
+		--color-secondary-foreground: #c0caf5;
+
+		--color-muted: #24283b;
+		--color-muted-foreground: #a9b1d6;
+
+		--color-accent: #bb9af7;
+		--color-accent-foreground: #1a1b26;
+
+		--color-destructive: #f7768e;
+		--color-destructive-foreground: #ffffff;
+
+		--color-warning: #e0af68;
+		--color-warning-foreground: #1a1b26;
+
+		--color-success: #9ece6a;
+		--color-success-foreground: #1a1b26;
+
+		--color-info: #2ac3de;
+		--color-info-foreground: #1a1b26;
+
+		--color-outline: #2f334d;
+		--color-stroke: #2f334d;
+		--color-field: #2f334d;
+		--color-focus: #7aa2f7;
+
+		--font-sans: "Instrument Sans", system-ui, sans-serif;
+		--font-mono: "Geist Mono", "Roboto Mono", monospace;
+
+		/* Monospace fonts need significantly smaller sizes */
+		--font-size-xs: 0.5625rem; /* 9px */
+		--font-size-sm: 0.6875rem; /* 11px */
+		--font-size-base: 0.75rem; /* 12px */
+		--font-size-lg: 0.875rem; /* 14px */
+		--font-size-xl: 1rem; /* 16px */
+		--font-size-2xl: 1.125rem; /* 18px */
+	}
+
+	/* Cyberpunk */
+	[data-theme='cyberpunk'] {
+		--color-background: #0d0221;
+		--color-foreground: #faffff;
+
+		--color-card: #150533;
+		--color-card-foreground: #faffff;
+
+		--color-popover: #150533;
+		--color-popover-foreground: #faffff;
+
+		--color-primary: #ff379b;
+		--color-primary-foreground: #ffffff;
+
+		--color-secondary: #150533;
+		--color-secondary-foreground: #faffff;
+
+		--color-muted: #150533;
+		--color-muted-foreground: #9ad0ff;
+
+		--color-accent: #04e4ff;
+		--color-accent-foreground: #0d0221;
+
+		--color-destructive: #ff3864;
+		--color-destructive-foreground: #ffffff;
+
+		--color-warning: #ffbd2e;
+		--color-warning-foreground: #0d0221;
+
+		--color-success: #72f1b8;
+		--color-success-foreground: #0d0221;
+
+		--color-info: #04e4ff;
+		--color-info-foreground: #0d0221;
+
+		--color-outline: #2b1459;
+		--color-stroke: #2b1459;
+		--color-field: #2b1459;
+		--color-focus: #ff379b;
+
+		--font-sans: "Instrument Sans", system-ui, sans-serif;
+		--font-mono: "Geist Mono", "Roboto Mono", monospace;
+
+		/* Monospace fonts need significantly smaller sizes */
+		--font-size-xs: 0.5625rem; /* 9px */
+		--font-size-sm: 0.6875rem; /* 11px */
+		--font-size-base: 0.75rem; /* 12px */
+		--font-size-lg: 0.875rem; /* 14px */
+		--font-size-xl: 1rem; /* 16px */
+		--font-size-2xl: 1.125rem; /* 18px */
+	}
+
+	/* GitHub Dark */
+	[data-theme='github-dark'] {
+		--color-background: #0d1117;
+		--color-foreground: #c9d1d9;
+
+		--color-card: #161b22;
+		--color-card-foreground: #c9d1d9;
+
+		--color-popover: #161b22;
+		--color-popover-foreground: #c9d1d9;
+
+		--color-primary: #238636;
+		--color-primary-foreground: #ffffff;
+
+		--color-secondary: #161b22;
+		--color-secondary-foreground: #c9d1d9;
+
+		--color-muted: #161b22;
+		--color-muted-foreground: #8b949e;
+
+		--color-accent: #2ea043;
+		--color-accent-foreground: #ffffff;
+
+		--color-destructive: #f85149;
+		--color-destructive-foreground: #ffffff;
+
+		--color-warning: #f57c00;
+		--color-warning-foreground: #ffffff;
+
+		--color-success: #3fb950;
+		--color-success-foreground: #0d1117;
+
+		--color-info: #58a6ff;
+		--color-info-foreground: #0d1117;
+
+		--color-outline: #30363d;
+		--color-stroke: #30363d;
+		--color-field: #30363d;
+		--color-focus: #238636;
+
+		--font-sans: "Roboto", sans-serif;
+		--font-mono: "Roboto Mono", monospace;
+	}
+
+	/* GitHub Light */
+	[data-theme='github-light'] {
+		--color-background: #f6f8fa;
+		--color-foreground: #24292f;
+
+		--color-card: #ffffff;
+		--color-card-foreground: #24292f;
+
+		--color-popover: #ffffff;
+		--color-popover-foreground: #24292f;
+
+		--color-primary: #0969da;
+		--color-primary-foreground: #ffffff;
+
+		--color-secondary: #ffffff;
+		--color-secondary-foreground: #24292f;
+
+		--color-muted: #ffffff;
+		--color-muted-foreground: #57606a;
+
+		--color-accent: #54aeff;
+		--color-accent-foreground: #24292f;
+
+		--color-destructive: #cf222e;
+		--color-destructive-foreground: #ffffff;
+
+		--color-warning: #fb8500;
+		--color-warning-foreground: #ffffff;
+
+		--color-success: #1a7f37;
+		--color-success-foreground: #ffffff;
+
+		--color-info: #0969da;
+		--color-info-foreground: #ffffff;
+
+		--color-outline: #d0d7de;
+		--color-stroke: #d0d7de;
+		--color-field: #d0d7de;
+		--color-focus: #0969da;
+
+		--font-sans: "Roboto", sans-serif;
+		--font-mono: "Roboto Mono", monospace;
+	}
+
+	/* Catppuccin Mocha */
+	[data-theme='catppuccin-mocha'] {
+		--color-background: #1e1e2e;
+		--color-foreground: #cdd6f4;
+
+		--color-card: #313244;
+		--color-card-foreground: #cdd6f4;
+
+		--color-popover: #313244;
+		--color-popover-foreground: #cdd6f4;
+
+		--color-primary: #f5c2e7;
+		--color-primary-foreground: #1e1e2e;
+
+		--color-secondary: #313244;
+		--color-secondary-foreground: #cdd6f4;
+
+		--color-muted: #313244;
+		--color-muted-foreground: #bac2de;
+
+		--color-accent: #b4befe;
+		--color-accent-foreground: #1e1e2e;
+
+		--color-destructive: #f38ba8;
+		--color-destructive-foreground: #ffffff;
+
+		--color-warning: #fab387;
+		--color-warning-foreground: #1e1e2e;
+
+		--color-success: #a6e3a1;
+		--color-success-foreground: #1e1e2e;
+
+		--color-info: #89dceb;
+		--color-info-foreground: #1e1e2e;
+
+		--color-outline: #45475a;
+		--color-stroke: #45475a;
+		--color-field: #45475a;
+		--color-focus: #f5c2e7;
+
+		--font-sans: "Instrument Sans", system-ui, sans-serif;
+		--font-mono: "Geist Mono", "Roboto Mono", monospace;
+
+		/* Monospace fonts need significantly smaller sizes */
+		--font-size-xs: 0.5625rem; /* 9px */
+		--font-size-sm: 0.6875rem; /* 11px */
+		--font-size-base: 0.75rem; /* 12px */
+		--font-size-lg: 0.875rem; /* 14px */
+		--font-size-xl: 1rem; /* 16px */
+		--font-size-2xl: 1.125rem; /* 18px */
+	}
+
+	/* Catppuccin Latte */
+	[data-theme='catppuccin-latte'] {
+		--color-background: #eff1f5;
+		--color-foreground: #4c4f69;
+
+		--color-card: #ffffff;
+		--color-card-foreground: #4c4f69;
+
+		--color-popover: #ffffff;
+		--color-popover-foreground: #4c4f69;
+
+		--color-primary: #fe640b;
+		--color-primary-foreground: #ffffff;
+
+		--color-secondary: #ffffff;
+		--color-secondary-foreground: #4c4f69;
+
+		--color-muted: #ffffff;
+		--color-muted-foreground: #6c6f85;
+
+		--color-accent: #1e66f5;
+		--color-accent-foreground: #ffffff;
+
+		--color-destructive: #d20f39;
+		--color-destructive-foreground: #ffffff;
+
+		--color-warning: #df8e1d;
+		--color-warning-foreground: #ffffff;
+
+		--color-success: #40a02b;
+		--color-success-foreground: #ffffff;
+
+		--color-info: #1e66f5;
+		--color-info-foreground: #ffffff;
+
+		--color-outline: #ccd0da;
+		--color-stroke: #ccd0da;
+		--color-field: #ccd0da;
+		--color-focus: #fe640b;
+
+		--font-sans: "Roboto", sans-serif;
+		--font-mono: "Roboto Mono", monospace;
+	}
+}
+
+/* Font family mappings based on data-font-sans attribute */
+[data-font-sans='roboto'] {
+	--font-sans: "Roboto", sans-serif;
+}
+
+[data-font-sans='inter'] {
+	--font-sans: "Inter", sans-serif;
+}
+
+[data-font-sans='instrument-sans'] {
+	--font-sans: "Instrument Sans", system-ui, sans-serif;
+}
+
+[data-font-sans='jetbrains-sans'] {
+	--font-sans: "JetBrains Sans", sans-serif;
+}
+
+[data-font-sans='geist'] {
+	--font-sans: "Geist", sans-serif;
+}
+
+/* Font mono mappings based on data-font-mono attribute */
+[data-font-mono='roboto-mono'] {
+	--font-mono: "Roboto Mono", monospace;
+}
+
+[data-font-mono='jetbrains-mono'] {
+	--font-mono: "JetBrains Mono", monospace;
+}
+
+[data-font-mono='geist-mono'] {
+	--font-mono: "Geist Mono", "Roboto Mono", monospace;
+}
+
+[data-font-mono='fira-code'] {
+	--font-mono: "Fira Code", monospace;
+}
+
+
+body {
+	@apply font-sans;
+	-webkit-font-smoothing: antialiased;
+	-moz-osx-font-smoothing: grayscale;
+}
+
+
+/* Inside ripple */
+@utility ripple-* {
+	& {
+		@apply relative overflow-hidden;
+		transform: translate3d(0, 0, 0);
+	}
+
+	&:after {
+		content: "";
+		@apply block absolute w-full h-full top-0 left-0 pointer-events-none opacity-0;
+		background-image: radial-gradient(circle, var(--color-accent) 10%, transparent 10.01%);
+		background-repeat: no-repeat;
+		background-position: 50%;
+		transform: scale(10, 10);
+		transition: transform 0.5s, opacity 1s;
+	}
+
+	&:active:after {
+		transform: scale(0, 0);
+		@apply opacity-30;
+		transition: 0s;
+	}
+}
+
+/* Themed based ripple outside */
+@utility effect-ripple-* {
+	position: relative;
+	transform: translate3d(0, 0, 0);
+
+	&::after {
+		content: "";
+		display: block;
+		position: absolute;
+		width: 30px;
+		height: 30px;
+		top: 50%;
+		left: 50%;
+		transform: translate(-50%, -50%) scale(10);
+		pointer-events: none;
+		background-image: radial-gradient(circle, --value(--color-*) 10%, transparent 10.01%);
+		background-repeat: no-repeat;
+		background-position: 50%;
+		opacity: 0;
+		transition: transform 0.5s, opacity 1s;
+	}
+
+	&:active::after {
+		transform: translate(-50%, -50%) scale(0);
+		opacity: 0.3;
+		transition: 0s;
+	}
+}
+
+@utility effect-hover-* {
+	position: relative;
+
+	&::before {
+		content: "";
+		position: absolute;
+		top: 50%;
+		left: 50%;
+		width: 40px;
+		height: 40px;
+		border-radius: 50%;
+		background-color: color-mix(in srgb, --value(--color-*) 20%, transparent);
+		transform: translate(-50%, -50%) scale(0);
+		transition: transform 0.2s ease-out;
+		pointer-events: none;
+	}
+
+	&:hover::before {
+		transform: translate(-50%, -50%) scale(1);
+	}
+}
+
+/* Hide scrollbar while maintaining scroll functionality */
+.scrollbar-hide {
+	-ms-overflow-style: none;
+	scrollbar-width: none;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+	@apply hidden;
+}
+
+/* v-ripple directive (based on cursor position) */
+.v-ripple {
+	@apply absolute rounded-full pointer-events-none;
+	background-color: rgba(255, 255, 255, 0.3);
+	transform: scale(0);
+	animation: v-ripple-animation 0.6s ease-out forwards;
+}
+
+@keyframes v-ripple-animation {
+	to {
+    	transform: scale(1);
+    	opacity: 0;
+	}
+}

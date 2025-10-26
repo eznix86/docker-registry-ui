@@ -1,0 +1,38 @@
+{
+	"name": "docker-registry-ui",
+	"type": "module",
+	"private": true,
+	"scripts": {
+		"dev": "vite",
+		"build": "vite build",
+		"build:dev": "vite build && ./build.sh",
+		"preview": "./bin/dev serve",
+		"lint": "knip && vue-tsc && eslint && go fmt ./... && golangci-lint run -c .golangci.yml ./...",
+		"lint:fix": "eslint --fix"
+	},
+	"dependencies": {
+		"@formkit/auto-animate": "^0.9.0",
+		"@headlessui/vue": "^1.7.23",
+		"@inertiajs/vue3": "^2.2.10",
+		"@vueuse/core": "^14.0.0",
+		"pinia": "^3.0.3",
+		"tailwind-merge": "^3.3.1",
+		"tailwind-variants": "^3.1.1",
+		"vue": "^3.5.22"
+	},
+	"devDependencies": {
+		"@antfu/eslint-config": "^6.0.0",
+		"@tailwindcss/vite": "^4.1.16",
+		"@types/node": "^24.9.1",
+		"@vitejs/plugin-vue": "^6.0.1",
+		"eslint": "^9.38.0",
+		"eslint-plugin-vuejs-accessibility": "^2.4.1",
+		"knip": "^5.66.3",
+		"laravel-vite-plugin": "^2.0.1",
+		"rollup-plugin-visualizer": "^6.0.5",
+		"typescript": "^5.9.3",
+		"vite": "^6.0.11",
+		"vite-plugin-manifest-sri": "^0.2.0",
+		"vue-tsc": "^3.1.1"
+	}
+}
