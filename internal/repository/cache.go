@@ -4,7 +4,7 @@
 package repository
 
 import (
-	"github.com/eznix86/docker-registry-ui/database/queries"
+	assets "github.com/eznix86/docker-registry-ui"
 	"gorm.io/gorm"
 )
 
@@ -23,7 +23,7 @@ func (r *CacheRepository) RefreshRepositoryStats() error {
 			return err
 		}
 
-		return tx.Exec(queries.RefreshRepositoryStatsSQL).Error
+		return tx.Exec(assets.RefreshRepositoryStatsSQL).Error
 	})
 }
 
@@ -34,7 +34,7 @@ func (r *CacheRepository) RefreshTagDetails() error {
 			return err
 		}
 
-		return tx.Exec(queries.RefreshTagDetailsSQL).Error
+		return tx.Exec(assets.RefreshTagDetailsSQL).Error
 	})
 }
 
@@ -42,7 +42,7 @@ func (r *CacheRepository) RefreshTagDetails() error {
 func (r *CacheRepository) RefreshDirtyRepositories() error {
 	return r.db.Transaction(func(tx *gorm.DB) error {
 		// Refresh only dirty repos
-		if err := tx.Exec(queries.RefreshDirtyRepositoriesSQL).Error; err != nil {
+		if err := tx.Exec(assets.RefreshDirtyRepositoriesSQL).Error; err != nil {
 			return err
 		}
 
@@ -55,7 +55,7 @@ func (r *CacheRepository) RefreshDirtyRepositories() error {
 func (r *CacheRepository) RefreshDirtyTags() error {
 	return r.db.Transaction(func(tx *gorm.DB) error {
 		// Refresh only dirty tags
-		if err := tx.Exec(queries.RefreshDirtyTagsSQL).Error; err != nil {
+		if err := tx.Exec(assets.RefreshDirtyTagsSQL).Error; err != nil {
 			return err
 		}
 

@@ -1,4 +1,4 @@
-bin/dev
+bin/
 build-errors.log
 node_modules
 public/build

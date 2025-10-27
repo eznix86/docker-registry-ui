@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright (C) 2025  Bruno Bernard
 
-package main
+package seed
 
 import (
 	"fmt"
@@ -26,7 +26,7 @@ func ensureDatabaseDir(dir string) error {
 	return nil
 }
 
-var seedCmd = &cobra.Command{
+var SeedCmd = &cobra.Command{
 	Use:   "seed",
 	Short: "Seed the database with test data",
 	Long:  `Populate the database with sample data for testing and development.`,

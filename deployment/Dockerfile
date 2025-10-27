@@ -33,13 +33,14 @@ RUN --mount=type=cache,target=/gomod-cache \
     --mount=type=cache,target=/go-cache \
     go build \
     -ldflags="-s -w -linkmode external -extldflags '-static'" \
-    -o ./bin/dev .
+    -o ./bin/ui \
+    ./cmd/web
 
 FROM busybox:uclibc
 
 WORKDIR /app
 
-COPY --from=backend /app/bin/dev .
+COPY --from=backend /app/bin/ui .
 
 EXPOSE 3000
-CMD ["./dev", "serve"]
+CMD ["./ui", "serve"]

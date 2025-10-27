@@ -4,7 +4,7 @@ tmp_dir = "bin"
 
 [build]
 args_bin = [ "serve" ]
-bin = "./bin/dev"
+bin = "./bin/ui"
 cmd = "./build.sh"
 delay = 1000
 exclude_dir = [

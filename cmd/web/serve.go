@@ -12,6 +12,7 @@ import (
 	"os/signal"
 	"syscall"
 
+	assets "github.com/eznix86/docker-registry-ui"
 	"github.com/eznix86/docker-registry-ui/internal/config"
 	"github.com/spf13/cobra"
 )
@@ -23,7 +24,7 @@ var serveCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		cfg := config.DefaultConfig()
 
-		app, err := config.NewApplication(publicFS, migrationsFS, cfg)
+		app, err := config.NewApplication(assets.PublicFS, assets.MigrationsFS, cfg)
 
 		if err != nil {
 			log.Fatalf("Failed to initialize application: %v", err)

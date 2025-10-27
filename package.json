@@ -6,7 +6,7 @@
 		"dev": "vite",
 		"build": "vite build",
 		"build:dev": "vite build && ./build.sh",
-		"preview": "./bin/dev serve",
+		"preview": "./bin/ui serve",
 		"lint": "knip && vue-tsc && eslint && go fmt ./... && golangci-lint run -c .golangci.yml ./...",
 		"lint:fix": "eslint --fix"
 	},
