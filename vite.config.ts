@@ -1,6 +1,3 @@
-// SPDX-License-Identifier: Apache-2.0
-// Copyright (C) 2025  Bruno Bernard
-
 import type { ServerOptions } from "vite"
 import fs from "node:fs"
 import path from "node:path"

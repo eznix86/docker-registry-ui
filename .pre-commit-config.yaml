@@ -5,11 +5,11 @@ repos:
       - id: trailing-whitespace
       - id: end-of-file-fixer
   - repo: https://github.com/eznix86/python-license
-    rev: v1.0.1
+    rev: v1.2.2
     hooks:
       - id: license-headers
-        args: [--fix, Apache-2.0, Bruno Bernard]
-        files: (\.(go|ts|tsx|py|js|jsx|html)|Dockerfile)$
+        args: [--notice-template, NOTICE.template, --fix, AGPL-3.0-or-later, Bruno Bernard]
+        files: (\.(go|ts|tsx|py|js|jsx|html|css|vue|sql)|Dockerfile|compose.yaml)$
         pass_filenames: true
         stages: [pre-commit]
   - repo: local

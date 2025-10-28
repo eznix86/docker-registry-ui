@@ -8,7 +8,7 @@
 		"build:dev": "vite build && ./build.sh",
 		"preview": "./bin/ui serve",
 		"lint": "knip && vue-tsc && eslint && go fmt ./... && golangci-lint run -c .golangci.yml ./...",
-		"lint:fix": "eslint --fix"
+		"lint:fix": "eslint --fix && go fmt ./..."
 	},
 	"dependencies": {
 		"@formkit/auto-animate": "^0.9.0",

@@ -1,5 +1,3 @@
-# Makefile
-
 DB_DRIVER := sqlite3
 DB_PATH := database/database.db
 MIGRATIONS_DIR := database/migrations

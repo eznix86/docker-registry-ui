@@ -1,3 +1,22 @@
+<!--
+SPDX-License-Identifier: AGPL-3.0-or-later
+Copyright (C) 2025  Bruno Bernard
+
+This file is part of Docker Registry UI (Container Hub).
+
+Docker Registry UI is free software: you can redistribute it and/or modify
+it under the terms of the GNU Affero General Public License as published by
+the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+
+Docker Registry UI is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+GNU Affero General Public License for more details.
+
+You should have received a copy of the GNU Affero General Public License
+along with this program. If not, see <https://www.gnu.org/licenses/>.
+-->
+
 <template>
 	<div class="flex items-start justify-between gap-4 mb-4">
 		<h1 class="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold leading-tight lg:leading-[56.7px] text-foreground break-words min-w-0">
