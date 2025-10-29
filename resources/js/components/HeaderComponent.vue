@@ -18,7 +18,7 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 -->
 
 <template>
-	<header class="bg-gradient-to-r from-primary to-accent flex items-center justify-between shadow-md h-16">
+	<header class="bg-linear-to-r from-primary to-accent flex items-center justify-between shadow-md h-16">
 		<div class="flex items-center flex-1 md:pl-6 pl-4">
 			<a
 				v-ripple

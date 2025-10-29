@@ -30,7 +30,7 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 				</div>
 				<button
 					v-ripple
-					class="p-2 hover:bg-muted rounded transition-colors flex-shrink-0 sm:order-last effect-hover-destructive effect-ripple-destructive"
+					class="p-2 hover:bg-muted rounded transition-colors shrink-0 sm:order-last effect-hover-destructive effect-ripple-destructive"
 					:aria-label="`Delete tag ${tag.name}`"
 					:title="`Delete tag ${tag.name}`"
 					@click="tagDeleteStore.openDialog(tag)"
