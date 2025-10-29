@@ -18,13 +18,13 @@
 package models
 
 type Manifest struct {
-	Digest             string `gorm:"column:digest;type:text;primaryKey"`
-	MediaType          string `gorm:"column:media_type;type:text;not null"`
-	OS                 string `gorm:"column:os;type:text"`
-	Architecture       string `gorm:"column:architecture;type:text"`
-	Created            string `gorm:"column:created;type:text"`
-	SizeBytes          int64  `gorm:"column:size_bytes;default:0"`
-	ManifestListDigest string `gorm:"column:manifest_list_digest;type:text"`
+	Digest             string  `gorm:"column:digest;type:text;primaryKey"`
+	MediaType          string  `gorm:"column:media_type;type:text;not null"`
+	OS                 string  `gorm:"column:os;type:text"`
+	Architecture       string  `gorm:"column:architecture;type:text"`
+	Created            string  `gorm:"column:created;type:text"`
+	SizeBytes          int64   `gorm:"column:size_bytes;default:0"`
+	ManifestListDigest *string `gorm:"column:manifest_list_digest;type:text"` // Pointer allows NULL for single-arch manifests
 
 	Layers            []ManifestLayer `gorm:"foreignKey:ManifestDigest;references:Digest"`
 	ManifestList      *Manifest       `gorm:"foreignKey:ManifestListDigest;references:Digest"`

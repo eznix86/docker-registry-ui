@@ -15,59 +15,59 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-import type { Repository, RepositoryFilters, TagScroll } from "~/types"
-import { router } from "@inertiajs/vue3"
+import type { RepositoryFilters, RepositoryProps, Tag } from "~/types"
+import { router, usePage } from "@inertiajs/vue3"
 import { defineStore } from "pinia"
-import { ref } from "vue"
+import { computed, ref } from "vue"
 import { buildFilterParams } from "~/lib/filterParams"
 
 export const useRepositoryFilterStore = defineStore("repositoryFilter", () => {
-	const repository = ref<Repository | null>(null)
-	const tags = ref<TagScroll>({ data: [] })
 	const filters = ref<RepositoryFilters>({
 		sortBy: "newest",
 		filter: "",
 	})
 	const localFilter = ref("")
 
-	function setRepository(repo: Repository | null) {
-		repository.value = repo
-	}
+	// Get tags from Inertia props
+	const page = usePage<RepositoryProps>()
+	const tags = computed(() => (page.props.tags?.data || []) as Tag[])
 
-	function setTags(tagScroll: TagScroll) {
-		tags.value = tagScroll
-	}
+	// Computed filtered tags based on local filter
+	const filteredTags = computed(() => {
+		if (!localFilter.value) {
+			return tags.value
+		}
+		return tags.value.filter(tag =>
+			tag.name.toLowerCase().includes(localFilter.value.toLowerCase()),
+		)
+	})
 
 	function setFilters(newFilters: RepositoryFilters) {
 		filters.value = newFilters
 	}
 
-	function setSortBy(sortBy: RepositoryFilters["sortBy"], url: string) {
+	function setSortBy(sortBy: RepositoryFilters["sortBy"]) {
 		filters.value.sortBy = sortBy
-		if (url) {
-			performFilterRequest(url)
-		}
+		performFilterRequest()
 	}
 
-	function setFilter(filter: string, url: string) {
+	function setFilter(filter: string) {
 		filters.value.filter = filter
 		localFilter.value = filter
-		if (url) {
-			performFilterRequest(url)
-		}
+		performFilterRequest()
 	}
 
 	function setLocalFilter(filter: string) {
 		localFilter.value = filter
 	}
 
-	function performFilterRequest(url: string) {
+	function performFilterRequest() {
 		const params = buildFilterParams({
 			sortBy: filters.value.sortBy,
 			filter: filters.value.filter,
 		})
 
-		router.get(url, params, {
+		router.get(location.pathname, params, {
 			preserveScroll: true,
 			preserveState: true,
 			replace: true,
@@ -77,12 +77,10 @@ export const useRepositoryFilterStore = defineStore("repositoryFilter", () => {
 	}
 
 	return {
-		repository,
-		tags,
 		filters,
 		localFilter,
-		setRepository,
-		setTags,
+		tags,
+		filteredTags,
 		setFilters,
 		setSortBy,
 		setFilter,

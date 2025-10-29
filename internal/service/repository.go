@@ -46,9 +46,9 @@ func NewRepositoryService(
 	}
 }
 
-func (s *RepositoryService) Filter(registries []string, architectures []string, showUntagged bool, search string) (*RepositoryFilterResult, error) {
+func (s *RepositoryService) Filter(registryHosts []string, architectures []string, showUntagged bool, search string) (*RepositoryFilterResult, error) {
 	statsFilters := repository.StatsFilters{
-		RegistryNames: registries,
+		RegistryHosts: registryHosts,
 		Architectures: architectures,
 		ShowUntagged:  showUntagged,
 		Search:        search,
@@ -59,19 +59,10 @@ func (s *RepositoryService) Filter(registries []string, architectures []string, 
 		return nil, err
 	}
 
-	// Preload all registries to avoid N+1 query
-	allRegistries, err := s.registryRepo.FindAll()
-	if err != nil {
-		return nil, err
-	}
-	registryMap := make(map[string]*models.Registry)
-	for i := range allRegistries {
-		registryMap[allRegistries[i].Name] = &allRegistries[i]
-	}
-
+	// No N+1 query: registry_host is denormalized in repository_stats
 	result := make([]Repository, 0, len(stats))
 	for _, stat := range stats {
-		result = append(result, s.statsToDTOWithMap(&stat, registryMap))
+		result = append(result, s.statsToDTO(&stat))
 	}
 
 	return &RepositoryFilterResult{
@@ -86,6 +77,25 @@ func (s *RepositoryService) GetAllArchitectures() ([]string, error) {
 
 func (s *RepositoryService) FindRepository(registryName string, namespace *string, repositoryName string) (*Repository, error) {
 	registry, err := s.registryRepo.FindByName(registryName)
+	if err != nil {
+		return nil, err
+	}
+
+	fullName := repositoryName
+	if namespace != nil {
+		fullName = *namespace + "/" + repositoryName
+	}
+
+	repo, err := s.repoRepo.FindByRegistryAndName(registry.ID, fullName)
+	if err != nil {
+		return nil, err
+	}
+
+	return s.toRepositoryDTO(repo)
+}
+
+func (s *RepositoryService) FindRepositoryByHost(registryHost string, namespace *string, repositoryName string) (*Repository, error) {
+	registry, err := s.registryRepo.FindByHost(registryHost)
 	if err != nil {
 		return nil, err
 	}
@@ -227,49 +237,8 @@ func (s *RepositoryService) toRepositoryDTO(repo *models.Repository) (*Repositor
 	return s.repositoryFromStats(name, namespace, repo.Registry.Name, repo.Registry.Host, stats), nil
 }
 
-// statsToDTOWithMap converts RepositoryStats to Repository DTO using a preloaded registry map
-func (s *RepositoryService) statsToDTOWithMap(stats *models.RepositoryStats, registryMap map[string]*models.Registry) Repository {
-	var namespace *string
-	parts := strings.SplitN(stats.Name, "/", 2)
-	if len(parts) == 2 {
-		namespace = &parts[0]
-	}
-
-	name := stats.Name
-	if namespace != nil {
-		name = parts[1]
-	}
-
-	var architectures []string
-	if stats.Architectures != "" {
-		for _, arch := range strings.Split(stats.Architectures, ",") {
-			arch = strings.TrimSpace(arch)
-			if arch != "" {
-				architectures = append(architectures, arch)
-			}
-		}
-	}
-
-	// Use preloaded registry map to avoid N+1 query
-	registryHost := ""
-	if registry, exists := registryMap[stats.RegistryName]; exists {
-		registryHost = registry.Host
-	}
-
-	return Repository{
-		ID:            stats.ID,
-		Name:          name,
-		Registry:      stats.RegistryName,
-		RegistryHost:  registryHost,
-		Namespace:     namespace,
-		Size:          stats.TotalSize,
-		Architectures: architectures,
-		TagsCount:     int(stats.TagsCount),
-	}
-}
-
-// statsToDTO converts RepositoryStats to Repository DTO (for backward compatibility)
-// Note: This method causes N+1 query - prefer statsToDTOWithMap when possible
+// statsToDTO converts RepositoryStats to Repository DTO
+// Uses denormalized registry_host from cache - no N+1 query
 func (s *RepositoryService) statsToDTO(stats *models.RepositoryStats) Repository {
 	var namespace *string
 	parts := strings.SplitN(stats.Name, "/", 2)
@@ -292,17 +261,11 @@ func (s *RepositoryService) statsToDTO(stats *models.RepositoryStats) Repository
 		}
 	}
 
-	// Fetch registry host (N+1 query - avoid if possible)
-	registryHost := ""
-	if registry, err := s.registryRepo.FindByName(stats.RegistryName); err == nil {
-		registryHost = registry.Host
-	}
-
 	return Repository{
 		ID:            stats.ID,
 		Name:          name,
 		Registry:      stats.RegistryName,
-		RegistryHost:  registryHost,
+		RegistryHost:  stats.RegistryHost,
 		Namespace:     namespace,
 		Size:          stats.TotalSize,
 		Architectures: architectures,

@@ -105,51 +105,6 @@ CREATE TABLE IF NOT EXISTS dirty_tags (
 CREATE INDEX idx_dirty_repos_marked ON dirty_repos(marked_at);
 CREATE INDEX idx_dirty_tags_marked ON dirty_tags(marked_at);
 
--- Job queue table for background sync workers
-CREATE TABLE IF NOT EXISTS sync_jobs (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-
-    -- Job identification
-    job_type TEXT NOT NULL,              -- 'sync_catalog', 'sync_tags', 'sync_manifest'
-    registry_name TEXT NOT NULL,         -- e.g., 'default', 'personal'
-    registry_url TEXT NOT NULL,
-    repository TEXT,                     -- NULL for catalog jobs
-    tag_ref TEXT,                        -- NULL for non-manifest jobs
-
-    -- State management
-    status TEXT NOT NULL DEFAULT 'pending', -- 'pending', 'running', 'completed', 'failed'
-    priority INTEGER DEFAULT 0,
-
-    -- Retry logic
-    attempts INTEGER DEFAULT 0,
-    max_attempts INTEGER DEFAULT 3,
-    next_retry_at TIMESTAMP,
-    backoff_seconds INTEGER DEFAULT 1,
-
-    -- Error tracking
-    error_message TEXT,
-
-    -- Timestamps
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    started_at TIMESTAMP,
-    completed_at TIMESTAMP,
-
-    -- Idempotency: prevent duplicate jobs
-    UNIQUE(job_type, registry_name, repository, tag_ref)
-);
-
--- Index for efficient job dequeuing
-CREATE INDEX IF NOT EXISTS idx_sync_jobs_dequeue
-ON sync_jobs(status, priority DESC, next_retry_at, created_at);
-
--- Index for registry-specific queries
-CREATE INDEX IF NOT EXISTS idx_sync_jobs_registry
-ON sync_jobs(registry_name, repository);
-
--- Index for job queue polling by status
-CREATE INDEX IF NOT EXISTS idx_sync_jobs_status ON sync_jobs(status);
-
 -- Additional performance indexes
 CREATE INDEX IF NOT EXISTS idx_repository_stats_registry_name ON repository_stats(registry_name);
 CREATE INDEX IF NOT EXISTS idx_repositories_registry_id_name ON repositories(registry_id, name);
@@ -166,12 +121,8 @@ DROP INDEX IF EXISTS idx_tags_repo_id_digest;
 DROP INDEX IF EXISTS idx_tags_repo_id_name;
 DROP INDEX IF EXISTS idx_repositories_registry_id_name;
 DROP INDEX IF EXISTS idx_repository_stats_registry_name;
-DROP INDEX IF EXISTS idx_sync_jobs_status;
-DROP INDEX IF EXISTS idx_sync_jobs_registry;
-DROP INDEX IF EXISTS idx_sync_jobs_dequeue;
 
 -- Drop tables in reverse dependency order
-DROP TABLE IF EXISTS sync_jobs;
 DROP TABLE IF EXISTS dirty_tags;
 DROP TABLE IF EXISTS dirty_repos;
 DROP TABLE IF EXISTS tag_details;

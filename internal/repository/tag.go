@@ -66,10 +66,14 @@ func (r *TagRepository) FindTagDetailsWithPagination(repoID uint, sortBy string,
 	switch sortBy {
 	case "oldest":
 		query = query.Order("earliest_created ASC")
-	case "name":
+	case "name-asc":
 		query = query.Order("name ASC")
-	case "size":
+	case "name-desc":
+		query = query.Order("name DESC")
+	case "size-asc":
 		query = query.Order("total_size_in_bytes ASC")
+	case "size-desc":
+		query = query.Order("total_size_in_bytes DESC")
 	case "newest":
 		fallthrough
 	default:
@@ -141,4 +145,62 @@ func (r *TagRepository) DeleteByRegistryRepoAndName(registryName, repoName, tagN
 		)
 		  AND name = ?
 	`, registryName, repoName, tagName).Error
+}
+
+// FindTagsNotInList returns tag names that exist in DB but not in the provided list
+// Used for differential sync to find removed tags
+func (r *TagRepository) FindTagsNotInList(registryName, repoName string, registryTags []string) ([]string, error) {
+	if len(registryTags) == 0 {
+		// If registry has no tags, all DB tags are removed
+		var allTags []string
+		err := r.DB.Table("tags").
+			Select("tags.name").
+			Joins("JOIN repositories ON repositories.id = tags.repo_id").
+			Joins("JOIN registries ON registries.id = repositories.registry_id").
+			Where("registries.name = ? AND repositories.name = ?", registryName, repoName).
+			Pluck("tags.name", &allTags).Error
+		return allTags, err
+	}
+
+	var removed []string
+	err := r.DB.Table("tags").
+		Select("tags.name").
+		Joins("JOIN repositories ON repositories.id = tags.repo_id").
+		Joins("JOIN registries ON registries.id = repositories.registry_id").
+		Where("registries.name = ? AND repositories.name = ?", registryName, repoName).
+		Where("tags.name NOT IN ?", registryTags).
+		Pluck("tags.name", &removed).Error
+	return removed, err
+}
+
+// DeleteTagsNotInList deletes all tags not in the provided list (SQL-based differential delete)
+func (r *TagRepository) DeleteTagsNotInList(registryName, repoName string, registryTags []string) (int64, error) {
+	if len(registryTags) == 0 {
+		// Delete all tags for this repo
+		result := r.DB.Exec(`
+			DELETE FROM tags
+			WHERE repo_id = (
+				SELECT repositories.id
+				FROM repositories
+				JOIN registries ON registries.id = repositories.registry_id
+				WHERE registries.name = ? AND repositories.name = ?
+				LIMIT 1
+			)
+		`, registryName, repoName)
+		return result.RowsAffected, result.Error
+	}
+
+	// Delete tags NOT IN the registry tag list
+	result := r.DB.Exec(`
+		DELETE FROM tags
+		WHERE repo_id = (
+			SELECT repositories.id
+			FROM repositories
+			JOIN registries ON registries.id = repositories.registry_id
+			WHERE registries.name = ? AND repositories.name = ?
+			LIMIT 1
+		)
+		  AND name NOT IN ?
+	`, registryName, repoName, registryTags)
+	return result.RowsAffected, result.Error
 }

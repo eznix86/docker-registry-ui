@@ -36,8 +36,8 @@ func NewRepositoryRepository(db *gorm.DB) *RepositoryRepository {
 func (r *RepositoryRepository) baseStatsQuery(filters StatsFilters) *gorm.DB {
 	query := r.DB.Model(&models.RepositoryStats{})
 
-	if len(filters.RegistryNames) > 0 {
-		query = query.Where("registry_name IN ?", filters.RegistryNames)
+	if len(filters.RegistryHosts) > 0 {
+		query = query.Where("registry_host IN ?", filters.RegistryHosts)
 	}
 
 	if !filters.ShowUntagged {
@@ -147,4 +147,76 @@ func (r *RepositoryRepository) DeleteByRegistryAndName(registryName, repoName st
 		WHERE registry_id = (SELECT id FROM registries WHERE name = ? LIMIT 1)
 		  AND name = ?
 	`, registryName, repoName).Error
+}
+
+// FindReposNotInList returns repository names that exist in DB but not in the provided list
+// Used for differential sync to find removed repositories
+func (r *RepositoryRepository) FindReposNotInList(registryName string, registryRepos []string) ([]string, error) {
+	if len(registryRepos) == 0 {
+		// If registry has no repos, all DB repos are removed
+		return r.FindNamesByRegistryName(registryName)
+	}
+
+	var removed []string
+	err := r.DB.Table("repositories").
+		Select("repositories.name").
+		Joins("JOIN registries ON registries.id = repositories.registry_id").
+		Where("registries.name = ?", registryName).
+		Where("repositories.name NOT IN ?", registryRepos).
+		Pluck("repositories.name", &removed).Error
+	return removed, err
+}
+
+// FindNewRepos returns repository names from the list that don't exist in DB
+// Used for differential sync to find new repositories
+func (r *RepositoryRepository) FindNewRepos(registryName string, registryRepos []string) ([]string, error) {
+	if len(registryRepos) == 0 {
+		return []string{}, nil
+	}
+
+	// Get existing repo names
+	existing, err := r.FindNamesByRegistryName(registryName)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(existing) == 0 {
+		// All registry repos are new
+		return registryRepos, nil
+	}
+
+	// Use SQL to find repos that are in registryRepos but not in existing
+	existingSet := make(map[string]bool, len(existing))
+	for _, name := range existing {
+		existingSet[name] = true
+	}
+
+	newRepos := make([]string, 0)
+	for _, name := range registryRepos {
+		if !existingSet[name] {
+			newRepos = append(newRepos, name)
+		}
+	}
+
+	return newRepos, nil
+}
+
+// DeleteReposNotInList deletes all repositories not in the provided list (SQL-based differential delete)
+func (r *RepositoryRepository) DeleteReposNotInList(registryName string, registryRepos []string) (int64, error) {
+	if len(registryRepos) == 0 {
+		// Delete all repos for this registry
+		result := r.DB.Exec(`
+			DELETE FROM repositories
+			WHERE registry_id = (SELECT id FROM registries WHERE name = ? LIMIT 1)
+		`, registryName)
+		return result.RowsAffected, result.Error
+	}
+
+	// Delete repos NOT IN the registry catalog
+	result := r.DB.Exec(`
+		DELETE FROM repositories
+		WHERE registry_id = (SELECT id FROM registries WHERE name = ? LIMIT 1)
+		  AND name NOT IN ?
+	`, registryName, registryRepos)
+	return result.RowsAffected, result.Error
 }

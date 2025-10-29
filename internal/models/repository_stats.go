@@ -24,6 +24,7 @@ type RepositoryStats struct {
 	RegistryID    uint      `gorm:"column:registry_id;not null"`
 	Name          string    `gorm:"column:name;not null"`
 	RegistryName  string    `gorm:"column:registry_name"`
+	RegistryHost  string    `gorm:"column:registry_host"` // Denormalized to avoid N+1 queries
 	TagsCount     int64     `gorm:"column:tags_count;default:0"`
 	TotalSize     int64     `gorm:"column:total_size;default:0"`
 	Architectures string    `gorm:"column:architectures"`

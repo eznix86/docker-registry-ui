@@ -20,17 +20,19 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 <template>
 	<div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 sm:justify-between mb-6">
 		<div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-4">
-			<div class="flex items-center gap-3 w-full md:w-48">
+			<div class="flex items-center gap-3 w-full md:w-52">
 				<span id="sort-by-label" class="text-muted-foreground text-sm whitespace-nowrap">Sort by</span>
-				<Select :model-value="sortByDisplay" aria-labelledby="sort-by-label" @update:model-value="handleSortChange">
+				<Select :model-value="repositoryStore.filters.sortBy" aria-labelledby="sort-by-label" @update:model-value="handleSortChange">
 					<SelectTrigger aria-labelledby="sort-by-label">
 						{{ sortByDisplay }}
 					</SelectTrigger>
 					<SelectContent>
-						<SelectItem value="Newest" label="Newest" />
-						<SelectItem value="Oldest" label="Oldest" />
-						<SelectItem value="Name" label="Name" />
-						<SelectItem value="Size" label="Size" />
+						<SelectItem value="newest" label="Newest" />
+						<SelectItem value="oldest" label="Oldest" />
+						<SelectItem value="name-asc" label="Name (A-Z)" />
+						<SelectItem value="name-desc" label="Name (Z-A)" />
+						<SelectItem value="size-asc" label="Size (Smallest)" />
+						<SelectItem value="size-desc" label="Size (Largest)" />
 					</SelectContent>
 				</Select>
 			</div>
@@ -51,7 +53,7 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 			</div>
 		</div>
 
-		<span class="text-muted-foreground text-sm">{{ filteredCount }} of {{ totalCount }} tags</span>
+		<span class="text-muted-foreground text-sm">{{ filteredCount }} of {{ totalTagsCount }} tags</span>
 	</div>
 </template>
 
@@ -71,9 +73,11 @@ import { useRepositoryFilterStore } from "~/stores/useRepositoryFilterStore"
 const page = usePage<RepositoryProps>()
 const repositoryStore = useRepositoryFilterStore()
 
-const tags = computed(() => page.props.tags?.data || [])
-const totalCount = computed(() => tags.value.length)
-const currentUrl = computed(() => location.pathname)
+// Total tags from database (repository.tagsCount)
+const totalTagsCount = computed(() => page.props.repository?.tagsCount ?? 0)
+
+// Filtered count based on local search filter
+const filteredCount = computed(() => repositoryStore.filteredTags.length)
 
 const sortByDisplay = computed(() => {
 	const sortBy = repositoryStore.filters.sortBy
@@ -81,35 +85,32 @@ const sortByDisplay = computed(() => {
 		return "Newest"
 	if (sortBy === "oldest")
 		return "Oldest"
-	if (sortBy === "name")
-		return "Name"
-	if (sortBy === "size")
-		return "Size"
+	if (sortBy === "name-asc")
+		return "Name (A-Z)"
+	if (sortBy === "name-desc")
+		return "Name (Z-A)"
+	if (sortBy === "size-asc")
+		return "Size (Smallest)"
+	if (sortBy === "size-desc")
+		return "Size (Largest)"
 	return "Newest"
 })
 
-const filteredCount = computed(() => {
-	if (!repositoryStore.localFilter) {
-		return tags.value.length
-	}
-	return tags.value.filter(tag =>
-		tag.name.toLowerCase().includes(repositoryStore.localFilter.toLowerCase()),
-	).length
-})
-
 const debouncedFilterRequest = useDebounceFn(() => {
-	repositoryStore.setFilter(repositoryStore.localFilter, currentUrl.value)
+	repositoryStore.setFilter(repositoryStore.localFilter)
 }, 300)
 
 function handleSortChange(value: string | number | undefined) {
 	if (!value || typeof value !== "string")
 		return
-	const sortByValue = value.toLowerCase() as
+	const sortByValue = value as
 		| "newest"
 		| "oldest"
-		| "name"
-		| "size"
-	repositoryStore.setSortBy(sortByValue, currentUrl.value)
+		| "name-asc"
+		| "name-desc"
+		| "size-asc"
+		| "size-desc"
+	repositoryStore.setSortBy(sortByValue)
 }
 
 function handleFilterQueryChange(value: string) {

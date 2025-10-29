@@ -46,6 +46,14 @@ func (r *RegistryRepository) FindByName(name string) (*models.Registry, error) {
 	return &registry, nil
 }
 
+func (r *RegistryRepository) FindByHost(host string) (*models.Registry, error) {
+	var registry models.Registry
+	if err := r.DB.Where("host = ?", host).First(&registry).Error; err != nil {
+		return nil, err
+	}
+	return &registry, nil
+}
+
 // DeleteByName deletes a registry by name (CASCADE will handle all related data)
 func (r *RegistryRepository) DeleteByName(name string) error {
 	return r.DB.Where("name = ?", name).Delete(&models.Registry{}).Error

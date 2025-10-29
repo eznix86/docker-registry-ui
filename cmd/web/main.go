@@ -52,7 +52,6 @@ func init() {
 	rootCmd.AddCommand(serveCmd)
 	rootCmd.AddCommand(seed.SeedCmd)
 	rootCmd.AddCommand(seed.SyncCmd)
-	rootCmd.AddCommand(seed.WorkerCmd)
 }
 
 func main() {

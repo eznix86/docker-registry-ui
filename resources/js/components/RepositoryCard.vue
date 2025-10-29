@@ -81,20 +81,23 @@ const untaggedDialogStore = useUntaggedDialogStore()
 const isUntagged = computed(() => props.repository.tagsCount === 0)
 
 function getRepositoryUrl(): string {
-	const { registry, namespace, name } = props.repository
+	const { registryHost, namespace, name } = props.repository
 
-	if (!registry || registry.trim() === "") {
+	if (!registryHost || registryHost.trim() === "") {
 		console.error(
-			`Repository "${name}" has empty registry:`,
+			`Repository "${name}" has empty registryHost:`,
 			props.repository,
 		)
 		return "#"
 	}
 
+	// Convert : to ~ for URL-safe port delimiter
+	const host = registryHost.replace(":", "~")
+
 	if (namespace && namespace.trim() !== "" && namespace !== name) {
-		return `/r/${registry}/${namespace}/${name}`
+		return `/r/${host}/${namespace}/${name}`
 	}
 
-	return `/r/${registry}/${name}`
+	return `/r/${host}/${name}`
 }
 </script>

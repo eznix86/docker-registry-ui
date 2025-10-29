@@ -111,7 +111,7 @@ func (f *ManifestFactory) WithArchitecture(arch string) *ManifestFactory {
 // WithManifestList sets the manifest list digest for platform-specific manifests
 func (f *ManifestFactory) WithManifestList(manifestListDigest string) *ManifestFactory {
 	f.overrides = append(f.overrides, func(manifest *models.Manifest) {
-		manifest.ManifestListDigest = manifestListDigest
+		manifest.ManifestListDigest = &manifestListDigest
 	})
 	return f
 }

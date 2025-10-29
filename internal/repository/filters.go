@@ -21,7 +21,7 @@ package repository
 // querying repository statistics from the cache table. Each field maps to a UI
 // filter so we can build the SQL dynamically instead of filtering in memory.
 type StatsFilters struct {
-	RegistryNames []string
+	RegistryHosts []string
 	Architectures []string
 	ShowUntagged  bool
 	Search        string

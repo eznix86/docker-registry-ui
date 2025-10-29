@@ -32,7 +32,7 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 			<InfiniteScroll data="tags" class="space-y-6">
 				<RepositoryTagCard
-					v-for="tag in filteredTags"
+					v-for="tag in repositoryStore.filteredTags"
 					:key="tag.name"
 					:tag="tag"
 				/>
@@ -45,7 +45,7 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 			update-url="#"
 		/>
 
-		<BulkDeleteTagsDialog :tags="filteredTags" />
+		<BulkDeleteTagsDialog :tags="repositoryStore.filteredTags" />
 
 		<DeleteTagDialog />
 	</div>
@@ -54,7 +54,7 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 <script setup lang="ts">
 import type { RepositoryProps } from "~/types"
 import { InfiniteScroll, usePage } from "@inertiajs/vue3"
-import { computed, watch } from "vue"
+import { watch } from "vue"
 import BulkDeleteTagsDialog from "~/components/BulkDeleteTagsDialog.vue"
 import DeleteTagDialog from "~/components/DeleteTagDialog.vue"
 import HeaderComponent from "~/components/HeaderComponent.vue"
@@ -71,8 +71,7 @@ const page = usePage<RepositoryProps>()
 const repositoryStore = useRepositoryFilterStore()
 const bulkDeleteStore = useTagBulkDeleteStore()
 
-const tags = computed(() => page.props.tags?.data || [])
-
+// Sync filters from props
 watch(
 	() => page.props.filters,
 	(filters) => {
@@ -84,19 +83,10 @@ watch(
 	{ immediate: true },
 )
 
-const filteredTags = computed(() => {
-	if (!repositoryStore.localFilter) {
-		return tags.value
-	}
-	return tags.value.filter(tag =>
-		tag.name.toLowerCase().includes(repositoryStore.localFilter.toLowerCase()),
-	)
-})
-
 // Sync select all with filtered tags
 watch(() => bulkDeleteStore.selectAll, (newValue) => {
 	if (newValue) {
-		bulkDeleteStore.selectedTags = filteredTags.value.map(tag => tag.name)
+		bulkDeleteStore.selectedTags = repositoryStore.filteredTags.map(tag => tag.name)
 	}
 	else {
 		bulkDeleteStore.selectedTags = []
@@ -105,8 +95,8 @@ watch(() => bulkDeleteStore.selectAll, (newValue) => {
 
 watch(() => bulkDeleteStore.selectedTags, (newValue) => {
 	if (
-		newValue.length === filteredTags.value.length
-		&& filteredTags.value.length > 0
+		newValue.length === repositoryStore.filteredTags.length
+		&& repositoryStore.filteredTags.length > 0
 	) {
 		bulkDeleteStore.selectAll = true
 	}

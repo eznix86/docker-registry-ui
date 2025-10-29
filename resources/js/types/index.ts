@@ -66,7 +66,7 @@ export interface Tag {
 }
 
 export interface RepositoryFilters {
-	sortBy: "newest" | "oldest" | "name" | "size"
+	sortBy: "newest" | "oldest" | "name-asc" | "name-desc" | "size-asc" | "size-desc"
 	filter: string
 }
 

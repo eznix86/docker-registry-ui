@@ -20,6 +20,7 @@ package handlers
 import (
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/eznix86/docker-registry-ui/internal/service"
 	"github.com/eznix86/docker-registry-ui/internal/utils/servertiming"
@@ -58,16 +59,19 @@ func (h *Handler) RepositoryDetail(w http.ResponseWriter, r *http.Request) {
 	t := servertiming.FromContext(r.Context())
 
 	db := t.NewMetric("db").Start()
-	registryName := chi.URLParam(r, "registry")
+	registryParam := chi.URLParam(r, "registry")
 	namespace := chi.URLParam(r, "namespace")
 	repositoryName := chi.URLParam(r, "repository")
+
+	// Convert ~ to : to support both formats (localhost~5001 and localhost:5001)
+	registryHost := strings.ReplaceAll(registryParam, "~", ":")
 
 	var namespacePtr *string
 	if namespace != "" {
 		namespacePtr = &namespace
 	}
 
-	repository, err := h.services.Repository.FindRepository(registryName, namespacePtr, repositoryName)
+	repository, err := h.services.Repository.FindRepositoryByHost(registryHost, namespacePtr, repositoryName)
 	if err != nil {
 		h.inertia.Redirect(w, r, "/404")
 		return

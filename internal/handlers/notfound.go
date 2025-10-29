@@ -24,7 +24,6 @@ import (
 )
 
 func (h *Handler) NotFound(w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(http.StatusNotFound)
 	if err := h.inertia.Render(w, r, "NotFound", gonertia.Props{}); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}

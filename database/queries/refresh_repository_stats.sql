@@ -51,12 +51,13 @@ tag_counts AS (
     FROM tags
     GROUP BY repo_id
 )
-INSERT INTO repository_stats (id, registry_id, name, registry_name, tags_count, total_size, architectures, updated_at)
+INSERT INTO repository_stats (id, registry_id, name, registry_name, registry_host, tags_count, total_size, architectures, updated_at)
 SELECT
     repositories.id,
     repositories.registry_id,
     repositories.name,
     registries.name as registry_name,
+    registries.host as registry_host,
     COALESCE(tag_counts.count, 0) as tags_count,
     COALESCE(repo_sizes.total_size, 0) as total_size,
     COALESCE(repo_architectures.architectures, '') as architectures,
@@ -70,6 +71,7 @@ ON CONFLICT(id) DO UPDATE SET
     registry_id = excluded.registry_id,
     name = excluded.name,
     registry_name = excluded.registry_name,
+    registry_host = excluded.registry_host,
     tags_count = excluded.tags_count,
     total_size = excluded.total_size,
     architectures = excluded.architectures,
