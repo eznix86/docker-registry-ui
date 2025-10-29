@@ -57,7 +57,7 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 					}}</span>
 				</span>
 				<span class="text-muted-foreground italic text-xs">{{
-					repository.registry
+					repository.registryHost
 				}}</span>
 			</CardFooter>
 		</Card>

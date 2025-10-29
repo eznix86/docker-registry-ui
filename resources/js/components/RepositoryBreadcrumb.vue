@@ -50,6 +50,6 @@ import { useRepositoryName } from "~/composables/useRepositoryName"
 const page = usePage<RepositoryProps>()
 const repository = computed(() => page.props.repository)
 
-const registryHost = computed(() => repository.value?.registry || "")
+const registryHost = computed(() => repository.value?.registryHost || "")
 const repositoryName = useRepositoryName(repository)
 </script>
