@@ -18,6 +18,7 @@
 package service
 
 import (
+	"github.com/eznix86/docker-registry-ui/internal/models"
 	"github.com/eznix86/docker-registry-ui/internal/repository"
 )
 
@@ -31,20 +32,6 @@ func NewRegistryService(registryRepo *repository.RegistryRepository) *RegistrySe
 	}
 }
 
-func (s *RegistryService) GetAll() ([]Registry, error) {
-	registries, err := s.registryRepo.FindAll()
-	if err != nil {
-		return nil, err
-	}
-
-	result := make([]Registry, 0, len(registries))
-	for _, reg := range registries {
-		result = append(result, Registry{
-			Name:   reg.Name,
-			Host:   reg.Host,
-			Status: reg.Status,
-		})
-	}
-
-	return result, nil
+func (s *RegistryService) GetAll() ([]models.Registry, error) {
+	return s.registryRepo.FindAll()
 }

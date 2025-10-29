@@ -19,12 +19,6 @@ package service
 
 import "time"
 
-type Registry struct {
-	Name   string `json:"name"`
-	Host   string `json:"host"`
-	Status int    `json:"status"`
-}
-
 type Repository struct {
 	ID            uint     `json:"id"`
 	Name          string   `json:"name"`
@@ -64,4 +58,15 @@ type Tag struct {
 	CreatedAt time.Time `json:"createdAt"`
 	Images    []Image   `json:"images"`
 	Alias     []string  `json:"aliases"`
+}
+
+// PlatformManifest represents a platform-specific manifest from a manifest list
+type PlatformManifest struct {
+	MediaType string `json:"mediaType"`
+	Size      int64  `json:"size"`
+	Digest    string `json:"digest"`
+	Platform  struct {
+		Architecture string `json:"architecture"`
+		OS           string `json:"os"`
+	} `json:"platform"`
 }

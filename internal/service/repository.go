@@ -214,17 +214,6 @@ func (s *RepositoryService) extractImagesFromManifest(manifest *models.Manifest)
 }
 
 func (s *RepositoryService) toRepositoryDTO(repo *models.Repository) (*Repository, error) {
-	var namespace *string
-	parts := strings.SplitN(repo.Name, "/", 2)
-	if len(parts) == 2 {
-		namespace = &parts[0]
-	}
-
-	name := repo.Name
-	if namespace != nil {
-		name = parts[1]
-	}
-
 	stats := repo.Stats
 	var err error
 	if stats == nil {
@@ -234,7 +223,12 @@ func (s *RepositoryService) toRepositoryDTO(repo *models.Repository) (*Repositor
 		}
 	}
 
-	return s.repositoryFromStats(name, namespace, repo.Registry.Name, repo.Registry.Host, stats), nil
+	// Populate stats with registry info for consistent DTO conversion
+	stats.RegistryName = repo.Registry.Name
+	stats.RegistryHost = repo.Registry.Host
+
+	dto := s.statsToDTO(stats)
+	return &dto, nil
 }
 
 // statsToDTO converts RepositoryStats to Repository DTO
@@ -266,29 +260,6 @@ func (s *RepositoryService) statsToDTO(stats *models.RepositoryStats) Repository
 		Name:          name,
 		Registry:      stats.RegistryName,
 		RegistryHost:  stats.RegistryHost,
-		Namespace:     namespace,
-		Size:          stats.TotalSize,
-		Architectures: architectures,
-		TagsCount:     int(stats.TagsCount),
-	}
-}
-
-func (s *RepositoryService) repositoryFromStats(name string, namespace *string, registryName string, registryHost string, stats *models.RepositoryStats) *Repository {
-	var architectures []string
-	if stats.Architectures != "" {
-		for _, arch := range strings.Split(stats.Architectures, ",") {
-			arch = strings.TrimSpace(arch)
-			if arch != "" {
-				architectures = append(architectures, arch)
-			}
-		}
-	}
-
-	return &Repository{
-		ID:            stats.ID,
-		Name:          name,
-		Registry:      registryName,
-		RegistryHost:  registryHost,
 		Namespace:     namespace,
 		Size:          stats.TotalSize,
 		Architectures: architectures,
