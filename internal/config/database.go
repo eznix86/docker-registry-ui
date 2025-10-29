@@ -30,6 +30,13 @@ import (
 	"gorm.io/gorm/logger"
 )
 
+// Database wraps gorm.DB with migration capabilities
+type Database struct {
+	*gorm.DB
+	migrationFS embed.FS
+}
+
+// NewDatabase creates a new database connection and runs migrations
 func NewDatabase(migrationFS embed.FS, databasePath string) (*gorm.DB, error) {
 	dbDir := filepath.Dir(databasePath)
 	if dbDir != "" && dbDir != "." {
@@ -48,24 +55,113 @@ func NewDatabase(migrationFS embed.FS, databasePath string) (*gorm.DB, error) {
 		return nil, fmt.Errorf("failed to open database: %w", err)
 	}
 
-	sqlDB, err := db.DB()
-	if err != nil {
-		return nil, fmt.Errorf("failed to get sql.DB: %w", err)
+	// Create Database wrapper
+	database := &Database{
+		DB:          db,
+		migrationFS: migrationFS,
 	}
 
-	goose.SetBaseFS(migrationFS)
-
-	err = goose.SetDialect("sqlite3")
-
-	if err != nil {
-		return nil, fmt.Errorf("failed to set dialect: %w", err)
+	// Run migrations
+	if err := database.Migrate(); err != nil {
+		return nil, err
 	}
 
-	if err := goose.Up(sqlDB, "database/migrations"); err != nil {
-		return nil, fmt.Errorf("failed to run migrations: %w", err)
+	// Configure connection pool for SQLite
+	if err := database.ConfigureConnectionPool(); err != nil {
+		return nil, err
+	}
+
+	// Optimize database settings
+	if err := database.Optimize(); err != nil {
+		return nil, err
 	}
 
 	log.Println("Database initialized and migrations applied successfully")
 
 	return db, nil
+}
+
+// Connect creates a database connection without running migrations
+func Connect(migrationFS embed.FS, databasePath string) (*Database, error) {
+	dbDir := filepath.Dir(databasePath)
+	if dbDir != "" && dbDir != "." {
+		if _, err := os.Stat(dbDir); os.IsNotExist(err) {
+			if err := os.MkdirAll(dbDir, 0750); err != nil {
+				return nil, fmt.Errorf("failed to create database directory %s: %w", dbDir, err)
+			}
+			log.Printf("Created database directory: %s\n", dbDir)
+		}
+	}
+
+	db, err := gorm.Open(sqlite.Open(databasePath), &gorm.Config{
+		Logger: logger.Default.LogMode(logger.Info),
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to open database: %w", err)
+	}
+
+	return &Database{
+		DB:          db,
+		migrationFS: migrationFS,
+	}, nil
+}
+
+// Migrate runs all pending migrations
+func (d *Database) Migrate() error {
+	sqlDB, err := d.DB.DB()
+	if err != nil {
+		return fmt.Errorf("failed to get sql.DB: %w", err)
+	}
+
+	goose.SetBaseFS(d.migrationFS)
+
+	if err := goose.SetDialect("sqlite3"); err != nil {
+		return fmt.Errorf("failed to set dialect: %w", err)
+	}
+
+	if err := goose.Up(sqlDB, "database/migrations"); err != nil {
+		return fmt.Errorf("failed to run migrations: %w", err)
+	}
+
+	return nil
+}
+
+// ConfigureConnectionPool configures the connection pool for SQLite
+// SQLite works best with a single connection to avoid lock contention
+func (d *Database) ConfigureConnectionPool() error {
+	sqlDB, err := d.DB.DB()
+	if err != nil {
+		return fmt.Errorf("failed to get sql.DB: %w", err)
+	}
+
+	// SQLite performs best with a single connection in WAL mode
+	sqlDB.SetMaxOpenConns(1)
+	sqlDB.SetMaxIdleConns(1)
+	sqlDB.SetConnMaxLifetime(0) // No connection lifetime limit
+
+	log.Println("Database connection pool configured successfully")
+	return nil
+}
+
+// Optimize configures SQLite pragmas for better performance and concurrency
+func (d *Database) Optimize() error {
+	pragmas := []string{
+		// Note: page_size can only be set before database creation - removed
+		"PRAGMA journal_mode = WAL",        // Uses Write-Ahead Logging for better concurrency
+		"PRAGMA auto_vacuum = INCREMENTAL", // Enables incremental vacuum to reclaim unused space
+		"PRAGMA cache_size = -64000",       // 64MB cache (negative = kilobytes)
+		"PRAGMA mmap_size = 268435456",     // 256MB memory-mapped I/O (reduced from 2GB)
+		"PRAGMA temp_store = MEMORY",       // Stores temporary tables and indices in RAM
+		"PRAGMA synchronous = NORMAL",      // Balances performance and reliability for transactions
+		"PRAGMA busy_timeout = 10000",      // Waits up to 10 seconds if the database is locked
+	}
+
+	for _, pragma := range pragmas {
+		if err := d.DB.Exec(pragma).Error; err != nil {
+			return fmt.Errorf("failed to execute pragma %s: %w", pragma, err)
+		}
+	}
+
+	log.Println("Database optimizations applied successfully")
+	return nil
 }

@@ -29,6 +29,7 @@ type Repository struct {
 	ID            uint     `json:"id"`
 	Name          string   `json:"name"`
 	Registry      string   `json:"registry"`
+	RegistryHost  string   `json:"registryHost"`
 	Namespace     *string  `json:"namespace"`
 	Size          int64    `json:"totalSizeInBytes"`
 	Architectures []string `json:"architectures"`

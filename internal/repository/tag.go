@@ -23,11 +23,11 @@ import (
 )
 
 type TagRepository struct {
-	db *gorm.DB
+	DB *gorm.DB // Exported for use in sync worker
 }
 
 func NewTagRepository(db *gorm.DB) *TagRepository {
-	return &TagRepository{db: db}
+	return &TagRepository{DB: db}
 }
 
 type PaginatedTagDetailsResult struct {
@@ -51,7 +51,7 @@ func (r *TagRepository) FindTagDetailsWithPagination(repoID uint, sortBy string,
 	}
 
 	// Base query with filters
-	query := r.db.Model(&models.TagDetails{}).Where("repo_id = ?", repoID)
+	query := r.DB.Model(&models.TagDetails{}).Where("repo_id = ?", repoID)
 	if search != "" {
 		query = query.Where("LOWER(name) LIKE ?", "%"+search+"%")
 	}
@@ -97,4 +97,48 @@ func (r *TagRepository) FindTagDetailsWithPagination(repoID uint, sortBy string,
 		TotalPages:   totalPages,
 		TotalCount:   totalCount,
 	}, nil
+}
+
+// FindWithDigestsByRepo returns map[tagName]digest for a repository (for differential sync)
+func (r *TagRepository) FindWithDigestsByRepo(registryName, repoName string) (map[string]string, error) {
+	var results []struct {
+		Name   string
+		Digest string
+	}
+
+	err := r.DB.Table("tags").
+		Select("tags.name, tags.digest").
+		Joins("JOIN repositories ON repositories.id = tags.repo_id").
+		Joins("JOIN registries ON registries.id = repositories.registry_id").
+		Where("registries.name = ? AND repositories.name = ?", registryName, repoName).
+		Scan(&results).Error
+
+	if err != nil {
+		return nil, err
+	}
+
+	tagDigestMap := make(map[string]string)
+	for _, r := range results {
+		tagDigestMap[r.Name] = r.Digest
+	}
+	return tagDigestMap, nil
+}
+
+// DeleteByRegistryRepoAndName deletes a tag (BeforeDelete hook marks repo as dirty)
+func (r *TagRepository) DeleteByRegistryRepoAndName(registryName, repoName, tagName string) error {
+	// BeforeDelete hook will mark repo as dirty before deletion
+	// CASCADE will handle tag_details cleanup
+
+	// Optimized query: direct lookup with nested subquery
+	return r.DB.Exec(`
+		DELETE FROM tags
+		WHERE repo_id = (
+			SELECT repositories.id
+			FROM repositories
+			JOIN registries ON registries.id = repositories.registry_id
+			WHERE registries.name = ? AND repositories.name = ?
+			LIMIT 1
+		)
+		  AND name = ?
+	`, registryName, repoName, tagName).Error
 }

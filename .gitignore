@@ -9,3 +9,4 @@ stats.html
 # TLS certificates (keep the directory structure)
 certs/*
 !certs/.gitkeep
+database.db*

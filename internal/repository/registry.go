@@ -23,16 +23,16 @@ import (
 )
 
 type RegistryRepository struct {
-	db *gorm.DB
+	DB *gorm.DB // Exported for use in sync worker
 }
 
 func NewRegistryRepository(db *gorm.DB) *RegistryRepository {
-	return &RegistryRepository{db: db}
+	return &RegistryRepository{DB: db}
 }
 
 func (r *RegistryRepository) FindAll() ([]models.Registry, error) {
 	var registries []models.Registry
-	if err := r.db.Find(&registries).Error; err != nil {
+	if err := r.DB.Find(&registries).Error; err != nil {
 		return nil, err
 	}
 	return registries, nil
@@ -40,8 +40,13 @@ func (r *RegistryRepository) FindAll() ([]models.Registry, error) {
 
 func (r *RegistryRepository) FindByName(name string) (*models.Registry, error) {
 	var registry models.Registry
-	if err := r.db.Where("name = ?", name).First(&registry).Error; err != nil {
+	if err := r.DB.Where("name = ?", name).First(&registry).Error; err != nil {
 		return nil, err
 	}
 	return &registry, nil
+}
+
+// DeleteByName deletes a registry by name (CASCADE will handle all related data)
+func (r *RegistryRepository) DeleteByName(name string) error {
+	return r.DB.Where("name = ?", name).Delete(&models.Registry{}).Error
 }

@@ -26,15 +26,15 @@ import (
 )
 
 type RepositoryRepository struct {
-	db *gorm.DB
+	DB *gorm.DB // Exported for use in sync worker
 }
 
 func NewRepositoryRepository(db *gorm.DB) *RepositoryRepository {
-	return &RepositoryRepository{db: db}
+	return &RepositoryRepository{DB: db}
 }
 
 func (r *RepositoryRepository) baseStatsQuery(filters StatsFilters) *gorm.DB {
-	query := r.db.Model(&models.RepositoryStats{})
+	query := r.DB.Model(&models.RepositoryStats{})
 
 	if len(filters.RegistryNames) > 0 {
 		query = query.Where("registry_name IN ?", filters.RegistryNames)
@@ -96,7 +96,7 @@ func (r *RepositoryRepository) ListStats(filters StatsFilters, pagination Pagina
 
 func (r *RepositoryRepository) FindAllStats() ([]models.RepositoryStats, error) {
 	var stats []models.RepositoryStats
-	if err := r.db.Find(&stats).Error; err != nil {
+	if err := r.DB.Find(&stats).Error; err != nil {
 		return nil, err
 	}
 	return stats, nil
@@ -104,7 +104,7 @@ func (r *RepositoryRepository) FindAllStats() ([]models.RepositoryStats, error) 
 
 func (r *RepositoryRepository) FindByRegistryAndName(registryID uint, name string) (*models.Repository, error) {
 	var repository models.Repository
-	if err := r.db.Where("registry_id = ? AND name = ?", registryID, name).
+	if err := r.DB.Where("registry_id = ? AND name = ?", registryID, name).
 		Preload("Registry").
 		Preload("Stats").
 		First(&repository).Error; err != nil {
@@ -115,8 +115,36 @@ func (r *RepositoryRepository) FindByRegistryAndName(registryID uint, name strin
 
 func (r *RepositoryRepository) FindStatsByID(id uint) (*models.RepositoryStats, error) {
 	var stats models.RepositoryStats
-	if err := r.db.Where("id = ?", id).First(&stats).Error; err != nil {
+	if err := r.DB.Where("id = ?", id).First(&stats).Error; err != nil {
 		return nil, err
 	}
 	return &stats, nil
+}
+
+// FindNamesByRegistryName gets all repository names for a registry (for differential sync)
+func (r *RepositoryRepository) FindNamesByRegistryName(registryName string) ([]string, error) {
+	var names []string
+	err := r.DB.Table("repositories").
+		Select("repositories.name").
+		Joins("JOIN registries ON registries.id = repositories.registry_id").
+		Where("registries.name = ?", registryName).
+		Pluck("repositories.name", &names).Error
+	return names, err
+}
+
+// DeleteByRegistryAndName deletes a repository (CASCADE handles tags, dirty tracking)
+func (r *RepositoryRepository) DeleteByRegistryAndName(registryName, repoName string) error {
+	// CASCADE will delete:
+	// - All tags in this repo
+	// - dirty_repos entry
+	// - repository_stats entry
+	// - tag_details entries (via tags CASCADE)
+	// Before deletion, tags will fire BeforeDelete hooks to mark repo as dirty
+
+	// Optimized query: direct lookup instead of subquery with IN
+	return r.DB.Exec(`
+		DELETE FROM repositories
+		WHERE registry_id = (SELECT id FROM registries WHERE name = ? LIMIT 1)
+		  AND name = ?
+	`, registryName, repoName).Error
 }

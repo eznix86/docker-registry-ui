@@ -23,16 +23,16 @@ import (
 )
 
 type ManifestRepository struct {
-	db *gorm.DB
+	DB *gorm.DB // Exported for use in sync worker
 }
 
 func NewManifestRepository(db *gorm.DB) *ManifestRepository {
-	return &ManifestRepository{db: db}
+	return &ManifestRepository{DB: db}
 }
 
 func (r *ManifestRepository) GetAllArchitectures() ([]string, error) {
 	var architectures []string
-	if err := r.db.Model(&models.Manifest{}).
+	if err := r.DB.Model(&models.Manifest{}).
 		Where("architecture != ''").
 		Distinct("architecture").
 		Pluck("architecture", &architectures).Error; err != nil {
