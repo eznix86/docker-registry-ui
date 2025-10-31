@@ -39,6 +39,7 @@ export type FontSans
 		| "instrument-sans"
 		| "jetbrains-sans"
 		| "geist"
+		| "nacelle"
 
 export type FontMono
 	= | "roboto-mono"
@@ -104,6 +105,11 @@ export const FONT_SANS_OPTIONS: FontOption[] = [
 		value: "geist",
 		label: "Geist",
 		family: "\"Geist\", sans-serif",
+	},
+	{
+		value: "nacelle",
+		label: "Nacelle",
+		family: "\"Nacelle\", sans-serif",
 	},
 ]
 

@@ -668,6 +668,10 @@
     --font-sans: "Geist", sans-serif;
 }
 
+[data-font-sans="nacelle"] {
+    --font-sans: "Nacelle", sans-serif;
+}
+
 /* Font mono mappings based on data-font-mono attribute */
 [data-font-mono="roboto-mono"] {
     --font-mono: "Roboto Mono", monospace;
