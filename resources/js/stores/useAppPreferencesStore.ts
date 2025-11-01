@@ -40,12 +40,20 @@ export type FontSans
 		| "jetbrains-sans"
 		| "geist"
 		| "nacelle"
+		| "ibm-plex-sans"
+		| "space-grotesk"
+		| "dm-sans"
+		| "onest"
 
 export type FontMono
 	= | "roboto-mono"
 		| "jetbrains-mono"
 		| "geist-mono"
 		| "fira-code"
+		| "cascadia-code"
+		| "source-code-pro"
+		| "inconsolata"
+		| "courier-prime"
 
 export type ContainerRuntime
 	= | "docker"
@@ -111,6 +119,26 @@ export const FONT_SANS_OPTIONS: FontOption[] = [
 		label: "Nacelle",
 		family: "\"Nacelle\", sans-serif",
 	},
+	{
+		value: "ibm-plex-sans",
+		label: "IBM Plex Sans",
+		family: "\"IBM Plex Sans\", sans-serif",
+	},
+	{
+		value: "space-grotesk",
+		label: "Space Grotesk",
+		family: "\"Space Grotesk\", sans-serif",
+	},
+	{
+		value: "dm-sans",
+		label: "DM Sans",
+		family: "\"DM Sans\", sans-serif",
+	},
+	{
+		value: "onest",
+		label: "Onest",
+		family: "\"Onest\", sans-serif",
+	},
 ]
 
 export const FONT_MONO_OPTIONS: FontOption[] = [
@@ -133,6 +161,26 @@ export const FONT_MONO_OPTIONS: FontOption[] = [
 		value: "fira-code",
 		label: "Fira Code",
 		family: "\"Fira Code\", monospace",
+	},
+	{
+		value: "cascadia-code",
+		label: "Cascadia Code",
+		family: "\"Cascadia Code\", monospace",
+	},
+	{
+		value: "source-code-pro",
+		label: "Source Code Pro",
+		family: "\"Source Code Pro\", monospace",
+	},
+	{
+		value: "inconsolata",
+		label: "Inconsolata",
+		family: "\"Inconsolata\", monospace",
+	},
+	{
+		value: "courier-prime",
+		label: "Courier Prime",
+		family: "\"Courier Prime\", monospace",
 	},
 ]
 

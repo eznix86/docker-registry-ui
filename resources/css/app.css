@@ -17,7 +17,6 @@
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
 */
 
-
 @import "tailwindcss";
 
 /* Base theme - The Hub Light (default) */
@@ -672,6 +671,22 @@
     --font-sans: "Nacelle", sans-serif;
 }
 
+[data-font-sans="ibm-plex-sans"] {
+    --font-sans: "IBM Plex Sans", sans-serif;
+}
+
+[data-font-sans="space-grotesk"] {
+    --font-sans: "Space Grotesk", sans-serif;
+}
+
+[data-font-sans="dm-sans"] {
+    --font-sans: "DM Sans", sans-serif;
+}
+
+[data-font-sans="onest"] {
+    --font-sans: "Onest", sans-serif;
+}
+
 /* Font mono mappings based on data-font-mono attribute */
 [data-font-mono="roboto-mono"] {
     --font-mono: "Roboto Mono", monospace;
@@ -687,6 +702,22 @@
 
 [data-font-mono="fira-code"] {
     --font-mono: "Fira Code", monospace;
+}
+
+[data-font-mono="cascadia-code"] {
+    --font-mono: "Cascadia Code", monospace;
+}
+
+[data-font-mono="source-code-pro"] {
+    --font-mono: "Source Code Pro", monospace;
+}
+
+[data-font-mono="inconsolata"] {
+    --font-mono: "Inconsolata", monospace;
+}
+
+[data-font-mono="courier-prime"] {
+    --font-mono: "Courier Prime", monospace;
 }
 
 body {

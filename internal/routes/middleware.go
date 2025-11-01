@@ -25,10 +25,10 @@ import (
 
 // TODO: Detect if the user is using a local development environment and adjust the CSP policy accordingly.
 const (
-	cspScriptSrc      = "script-src 'self' 'unsafe-inline' https://localhost:5173 https://127.0.0.1:5173"
-	cspStyleSrc       = "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://localhost:5173 https://127.0.0.1:5173"
-	cspImgSrc         = "img-src 'self' data: https:"
-	cspFontSrc        = "font-src 'self' data: https://fonts.gstatic.com"
+	cspScriptSrc      = "script-src 'self' 'unsafe-inline' localhost:5173 127.0.0.1:5173"
+	cspStyleSrc       = "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://reinhart1010.github.io localhost:5173 127.0.0.1:5173"
+	cspImgSrc         = "img-src 'self'"
+	cspFontSrc        = "font-src 'self' data: https://fonts.gstatic.com https://reinhart1010.github.io"
 	cspConnectSrc     = "connect-src 'self' https://localhost:5173 https://127.0.0.1:5173 wss://127.0.0.1:5173"
 	cspFrameAncestors = "frame-ancestors 'none'"
 	cspBaseURI        = "base-uri 'self'"
