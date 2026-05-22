@@ -13,7 +13,7 @@ COPY . .
 
 RUN bun run build
 
-FROM nginx:1.30.0-alpine-slim
+FROM nginx:1.31.1-alpine-slim
 
 LABEL org.opencontainers.image.source=https://github.com/eznix86/docker-registry-ui
 LABEL org.opencontainers.image.description="Container for Docker Registry UI"
