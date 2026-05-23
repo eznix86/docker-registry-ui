@@ -1,28 +1,17 @@
-# Default values for docker-registry-ui.
-# This is a YAML-formatted file.
-# Declare variables to be passed into your templates.
-
-# This will set the replicaset count more information can be found here: https://kubernetes.io/docs/concepts/workloads/controllers/replicaset/
 replicaCount: 1
 
-# This sets the container image more information can be found here: https://kubernetes.io/docs/concepts/containers/images/
 image:
   repository: ghcr.io/eznix86/docker-registry-ui
-  # This sets the pull policy for images.
   pullPolicy: Always
-  # Overrides the image tag whose default is the chart appVersion.
   tag: ""
 
-# This is for the secrets for pulling an image from a private repository more information can be found here: https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/
 imagePullSecrets: []
-# This is to override the chart name.
 nameOverride: ""
 fullnameOverride: ""
 
-# This section builds out the service account more information can be found here: https://kubernetes.io/docs/concepts/security/service-accounts/
 serviceAccount:
   # Specifies whether a service account should be created
-  create: true
+  create: false
   # Automatically mount a ServiceAccount's API credentials?
   automount: true
   # Annotations to add to the service account
@@ -31,11 +20,14 @@ serviceAccount:
   # If not set and create is true, a name is generated using the fullname template
   name: ""
 
-# This is for setting Kubernetes Annotations to a Pod.
-# For more information checkout: https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/
+# Deployment update strategy.
+strategy:
+  type: RollingUpdate
+  rollingUpdate:
+    maxSurge: 25%
+    maxUnavailable: 25%
+
 podAnnotations: {}
-# This is for setting Kubernetes Labels to a Pod.
-# For more information checkout: https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/
 podLabels: {}
 
 podSecurityContext: {}
@@ -49,38 +41,61 @@ securityContext: {}
   # runAsNonRoot: true
   # runAsUser: 1000
 
-# This is for setting up a service more information can be found here: https://kubernetes.io/docs/concepts/services-networking/service/
 service:
-  # This sets the service type more information can be found here: https://kubernetes.io/docs/concepts/services-networking/service/#publishing-services-service-types
   type: ClusterIP
-  # This sets the ports more information can be found here: https://kubernetes.io/docs/concepts/services-networking/service/#field-spec-ports
-  port: 80
-  # To add extra annotations
-  # annotations:
-  #   - "tailscale.com/expose": true
+  port: 3000
+  annotations: {}
 
-# This block is for setting up the ingress for more information can be found here: https://kubernetes.io/docs/concepts/services-networking/ingress/
 ingress:
   enabled: false
   className: ""
   annotations: {}
-    # kubernetes.io/ingress.class: nginx
-    # kubernetes.io/tls-acme: "true"
   hosts:
-    - host: chart-example.local
+    - host: container-hub.local
       paths:
         - path: /
           pathType: ImplementationSpecific
   tls: []
-  #  - secretName: chart-example-tls
-  #    hosts:
-  #      - chart-example.local
+
+gateway:
+  enabled: false
+  # Whether to create the Gateway resource itself.
+  # If false, parentRefs must point to an existing Gateway.
+  create: false
+  # GatewayClass name (e.g. traefik, nginx, cilium).
+  className: ""
+  annotations: {}
+  listeners:
+    - name: http
+      protocol: HTTP
+      port: 80
+    # - name: https
+    #   protocol: HTTPS
+    #   port: 8443
+    #   hostname: container-hub.local
+    #   tls:
+    #     mode: Terminate
+    #     certificateRefs:
+    #       - kind: Secret
+    #         name: container-hub-tls
+  # Parent Gateway references for the HTTPRoute.
+  # When create is true, these are ignored and the route attaches to the chart-created Gateway.
+  parentRefs:
+    - name: gateway
+      namespace: default
+      sectionName: http
+  hostnames:
+    - container-hub.local
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      backendRefs:
+        - name: ""
+          port: 3000
 
 resources: {}
-  # We usually recommend not to specify default resources and to leave this as a conscious
-  # choice for the user. This also increases chances charts run on environments with little
-  # resources, such as Minikube. If you do want to specify resources, uncomment the following
-  # lines, adjust them as necessary, and remove the curly braces after 'resources:'.
   # limits:
   #   cpu: 100m
   #   memory: 128Mi
@@ -88,53 +103,60 @@ resources: {}
   #   cpu: 100m
   #   memory: 128Mi
 
-# This is to setup the liveness and readiness probes more information can be found here: https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/
 livenessProbe:
   httpGet:
-    path: /
+    path: /healthz
     port: http
 readinessProbe:
   httpGet:
-    path: /
+    path: /healthz
     port: http
 
-# This defines the set of environment to proxy the environment URL
+# Optional startup probe.
+startupProbe: {}
+  # httpGet:
+  #   path: /healthz
+  #   port: http
+  # failureThreshold: 30
+  # periodSeconds: 10
+
+# Container lifecycle hooks.
+lifecycle: {}
+  # preStop:
+  #   exec:
+  #     command: ["/bin/sh", "-c", "sleep 15"]
+
 env:
-  - name: REGISTRY_URL
-    valueFrom:
-      secretKeyRef:
-        name: registry-ui-secret
-        key: url
-  - name: REGISTRY_AUTH
-    valueFrom:
-      secretKeyRef:
-        name: registry-ui-secret
-        key: auth
+  SERVER_HOST: "0.0.0.0"
+  SERVER_PORT: "3000"
 
+# Additional environment variables (map of key-value pairs).
+extraEnv: {}
 
-# This section is for setting up autoscaling more information can be found here: https://kubernetes.io/docs/concepts/workloads/autoscaling/
-autoscaling:
+# Load env vars from a Kubernetes Secret (optional).
+# Leave name empty to disable.
+secretEnv:
+  name: ""
+
+persistence:
   enabled: false
-  minReplicas: 1
-  maxReplicas: 100
-  targetCPUUtilizationPercentage: 80
-  # targetMemoryUtilizationPercentage: 80
+  size: 1Gi
+  storageClass: ""
+  existingClaim: ""
+  accessModes:
+    - ReadWriteOnce
 
-# Additional volumes on the output Deployment definition.
+# Init container configuration (used when persistence is enabled).
+initContainer:
+  image:
+    repository: busybox
+    tag: "1.37"
+    pullPolicy: IfNotPresent
+  command: ["sh", "-c", "mkdir -p /app/data && chown 65534:65534 /app/data"]
+
 volumes: []
-# - name: foo
-#   secret:
-#     secretName: mysecret
-#     optional: false
-
-# Additional volumeMounts on the output Deployment definition.
 volumeMounts: []
-# - name: foo
-#   mountPath: "/etc/foo"
-#   readOnly: true
 
 nodeSelector: {}
-
 tolerations: []
-
 affinity: {}

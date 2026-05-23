@@ -1,0 +1,89 @@
+version: "3"
+
+vars:
+  IMAGE_NAME: docker-registry-ui
+  BUILDER_NAME: ch-multiarch
+  BINARY_NAME: container-hub
+
+  REGISTRY:
+    sh: |
+      if [ -n "${REGISTRY:-}" ]; then
+        printf "%s" "$REGISTRY"
+      else
+        echo "REGISTRY is required. Example: REGISTRY=ghcr.io/eznix86 task image-push" >&2
+        exit 1
+      fi
+
+  TAG:
+    sh: printf "%s" "${TAG:-0.0.0}"
+
+  FULL_IMAGE: "{{.REGISTRY}}/{{.IMAGE_NAME}}:{{.TAG}}"
+
+tasks:
+  dev:
+    desc: Start development server (go + vite)
+    cmds:
+      - concurrently -n vite,air -c cyan,green "bun run dev:vite" "sleep 3 && air"
+
+  build:
+    desc: Build the binary and frontend
+    cmds:
+      - go build -o bin/{{.BINARY_NAME}} ./cmd/container-hub
+      - bun run build
+
+  sync:
+    desc: Run a one-time sync
+    deps: [build]
+    cmds:
+      - ./bin/{{.BINARY_NAME}} sync -v
+
+  image:builder:
+    desc: Ensure a multi-platform buildx builder exists
+    cmds:
+      - |
+        if ! docker buildx inspect "{{.BUILDER_NAME}}" >/dev/null 2>&1; then
+          docker buildx create \
+            --name "{{.BUILDER_NAME}}" \
+            --driver docker-container \
+            --use
+        else
+          docker buildx use "{{.BUILDER_NAME}}"
+        fi
+      - docker buildx inspect "{{.BUILDER_NAME}}" --bootstrap >/dev/null
+
+  image-build:
+    desc: Build the Docker image locally
+    deps: [image:builder]
+    cmds:
+      - docker buildx build --builder "{{.BUILDER_NAME}}" -t "{{.FULL_IMAGE}}" --load .
+
+  image-push:
+    desc: Build and push the multi-arch Docker image
+    deps: [image:builder]
+    cmds:
+      - docker buildx build --builder "{{.BUILDER_NAME}}" --platform linux/amd64,linux/arm64 -t "{{.FULL_IMAGE}}" --push .
+
+  helm:lint:
+    desc: Lint the Helm chart
+    cmds:
+      - helm lint charts/docker-registry-ui
+
+  helm:template:
+    desc: Render the Helm chart templates
+    cmds:
+      - helm template container-hub charts/docker-registry-ui
+
+  helm:install:
+    desc: Install the Helm chart
+    cmds:
+      - helm upgrade --install container-hub charts/docker-registry-ui -n container-hub --create-namespace -f charts/docker-registry-ui/values.yaml -f charts/docker-registry-ui/values-dev.yaml
+
+  helm:uninstall:
+    desc: Uninstall the Helm chart
+    cmds:
+      - helm uninstall container-hub -n container-hub
+
+  clean:
+    desc: Remove build artifacts
+    cmds:
+      - rm -rf bin/ data/ tmp/

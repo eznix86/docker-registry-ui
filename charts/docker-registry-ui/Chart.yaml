@@ -1,9 +1,30 @@
 apiVersion: v2
 name: docker-registry-ui
-description: A Helm chart for Kubernetes for Docker Registry UI
+description: Container Hub — A UI for exploring and managing Docker/OCI container registries
+icon: https://raw.githubusercontent.com/eznix86/docker-registry-ui/main/public/container-hub.svg
+
+# A SemVer range of compatible Kubernetes versions.
+kubeVersion: ">=1.23.0-0"
+
+home: https://github.com/eznix86/docker-registry-ui
+sources:
+  - https://github.com/eznix86/docker-registry-ui
+
+keywords:
+  - docker
+  - registry
+  - ui
+  - container
+  - oci
+
+maintainers:
+  - name: eznix86
+    url: https://github.com/eznix86
 
 type: application
 
-version: 0.2.0
+# version and appVersion are set automatically by the release workflow
+# from the git tag (e.g. v1.0.0 becomes 1.0.0).
+version: 1.0.0
 
-appVersion: "latest"
+appVersion: "1.0.0"

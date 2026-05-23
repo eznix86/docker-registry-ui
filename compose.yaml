@@ -1,0 +1,11 @@
+services:
+  container-hub:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      - SERVER_HOST=0.0.0.0
+    env_file:
+      - .env
+    volumes:
+      - ./data:/app/data

@@ -1,0 +1,101 @@
+version: "2"
+
+run:
+  timeout: 5m
+  tests: true
+  concurrency: 4
+  allow-parallel-runners: true
+
+linters:
+  default: standard
+  enable:
+    - revive
+    - gocyclo
+    - misspell
+    - dupl
+    - gocritic
+    - gosec
+    - funlen
+    - nestif
+    - unused
+    - unparam
+    - asciicheck
+    - bidichk
+    - bodyclose
+    - usestdlibvars
+    - staticcheck
+    - errcheck # Check for unchecked errors
+    - govet # Reports suspicious constructs
+    - ineffassign # Detects ineffectual assignments
+    - errorlint # Find misuses of error wrapping
+    - unconvert # Remove unnecessary type conversions
+    - wastedassign # Detect wasted assignment statements
+    - nolintlint # Reports ill-formed or insufficient nolint directives
+    - prealloc # Find slice declarations that could be preallocated
+    - predeclared # Find code that shadows predeclared identifiers
+    - thelper # Detect incorrect usage of t.Helper() in tests
+    - copyloopvar # Detect places where loop variables are copied
+    - dogsled # Check for too many blank identifiers
+    - durationcheck # Check for two durations multiplied together
+    - errname # Check that sentinel errors are prefixed with Err
+    - exhaustive # Check exhaustiveness of enum switch statements
+    - goconst # Find repeated strings that could be constants
+    - gochecknoglobals # Check that no global variables exist
+    - gochecknoinits # Check that no init functions are present
+    - nakedret # Find naked returns in long functions
+    - nilnil # Check returning nil for both error and value
+    - nilerr # Find code that returns nil even if error is not nil
+    - rowserrcheck # Check if sql.Rows.Err() is checked
+    - sqlclosecheck # Check if sql rows/statements are closed
+    - makezero # Find slice declarations with non-zero initial length
+    - contextcheck # Check whether the function uses a non-inherited context
+    - err113 # Check errors handling expressions (Go 1.13+)
+    - errchkjson # Checks types passed to json encoding functions
+    - forcetypeassert # Find forced type assertions
+    - gocognit # Computes and checks cognitive complexity
+    - gomoddirectives # Manage go.mod directives (replace, retract, exclude)
+    - goprintffuncname # Check that printf-like functions are named properly
+    - intrange # Find places where int range can cause issues
+    - loggercheck # Check key-value pairs for common logger libraries
+    - mirror # Reports wrong mirror patterns of bytes/strings usage
+    - musttag # Enforce field tags in structs
+    - noctx # Find HTTP requests without context.Context
+    - nonamedreturns # Reports named returns
+    - nosprintfhostport # Check for misuse of Sprintf with host:port
+    - perfsprint # Check for performance issues with Sprint
+    - protogetter # Reports direct reads from proto message fields
+    - reassign # Check that package variables are not reassigned
+    - sloglint # Ensure consistent use of keys in slog
+    - spancheck # Check for mistakes with OpenTelemetry spans
+    - testifylint # Check for common testify mistakes
+    - tparallel # Detect inappropriate usage of t.Parallel()
+    - zerologlint # Detect incorrect usage of zerolog
+  disable:
+    - wsl
+    - wrapcheck # Too noisy - requires wrapping all external errors
+    - nonamedreturns # Named returns can be useful for documentation
+    - err113 # Too strict about dynamic errors
+  settings:
+    gocyclo:
+      min-complexity: 15
+    misspell:
+      locale: US
+    revive:
+      severity: warning
+      rules:
+        - name: unused-parameter
+          severity: warning
+    errcheck:
+      check-blank: true
+      check-type-assertions: true
+
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 3
+  uniq-by-line: false
+
+output:
+  formats:
+    text:
+      print-issued-lines: true
+      colors: true
