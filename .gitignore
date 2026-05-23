@@ -11,4 +11,5 @@ tmp/
 .DS_Store
 *.log
 public/build/
+public/hot
 charts/**/values-*.yaml
