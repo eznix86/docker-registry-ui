@@ -69,14 +69,15 @@ jobs:
         uses: docker/build-push-action@v7
         with:
           context: .
+          file: ./Dockerfile
           platforms: ${{ matrix.platform }}
           build-args: |
             VERSION=${{ needs.version.outputs.version }}
             GIT_COMMIT=${{ github.sha }}
             BUILD_DATE=${{ github.event.head_commit.timestamp || github.event.repository.updated_at }}
           outputs: type=image,name=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }},push-by-digest=true,name-canonical=true,push=true
-          cache-from: type=gha,scope=${{ matrix.platform }}
-          cache-to: type=gha,mode=max,scope=${{ matrix.platform }}
+          cache-from: type=gha,scope=${{ env.PLATFORM_PAIR }}
+          cache-to: type=gha,mode=max,scope=${{ env.PLATFORM_PAIR }}
 
       - name: Export digest
         run: |
