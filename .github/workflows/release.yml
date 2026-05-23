@@ -30,9 +30,10 @@ jobs:
             exit 1
           fi
           VERSION="${GITHUB_REF_NAME#v}"
+          IFS='.' read -r MAJOR MINOR PATCH <<< "$VERSION"
           echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
-          echo "major=${VERSION%%.*}" >> "$GITHUB_OUTPUT"
-          echo "minor=${VERSION%.*}" >> "$GITHUB_OUTPUT"
+          echo "major=${MAJOR}" >> "$GITHUB_OUTPUT"
+          echo "minor=${MINOR}" >> "$GITHUB_OUTPUT"
 
   build-image:
     name: Build ${{ matrix.platform }}
