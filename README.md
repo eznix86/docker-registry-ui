@@ -242,3 +242,9 @@ Please include:
 * Document any new features or configuration options.
 * Pick any issue listed.
 * Open an issue before contributing
+
+---
+
+## License
+
+This project is licensed under the **GNU Affero General Public License v3.0**. See the [`LICENSE`](./LICENSE) file for details.
