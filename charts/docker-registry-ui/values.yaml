@@ -21,11 +21,17 @@ serviceAccount:
   name: ""
 
 # Deployment update strategy.
-strategy:
-  type: RollingUpdate
-  rollingUpdate:
-    maxSurge: 25%
-    maxUnavailable: 25%
+# Leave empty to use chart defaults:
+# - RollingUpdate when persistence is disabled
+# - Recreate when persistence is enabled
+#
+# Example explicit override:
+# strategy:
+#   type: RollingUpdate
+#   rollingUpdate:
+#     maxSurge: 25%
+#     maxUnavailable: 25%
+strategy: {}
 
 podAnnotations: {}
 podLabels: {}

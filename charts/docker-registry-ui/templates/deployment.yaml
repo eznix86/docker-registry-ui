@@ -5,7 +5,15 @@ metadata:
   labels:
     {{- include "docker-registry-ui.labels" . | nindent 4 }}
 spec:
-  {{- with .Values.strategy }}
+  {{- $strategy := .Values.strategy }}
+  {{- if and (empty $strategy) .Values.persistence.enabled }}
+  {{-   $strategy = dict "type" "Recreate" }}
+  {{- else if empty $strategy }}
+  {{-   $strategy = dict "type" "RollingUpdate" "rollingUpdate" (dict "maxSurge" "25%" "maxUnavailable" "25%") }}
+  {{- else if and $strategy (eq (toString $strategy.type) "Recreate") }}
+  {{-   $strategy = omit $strategy "rollingUpdate" }}
+  {{- end }}
+  {{- with $strategy }}
   strategy:
     {{- toYaml . | nindent 4 }}
   {{- end }}
@@ -85,7 +93,11 @@ spec:
           startupProbe:
             {{- toYaml . | nindent 12 }}
           {{- end }}
-          {{- with .Values.lifecycle }}
+          {{- $lifecycle := .Values.lifecycle }}
+          {{- if and .Values.persistence.enabled (empty $lifecycle) }}
+          {{-   $lifecycle = dict "preStop" (dict "exec" (dict "command" (list "/bin/sh" "-c" "sleep 10"))) }}
+          {{- end }}
+          {{- with $lifecycle }}
           lifecycle:
             {{- toYaml . | nindent 12 }}
           {{- end }}
