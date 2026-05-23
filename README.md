@@ -1,17 +1,13 @@
 # Container Hub – Docker Registry UI
 
-A simple, lightweight **UI for exploring and managing Docker/OCI container registries**.
+A simple, lightweight **UI for exploring and managing Docker/OCI registries**.
 
 ![Demo](./docs/images/container-hub.gif)
 
 ---
 
-> [!IMPORTANT]
-> I’m currently working towards the upcoming **`v1.0.0`** release. While the current version works well, it doesn’t scale efficiently—even for relatively small projects (e.g., repositories with 100+ tags).
->
-> To address this, I’ve opened a tracking issue: [#28](https://github.com/eznix86/docker-registry-ui/issues/28).
->
-> **Community input is welcome** — feel free to share your ideas or propose improvements in the issue.
+> [!NOTE]
+> **v1.0.0** is now available. This is a Go backend, sync engine, themes, and updated UI with helm OCI support. The legacy React frontend (v0.x) is available on the [0.x branch](https://github.com/eznix86/docker-registry-ui/tree/0.x).
 
 
 ## Quick Start
@@ -23,13 +19,15 @@ services:
   registry-ui:
     image: ghcr.io/eznix86/docker-registry-ui:latest
     ports:
-      - "8011:80"
+      - "8011:3000"
     environment:
       - REGISTRY_URL=http://your-registry.com:5000
       - REGISTRY_AUTH=base64basicauthhere
 ```
 
 Then open the UI at: [http://localhost:8011](http://localhost:8011)
+
+For extensive environment customization, see [`.env.example`](./.env.example).
 
 ---
 
@@ -42,7 +40,7 @@ services:
   registry-ui:
     image: ghcr.io/eznix86/docker-registry-ui:latest
     ports:
-      - "8011:80"
+      - "8011:3000"
     environment:
       - REGISTRY_URL=http://your-registry.com:5000
       - REGISTRY_AUTH=base64basicauthhere
@@ -64,25 +62,18 @@ helm install docker-registry-ui docker-registry-ui/docker-registry-ui \
 ```sh
 kubectl create secret generic registry-ui-secret \
   -n docker-registry-ui \
-  --from-literal=url="http://your-registry.com:5000" \
-  --from-literal=auth="$(echo -n 'username:password' | base64)"
+  --from-literal=REGISTRY_URL="http://your-registry.com:5000" \
+  --from-literal=REGISTRY_AUTH="$(echo -n 'username:password' | base64)"
 ```
 
 Reference the secret in your Helm values:
 
 ```yaml
-env:
-  - name: REGISTRY_URL
-    valueFrom:
-      secretKeyRef:
-        name: registry-ui-secret
-        key: url
-  - name: REGISTRY_AUTH
-    valueFrom:
-      secretKeyRef:
-        name: registry-ui-secret
-        key: auth
+secretEnv:
+  name: registry-ui-secret
 ```
+
+For all available configuration options, see [`charts/docker-registry-ui/values.yaml`](./charts/docker-registry-ui/values.yaml).
 
 ---
 
@@ -160,7 +151,8 @@ Pull requests are welcome. Please ensure code is linted and tested before submis
 ## Storage Reclamation
 
 When deleting images, Docker Registry **v2/v3** only marks them as deleted. Disk space is not automatically reclaimed.
-To free space, run garbage collection inside your registry container:
+
+Use the [Docker Registry Cleaner](https://github.com/eznix86/docker-registry-cleaner) for automated cleanup, or run garbage collection manually:
 
 ```sh
 # Run garbage collection
@@ -242,3 +234,9 @@ Please include:
 * Document any new features or configuration options.
 * Pick any issue listed.
 * Open an issue before contributing
+
+---
+
+## License
+
+This project is licensed under the **GNU Affero General Public License v3.0**. See the [`LICENSE`](./LICENSE) file for details.

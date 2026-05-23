@@ -1,5 +1,4 @@
-node_modules/*
-.playwright*
+node_modules/
 .git
 .github
 .gitignore
@@ -10,12 +9,11 @@ docs/
 .vscode
 .idea
 *.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-dist/
 coverage/
-.nyc_output
 .cache
 *.tgz
 *.tar.gz
+bin/
+data/
+tmp/
+public/build/

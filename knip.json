@@ -1,0 +1,12 @@
+{
+	"$schema": "https://unpkg.com/knip@5/schema.json",
+	"entry": ["resources/js/app.ts"],
+	"project": ["resources/js/**/*.{ts,vue}", "resources/css/**/*.css"],
+	"ignoreBinaries": ["sleep", "air", "go", "golangci-lint"],
+	"ignoreDependencies": ["@inertiajs/core", "@antfu/eslint-config", "eslint-plugin-vuejs-accessibility"],
+	"ignore": [
+		"resources/css/app.css",
+		"resources/js/components/RegistryRepositoryBarChart.vue",
+		"resources/js/composables/useRipple.ts"
+	]
+}
