@@ -38,9 +38,9 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref, watch } from "vue"
 import { router, usePage } from "@inertiajs/vue3"
 import { useDebounceFn } from "@vueuse/core"
+import { onMounted, onUnmounted, ref, watch } from "vue"
 import RefreshButton from "~/components/RefreshButton.vue"
 import { buildFilterParams } from "~/lib/filterParams"
 
@@ -48,7 +48,20 @@ const page = usePage<{ props: { filters?: { search?: string } } }>()
 const searchValue = ref(((page.props.filters as any)?.search) || "")
 const searchInput = ref<HTMLInputElement | null>(null)
 
-watch(() => (page.props.filters as any)?.search, (v) => { searchValue.value = v || "" })
+const doSearch = useDebounceFn(() => {
+	const params = buildFilterParams({ search: searchValue.value || undefined })
+	router.get(`/?${params.toString()}`, {}, {
+		preserveScroll: true,
+		preserveState: true,
+		replace: true,
+		only: ["repositories", "totalRepositories", "filters"],
+	})
+}, 300)
+
+watch(() => (page.props.filters as any)?.search, (v) => {
+	searchValue.value = v || ""
+})
+
 watch(searchValue, (v) => {
 	if (v === (((page.props.filters as any)?.search) || "")) {
 		return
@@ -66,12 +79,4 @@ function handleKeydown(e: KeyboardEvent) {
 
 onMounted(() => document.addEventListener("keydown", handleKeydown))
 onUnmounted(() => document.removeEventListener("keydown", handleKeydown))
-
-const doSearch = useDebounceFn(() => {
-	const params = buildFilterParams({ search: searchValue.value || undefined })
-	router.get("/?" + params.toString(), {}, {
-		preserveScroll: true, preserveState: true, replace: true,
-		only: ["repositories", "totalRepositories", "filters"],
-	})
-}, 300)
 </script>

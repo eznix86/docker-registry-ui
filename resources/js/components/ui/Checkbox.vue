@@ -1,6 +1,3 @@
-
-
-
 <template>
 	<!-- eslint-disable-next-line vue-a11y/no-static-element-interactions -->
 	<div v-if="statusCode && !isHealthy" role="group" class="relative py-1 rounded group/status-row cursor-help" @mouseenter="isHovered = true" @mouseleave="isHovered = false" @focusin="isHovered = true" @focusout="isHovered = false">

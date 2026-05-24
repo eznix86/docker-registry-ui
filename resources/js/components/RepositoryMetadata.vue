@@ -1,6 +1,3 @@
-
-
-
 <template>
 	<div class="mb-6 sm:mb-8 pb-6 sm:pb-8 border-b border-outline">
 		<!-- Mobile: Two-column aligned layout -->

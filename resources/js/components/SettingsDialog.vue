@@ -1,6 +1,3 @@
-
-
-
 <template>
 	<Dialog v-model="isOpen">
 		<DialogTitle>Settings</DialogTitle>
@@ -92,7 +89,7 @@
 <script setup lang="ts">
 import { computed } from "vue"
 import { Button, Dialog, DialogTitle, Select, SelectContent, SelectItem, SelectTrigger } from "~/components/ui"
-import { isSettingsOpen, usePreferences, THEME_OPTIONS, FONT_SANS_OPTIONS, FONT_MONO_OPTIONS, RUNTIME_OPTIONS } from "~/composables/usePreferences"
+import { FONT_MONO_OPTIONS, FONT_SANS_OPTIONS, isSettingsOpen, RUNTIME_OPTIONS, THEME_OPTIONS, usePreferences } from "~/composables/usePreferences"
 
 const isOpen = isSettingsOpen
 const { theme, fontSans, fontMono, containerRuntime } = usePreferences()

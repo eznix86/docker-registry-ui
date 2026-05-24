@@ -1,4 +1,3 @@
-
 export interface RegistryStatusInfo {
 	code: number
 	message: string

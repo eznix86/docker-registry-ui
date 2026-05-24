@@ -1,6 +1,3 @@
-
-
-
 <template>
 	<div class="flex items-start justify-between gap-4 mb-4">
 		<h1 class="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold leading-tight lg:leading-[56.7px] text-foreground break-words min-w-0">
@@ -26,7 +23,8 @@ import type { Repository } from "~/types"
 import { useRepositoryName } from "~/composables/useRepositoryName"
 
 const props = withDefaults(defineProps<{ repository?: Repository, disableTagDeletion?: boolean }>(), {
-	repository: undefined, disableTagDeletion: false,
+	repository: undefined,
+	disableTagDeletion: false,
 })
 
 const emit = defineEmits<{ bulkDelete: [] }>()

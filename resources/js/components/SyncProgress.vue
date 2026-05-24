@@ -1,6 +1,3 @@
-
-
-
 <template>
 	<div v-if="shouldShow" class="w-full space-y-2 mb-4">
 		<!-- Progress Bar with Percentage -->

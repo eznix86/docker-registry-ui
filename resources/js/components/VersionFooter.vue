@@ -1,6 +1,3 @@
-
-
-
 <template>
 	<footer class="fixed bottom-4 right-6 text-sm text-muted-foreground backdrop-blur-sm bg-muted/50 px-3 py-1.5 rounded-lg shadow-sm">
 		<span class="text-muted-foreground">{{ displayCurrentVersion }}</span>

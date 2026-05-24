@@ -1,6 +1,3 @@
-
-
-
 <template>
 	<component :is="as" :class="body({ class: props.class })" v-bind="$attrs">
 		<slot />

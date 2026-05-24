@@ -1,6 +1,3 @@
-
-
-
 <template>
 	<DialogTitle
 		as="h2"

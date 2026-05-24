@@ -89,7 +89,10 @@ export function usePreferences() {
 	}
 
 	return {
-		theme, fontSans, fontMono, containerRuntime,
+		theme,
+		fontSans,
+		fontMono,
+		containerRuntime,
 		runtimeCommand,
 		getPullCommand,
 	}

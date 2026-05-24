@@ -1,6 +1,3 @@
-
-
-
 <template>
 	<ListboxOption
 		v-slot="{ active, selected }"

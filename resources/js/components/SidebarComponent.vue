@@ -1,13 +1,14 @@
-
-
-
 <template>
 	<aside class="w-80 bg-background h-full border-r border-outline p-8 flex flex-col">
 		<div class="flex-1 overflow-y pr-2 -mr-2">
-			<h2 class="text-lg font-semibold mb-6 text-foreground">Filter by</h2>
+			<h2 class="text-lg font-semibold mb-6 text-foreground">
+				Filter by
+			</h2>
 
 			<div class="mb-6">
-				<h3 class="text-sm font-semibold text-foreground mb-2">Registries</h3>
+				<h3 class="text-sm font-semibold text-foreground mb-2">
+					Registries
+				</h3>
 				<div class="space-y-2">
 					<Checkbox
 						v-for="registry in registries"
@@ -54,8 +55,8 @@
 </template>
 
 <script setup lang="ts">
-import { computed, defineAsyncComponent } from "vue"
 import { router, usePage } from "@inertiajs/vue3"
+import { computed, defineAsyncComponent } from "vue"
 import { Button, Checkbox, Select, SelectContent, SelectItem, SelectTrigger } from "~/components/ui"
 import { isSettingsOpen } from "~/composables/usePreferences"
 import { buildFilterParams } from "~/lib/filterParams"
@@ -65,7 +66,7 @@ interface SidebarComponentProps {
 	architectures: string[]
 }
 
-const props = defineProps<SidebarComponentProps>()
+defineProps<SidebarComponentProps>()
 const SettingsDialog = defineAsyncComponent(() => import("~/components/SettingsDialog.vue"))
 const page = usePage<{ props: { filters?: Record<string, any> } }>()
 
@@ -80,22 +81,38 @@ const selectedArchitecture = computed(() => {
 
 function navigate(f: Record<string, any>) {
 	const params = buildFilterParams(f)
-	router.get("/?" + params.toString(), {}, {
-		preserveScroll: true, preserveState: true, replace: true,
+	router.get(`/?${params.toString()}`, {}, {
+		preserveScroll: true,
+		preserveState: true,
+		replace: true,
 		only: ["repositories", "totalRepositories", "filters"],
 	})
 }
 
 function setRegistrySelection(regs: string[]) {
-	navigate({ registries: regs.length > 0 ? regs : undefined, architectures: (filters.value as any).architectures, untagged: (filters.value as any).showUntagged || undefined })
+	navigate({
+		registries: regs.length > 0 ? regs : undefined,
+		architectures: (filters.value as any).architectures,
+		untagged: (filters.value as any).showUntagged || undefined,
+	})
 }
 
 function handleArchitectureChange(value: string | number | undefined) {
-	if (!value || typeof value !== "string") return
-	navigate({ registries: (filters.value as any).registries, architectures: value === "all" ? undefined : [value], untagged: (filters.value as any).showUntagged || undefined })
+	if (!value || typeof value !== "string")
+		return
+
+	navigate({
+		registries: (filters.value as any).registries,
+		architectures: value === "all" ? undefined : [value],
+		untagged: (filters.value as any).showUntagged || undefined,
+	})
 }
 
 function toggleUntagged() {
-	navigate({ registries: (filters.value as any).registries, architectures: (filters.value as any).architectures, untagged: !showUntagged.value || undefined })
+	navigate({
+		registries: (filters.value as any).registries,
+		architectures: (filters.value as any).architectures,
+		untagged: !showUntagged.value || undefined,
+	})
 }
 </script>

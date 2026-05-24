@@ -9,7 +9,6 @@ A simple, lightweight **UI for exploring and managing Docker/OCI registries**.
 > [!NOTE]
 > **v1.0.0** is now available. This is a Go backend, sync engine, themes, and updated UI with helm OCI support. The legacy React frontend (v0.x) is available on the [0.x branch](https://github.com/eznix86/docker-registry-ui/tree/0.x).
 
-
 ## Quick Start
 
 The UI can be deployed in minutes with Docker Compose:

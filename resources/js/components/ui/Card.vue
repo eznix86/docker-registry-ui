@@ -1,6 +1,3 @@
-
-
-
 <template>
 	<component :is="as" :class="card({ variant, class: props.class })" v-bind="$attrs">
 		<slot />

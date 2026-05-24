@@ -1,6 +1,3 @@
-
-
-
 <template>
 	<component :is="as" :class="header({ class: props.class })" v-bind="$attrs">
 		<slot />

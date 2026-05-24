@@ -1,4 +1,3 @@
-
 import { encodeRouteSegment } from "~/lib/routes"
 
 export function buildFilterParams(

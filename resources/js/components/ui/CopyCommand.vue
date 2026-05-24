@@ -1,6 +1,3 @@
-
-
-
 <template>
 	<button
 		v-ripple

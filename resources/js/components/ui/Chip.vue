@@ -1,6 +1,3 @@
-
-
-
 <template>
 	<component
 		:is="as"

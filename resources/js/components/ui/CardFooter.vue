@@ -1,6 +1,3 @@
-
-
-
 <template>
 	<component :is="as" :class="footer({ class: props.class })" v-bind="$attrs">
 		<slot />

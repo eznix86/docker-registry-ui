@@ -28,9 +28,8 @@
 	"devDependencies": {
 		"@antfu/eslint-config": "^6.2.0",
 		"@tailwindcss/vite": "^4.0.0",
-		"tailwindcss": "^4.0.0",
-		"@types/semver": "^7.7.0",
 		"@types/node": "^24.0.0",
+		"@types/semver": "^7.7.0",
 		"@vitejs/plugin-vue": "^6.0.0",
 		"concurrently": "^9.2.0",
 		"esbuild": "^0.25.0",
@@ -39,6 +38,7 @@
 		"knip": "^5.66.0",
 		"laravel-vite-plugin": "^3.0.0",
 		"rollup-plugin-visualizer": "^6.0.0",
+		"tailwindcss": "^4.0.0",
 		"typescript": "^5.9.0",
 		"vite": "^8.0.0",
 		"vite-plugin-manifest-sri": "^0.2.0",
