@@ -2,6 +2,7 @@ package registry
 
 import (
 	"context"
+	"crypto/tls"
 	"encoding/base64"
 	"errors"
 	"fmt"
@@ -32,6 +33,7 @@ type Config struct {
 	URL         string
 	Username    string
 	Password    string
+	Insecure    bool
 	IsGitHub    bool
 	IsGitHubOrg bool
 }
@@ -40,10 +42,12 @@ type Client struct {
 	registryclient.RegistryClient
 	name string
 	host string
+	url  string
 }
 
 func (c *Client) Name() string { return c.name }
 func (c *Client) Host() string { return c.host }
+func (c *Client) URL() string  { return c.url }
 
 type Manager struct {
 	clients map[string]*Client
@@ -100,6 +104,7 @@ func (m *Manager) newClient(cfg Config, httpMaxRetries int, disableTagDeletion b
 			MaxConnsPerHost:       64,
 			IdleConnTimeout:       idleConnTimeout,
 			TLSHandshakeTimeout:   tlsTimeout,
+			TLSClientConfig:       &tls.Config{InsecureSkipVerify: cfg.Insecure},
 			ResponseHeaderTimeout: responseHeaderTimeout,
 			ExpectContinueTimeout: expectContinueTimeout,
 		},
@@ -115,7 +120,7 @@ func (m *Manager) newClient(cfg Config, httpMaxRetries int, disableTagDeletion b
 		libClient = buildBaseClient(cfg, hc, maxAttempts, disableTagDeletion)
 	}
 
-	return &Client{RegistryClient: libClient, name: cfg.Name, host: host}
+	return &Client{RegistryClient: libClient, name: cfg.Name, host: host, url: strings.TrimSuffix(cfg.URL, "/")}
 }
 
 func buildBaseClient(cfg Config, hc *http.Client, maxAttempts int, disableDelete bool) *registryclient.BaseClient {
@@ -193,6 +198,7 @@ func loadDefaultConfig() *Config {
 		cfg.Username = auth.user
 		cfg.Password = auth.pass
 	}
+	cfg.Insecure = strings.ToLower(os.Getenv("REGISTRY_SETTINGS_INSECURE")) == "true"
 	if isGHCR(url) {
 		cfg.IsGitHub = true
 		cfg.IsGitHubOrg = os.Getenv("REGISTRY_SETTINGS_ORG") == "true"
@@ -223,6 +229,7 @@ func loadNamedConfigs() ([]Config, error) {
 			cfg.Username = auth.user
 			cfg.Password = auth.pass
 		}
+		cfg.Insecure = strings.ToLower(os.Getenv("REGISTRY_SETTINGS_"+suffix+"_INSECURE")) == "true"
 		if isGHCR(v) {
 			cfg.IsGitHub = true
 			cfg.IsGitHubOrg = strings.ToLower(os.Getenv("REGISTRY_SETTINGS_"+suffix+"_ORG")) == "true"
