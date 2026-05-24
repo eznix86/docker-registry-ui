@@ -393,7 +393,7 @@ func (e *engine) syncRegistries(ctx context.Context) error {
 		if err != nil {
 			return fmt.Errorf("get client %s: %w", name, err)
 		}
-		if _, err := e.store.UpsertRegistryByFields(ctx, name, "https://"+client.Host(), client.Host(), 0); err != nil {
+		if _, err := e.store.UpsertRegistryByFields(ctx, name, client.URL(), client.Host(), 0); err != nil {
 			return fmt.Errorf("upsert registry %s: %w", name, err)
 		}
 	}
