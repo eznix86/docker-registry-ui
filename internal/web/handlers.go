@@ -14,11 +14,12 @@ import (
 )
 
 type handler struct {
-	inertia     *gonertia.ViteInstance
-	store       *store.Store
-	regManager  *registry.Manager
-	broadcaster *progress.WebSocketBroadcaster
-	manualCh    sync.ManualSyncChannel
+	inertia        *gonertia.ViteInstance
+	store          *store.Store
+	regManager     *registry.Manager
+	broadcaster    *progress.WebSocketBroadcaster
+	manualCh       sync.ManualSyncChannel
+	showUsageBar   bool
 }
 
 func (h *handler) explore(w http.ResponseWriter, r *http.Request) {
@@ -46,6 +47,16 @@ func (h *handler) explore(w http.ResponseWriter, r *http.Request) {
 		"totalRepositories": total,
 		"architectures":     archs,
 		"filters":           exploreProps(filters),
+	}
+
+	if h.showUsageBar {
+		storageByRegistry, err := h.store.GetStorageUsageByRegistry(ctx)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		props["charts"] = gonertia.Props{"storageByRegistry": storageByRegistry}
 	}
 
 	if err := h.inertia.Render(w, r, "Explore", props); err != nil {

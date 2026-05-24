@@ -1,7 +1,7 @@
 <template>
 	<div class="w-full space-y-1.5">
 		<div class="h-[72px] w-full">
-			<VChart class="h-full w-full" :option="option" />
+			<VChart class="h-full w-full" :option="option" @click="handleChartClick" />
 		</div>
 
 		<div class="flex flex-wrap gap-x-3 gap-y-1.5">
@@ -42,6 +42,8 @@ type EChartsOption = ComposeOption<
 interface ChartItem {
 	label: string
 	value: number
+	href?: string
+	hint?: string
 }
 
 interface SegmentedHorizontalBarChartProps {
@@ -85,8 +87,10 @@ const option = computed<EChartsOption>(() => ({
 
 			const value = Number(params.value ?? 0)
 			const percent = total.value > 0 ? Math.round((value / total.value) * 100) : 0
+			const item = normalizedItems.value[params.seriesIndex ?? -1]
+			const hint = item?.hint ? `<br/><span style=\"opacity:0.75\">${item.hint}</span>` : ""
 
-			return `<strong>${params.seriesName}</strong><br/>${props.formatter(value)} (${percent}%)`
+			return `<strong>${params.seriesName}</strong><br/>${props.formatter(value)} (${percent}%)${hint}`
 		},
 	},
 	xAxis: {
@@ -104,6 +108,7 @@ const option = computed<EChartsOption>(() => ({
 		type: "bar",
 		stack: "total",
 		barWidth: 18,
+		cursor: item.href ? "pointer" : "default",
 		data: [item.value],
 		emphasis: { focus: "series" },
 		itemStyle: {
@@ -121,6 +126,19 @@ function colorAt(index: number): string {
 
 function segmentRadius(): number[] {
 	return [0, 0, 0, 0]
+}
+
+function handleChartClick(params: { componentType?: string, seriesIndex?: number }) {
+	if (params.componentType !== "series" || params.seriesIndex == null) {
+		return
+	}
+
+	const item = normalizedItems.value[params.seriesIndex]
+	if (!item?.href) {
+		return
+	}
+
+	window.location.href = item.href
 }
 
 function normalizeItems(items: ChartItem[], maxItems = items.length, aggregateLabel = "other") {

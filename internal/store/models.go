@@ -143,6 +143,12 @@ type RegistryRepositoryRow struct {
 	TotalSizeInBytes int64  `json:"totalSizeInBytes"`
 }
 
+type RegistryStorageUsageView struct {
+	RegistryHost    string `json:"registryHost"`
+	DisplayName     string `json:"displayName"`
+	TotalSizeBytes  int64  `json:"totalSizeBytes"`
+}
+
 // Filter and pagination types.
 
 type RepositoryFilters struct {
