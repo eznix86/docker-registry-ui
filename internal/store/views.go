@@ -4,8 +4,11 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"sort"
 	"strings"
 	"time"
+
+	"golang.org/x/mod/semver"
 )
 
 func (s *Store) GetTagsForRepository(ctx context.Context, repositoryID uint, filter TagFilter, pagination ScrollPagination) (ScrollResult, error) {
@@ -36,28 +39,41 @@ func (s *Store) GetTagsForRepository(ctx context.Context, repositoryID uint, fil
 	}
 
 	orderClause := "created_at DESC"
+	applyVersionSort := false
 	switch filter.SortBy {
 	case "size-asc":
 		orderClause = "total_size ASC"
 	case "size-desc":
 		orderClause = "total_size DESC"
 	case "oldest":
-		orderClause = "created_at ASC"
+		applyVersionSort = true
 	case "name-asc":
 		orderClause = "name ASC"
 	case "name-desc":
 		orderClause = "name DESC"
+	default:
+		applyVersionSort = true
 	}
 
 	offset := (pagination.Page - 1) * pagination.PageSize
+	limit := pagination.PageSize
+	queryOffset := offset
+	if applyVersionSort {
+		limit = 0
+		queryOffset = 0
+	}
 
-	rows, err := s.queryTagData(ctx, repositoryID, filter.Name, orderClause, pagination.PageSize, offset)
+	rows, err := s.queryTagData(ctx, repositoryID, filter.Name, orderClause, limit, queryOffset)
 	if err != nil {
 		return ScrollResult{}, err
 	}
 
 	tagViews := s.buildTagViews(rows)
 	s.populateAliases(ctx, repositoryID, tagViews)
+	if applyVersionSort {
+		s.sortTagViewsByVersion(tagViews, filter.SortBy == "oldest")
+		tagViews = paginateTagViews(tagViews, offset, pagination.PageSize)
+	}
 
 	return ScrollResult{
 		Tags:         tagViews,
@@ -96,15 +112,21 @@ func (s *Store) queryTagData(ctx context.Context, repositoryID uint, nameFilter,
 		args = append(args, "%"+nameFilter+"%")
 	}
 
-	args = append(args, limit, offset)
+	limitClause := ""
+	if limit > 0 {
+		limitClause = "LIMIT ? OFFSET ?"
+		args = append(args, limit, offset)
+	}
 
 	query := fmt.Sprintf(`
 		WITH filtered_tags AS (
-			SELECT id, name, digest, kind, created_at, chart_name, chart_version, chart_desc
+			SELECT
+				id, name, digest, kind, created_at, chart_name, chart_version, chart_desc,
+				ROW_NUMBER() OVER (ORDER BY %s) AS sort_order
 			FROM tags_view
 			WHERE repository_id = ? %s
 			ORDER BY %s
-			LIMIT ? OFFSET ?
+			%s
 		)
 		SELECT
 			ft.id, ft.name, ft.digest, ft.kind, ft.created_at,
@@ -113,7 +135,7 @@ func (s *Store) queryTagData(ctx context.Context, repositoryID uint, nameFilter,
 			ft.chart_name, ft.chart_version, ft.chart_desc
 		FROM filtered_tags ft
 		LEFT JOIN manifests m ON m.digest = ft.digest AND ft.kind IN ('image', 'helm')
-		ORDER BY ft.id`, nameCond, order)
+		ORDER BY ft.sort_order, m.digest`, order, nameCond, order, limitClause)
 
 	rows, err := s.query(ctx, query, args...)
 	if err != nil {
@@ -368,6 +390,70 @@ func (s *Store) populateAliases(ctx context.Context, repositoryID uint, tagViews
 			}
 		}
 	}
+}
+
+func (s *Store) sortTagViewsByVersion(tagViews []TagView, ascending bool) {
+	sort.SliceStable(tagViews, func(i, j int) bool {
+		leftVersion, leftOK := canonicalSemver(tagViews[i].Name)
+		rightVersion, rightOK := canonicalSemver(tagViews[j].Name)
+
+		switch {
+		case leftOK && rightOK:
+			cmp := semver.Compare(leftVersion, rightVersion)
+			if cmp == 0 {
+				return compareTagViewFallback(tagViews[i], tagViews[j], ascending)
+			}
+			if ascending {
+				return cmp < 0
+			}
+			return cmp > 0
+		case leftOK != rightOK:
+			return leftOK
+		default:
+			return compareTagViewFallback(tagViews[i], tagViews[j], ascending)
+		}
+	})
+}
+
+func paginateTagViews(tagViews []TagView, offset, pageSize int) []TagView {
+	if offset >= len(tagViews) {
+		return []TagView{}
+	}
+
+	end := offset + pageSize
+	if end > len(tagViews) {
+		end = len(tagViews)
+	}
+
+	return tagViews[offset:end]
+}
+
+func canonicalSemver(tagName string) (string, bool) {
+	version := tagName
+	if !strings.HasPrefix(version, "v") {
+		version = "v" + version
+	}
+
+	if !semver.IsValid(version) {
+		return "", false
+	}
+
+	return version, true
+}
+
+func compareTagViewFallback(left, right TagView, ascending bool) bool {
+	if !left.CreatedAt.Equal(right.CreatedAt) {
+		if ascending {
+			return left.CreatedAt.Before(right.CreatedAt)
+		}
+		return left.CreatedAt.After(right.CreatedAt)
+	}
+
+	if ascending {
+		return left.Name < right.Name
+	}
+
+	return left.Name > right.Name
 }
 
 func (s *Store) GetRegistryStats(ctx context.Context, host string) (*RegistryStatsView, error) {

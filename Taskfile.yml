@@ -17,6 +17,12 @@ vars:
   TAG:
     sh: printf "%s" "${TAG:-0.0.0}"
 
+  GIT_COMMIT:
+    sh: git rev-parse HEAD
+
+  BUILD_DATE:
+    sh: date -u +"%Y-%m-%dT%H:%M:%SZ"
+
   FULL_IMAGE: "{{.REGISTRY}}/{{.IMAGE_NAME}}:{{.TAG}}"
 
 tasks:
@@ -55,13 +61,13 @@ tasks:
     desc: Build the Docker image locally
     deps: [image:builder]
     cmds:
-      - docker buildx build --builder "{{.BUILDER_NAME}}" -t "{{.FULL_IMAGE}}" --load .
+      - docker buildx build --builder "{{.BUILDER_NAME}}" --build-arg VERSION="{{.TAG}}" --build-arg GIT_COMMIT="{{.GIT_COMMIT}}" --build-arg BUILD_DATE="{{.BUILD_DATE}}" -t "{{.FULL_IMAGE}}" --load .
 
   image-push:
     desc: Build and push the multi-arch Docker image
     deps: [image:builder]
     cmds:
-      - docker buildx build --builder "{{.BUILDER_NAME}}" --platform linux/amd64,linux/arm64 -t "{{.FULL_IMAGE}}" --push .
+      - docker buildx build --builder "{{.BUILDER_NAME}}" --platform linux/amd64,linux/arm64 --build-arg VERSION="{{.TAG}}" --build-arg GIT_COMMIT="{{.GIT_COMMIT}}" --build-arg BUILD_DATE="{{.BUILD_DATE}}" -t "{{.FULL_IMAGE}}" --push .
 
   helm:lint:
     desc: Lint the Helm chart
