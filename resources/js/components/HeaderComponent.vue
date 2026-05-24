@@ -27,7 +27,6 @@
 						placeholder="Search repositories..."
 						aria-label="Search repositories"
 						class="w-full bg-primary-foreground/10 text-primary-foreground placeholder-primary-foreground/50 pl-12 pr-3 sm:pr-14 py-2 text-sm sm:text-base rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-foreground/30 focus:bg-primary-foreground/15 transition-colors [&::-webkit-search-cancel-button]:hidden [&::-webkit-search-decoration]:hidden"
-						@keyup.enter="doSearch"
 					>
 					<span class="absolute right-3 text-xs bg-primary-foreground/15 px-2 py-1 rounded text-primary-foreground/50 hidden sm:inline">⌘K</span>
 				</div>
@@ -50,6 +49,13 @@ const searchValue = ref(((page.props.filters as any)?.search) || "")
 const searchInput = ref<HTMLInputElement | null>(null)
 
 watch(() => (page.props.filters as any)?.search, (v) => { searchValue.value = v || "" })
+watch(searchValue, (v) => {
+	if (v === (((page.props.filters as any)?.search) || "")) {
+		return
+	}
+
+	doSearch()
+})
 
 function handleKeydown(e: KeyboardEvent) {
 	if ((e.metaKey || e.ctrlKey) && e.key === "k") {
