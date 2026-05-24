@@ -19,7 +19,7 @@ type handler struct {
 	regManager     *registry.Manager
 	broadcaster    *progress.WebSocketBroadcaster
 	manualCh       sync.ManualSyncChannel
-	showTotalUsage bool
+	showUsageBar   bool
 }
 
 func (h *handler) explore(w http.ResponseWriter, r *http.Request) {
@@ -49,7 +49,7 @@ func (h *handler) explore(w http.ResponseWriter, r *http.Request) {
 		"filters":           exploreProps(filters),
 	}
 
-	if h.showTotalUsage {
+	if h.showUsageBar {
 		storageByRegistry, err := h.store.GetStorageUsageByRegistry(ctx)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)

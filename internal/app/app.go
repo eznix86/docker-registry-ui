@@ -218,7 +218,7 @@ func (r *runtime) initServer(cfg *Config, withSync bool) error {
 		Host:            cfg.Server.Host,
 		Port:            cfg.Server.Port,
 		Debug:           cfg.Server.Debug,
-		ShowTotalUsage:  cfg.App.ShowTotalUsage,
+		ShowUsageBar:    cfg.App.ShowUsageBar,
 	})
 	if err != nil {
 		return fmt.Errorf("create server: %w", err)
@@ -253,7 +253,7 @@ func newInertia(cfg *Config) (*gonertia.ViteInstance, error) {
 	}
 	i.ShareProp("disableTagDeletion", cfg.App.DisableTagDeletion)
 	i.ShareProp("appVersion", version.New().Short())
-	i.ShareProp("showTotalUsage", cfg.App.ShowTotalUsage)
+	i.ShareProp("showUsageBar", cfg.App.ShowUsageBar)
 	return i, nil
 }
 

@@ -16,7 +16,7 @@
 				</div>
 
 				<main v-auto-animate class="flex-1 lg:p-8 p-4 overflow-y-auto">
-					<section v-if="showTotalUsage && registryUsageChart.length > 0" class="mb-4 rounded-lg border border-outline bg-card px-5 py-4 shadow-[0_1px_3px_0_rgba(0,0,0,0.05)]">
+					<section v-if="showUsageBar && registryUsageChart.length > 0" class="mb-4 rounded-lg border border-outline bg-card px-5 py-4 shadow-[0_1px_3px_0_rgba(0,0,0,0.05)]">
 						<div class="space-y-2">
 							<div>
 								<h2 class="text-sm font-semibold tracking-wide text-foreground">
@@ -76,7 +76,7 @@ const page = usePage<ExploreProps>()
 const repositories = computed(() => page.props.repositories || [])
 const architectureList = computed(() => page.props.architectures || [])
 const totalRepos = computed(() => page.props.totalRepositories || 0)
-const showTotalUsage = computed(() => Boolean(page.props.showTotalUsage))
+const showUsageBar = computed(() => Boolean(page.props.showUsageBar))
 const storageByRegistry = computed(() => normalizeArray(page.props.charts?.storageByRegistry))
 const sidebarOpen = ref(false)
 const registryList = computed(() => page.props.registries || [])

@@ -71,7 +71,7 @@ export type ExploreProps = PageProps & SharedProps & {
 	totalRepositories: number
 	architectures: string[]
 	filters: ExploreFilters
-	showTotalUsage?: boolean
+	showUsageBar?: boolean
 	charts?: {
 		storageByRegistry: RegistryStorageUsage[]
 	}

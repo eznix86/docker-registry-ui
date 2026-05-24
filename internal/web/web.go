@@ -36,7 +36,7 @@ type Options struct {
 	Host            string
 	Port            string
 	Debug           bool
-	ShowTotalUsage  bool
+	ShowUsageBar    bool
 }
 
 func New(opts Options) (*Server, error) {
@@ -59,7 +59,7 @@ func New(opts Options) (*Server, error) {
 		regManager:  opts.RegistryManager,
 		broadcaster: opts.Broadcaster,
 		manualCh:    opts.ManualSyncChan,
-		showTotalUsage: opts.ShowTotalUsage,
+		showUsageBar:   opts.ShowUsageBar,
 	}
 
 	r := chi.NewRouter()
