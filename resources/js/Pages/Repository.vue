@@ -1,6 +1,3 @@
-
-
-
 <template>
 	<AppLayout>
 		<div class="h-screen bg-background text-foreground flex flex-col">
@@ -63,8 +60,8 @@ import RepositoryTagCard from "~/components/RepositoryTagCard.vue"
 import { useAutoRefreshOnSync } from "~/composables/useAutoRefreshOnSync"
 import AppLayout from "~/layouts/AppLayout.vue"
 import { buildFilterParams } from "~/lib/filterParams"
-import { currentPath } from "~/lib/routes"
 import { normalizeArray } from "~/lib/normalize"
+import { currentPath } from "~/lib/routes"
 
 const page = usePage<RepositoryProps>()
 const repository = computed(() => page.props.repository)
@@ -74,8 +71,13 @@ const bulkDeleteTags = computed(() => (page.props as any).bulkDeleteTags ?? [])
 const tagToDelete = ref<Tag | null>(null)
 const bulkDeleteRef = ref<InstanceType<typeof BulkDeleteTagsDialog> | null>(null)
 
-function openDeleteTag(tag: Tag) { tagToDelete.value = tag }
-function openBulkDelete() { bulkDeleteRef.value?.open() }
+function openDeleteTag(tag: Tag) {
+	tagToDelete.value = tag
+}
+
+function openBulkDelete() {
+	bulkDeleteRef.value?.open()
+}
 
 const currentSortBy = ref(page.props.filters?.sortBy || "newest")
 const currentFilter = ref(page.props.filters?.filter || "")
@@ -83,13 +85,24 @@ const currentFilter = ref(page.props.filters?.filter || "")
 function navigate(params: Record<string, string>) {
 	const p = Object.fromEntries(buildFilterParams(params).entries())
 	router.get(currentPath(), p, {
-		preserveScroll: true, preserveState: true, replace: true,
-		reset: ["tags"], only: ["tags", "filters"],
+		preserveScroll: true,
+		preserveState: true,
+		replace: true,
+		reset: ["tags"],
+		only: ["tags", "filters"],
 	})
 }
 
-function setSortBy(v: string) { const val = v as RepositoryFilters["sortBy"]; currentSortBy.value = val; navigate({ sortBy: val, filter: currentFilter.value }) }
-function setFilter(v: string) { currentFilter.value = v; navigate({ sortBy: currentSortBy.value, filter: v }) }
+function setSortBy(v: string) {
+	const val = v as RepositoryFilters["sortBy"]
+	currentSortBy.value = val
+	navigate({ sortBy: val, filter: currentFilter.value })
+}
+
+function setFilter(v: string) {
+	currentFilter.value = v
+	navigate({ sortBy: currentSortBy.value, filter: v })
+}
 
 useAutoRefreshOnSync()
 </script>

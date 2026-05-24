@@ -32,7 +32,9 @@
 		</div>
 
 		<div class="flex justify-end mt-6">
-			<Button @click="close">CLOSE</Button>
+			<Button @click="close">
+				CLOSE
+			</Button>
 		</div>
 	</Dialog>
 </template>
@@ -45,8 +47,15 @@ import { Button, CopyCommand, Dialog, DialogTitle } from "~/components/ui"
 const isOpen = ref(false)
 const repo = ref<Repository | null>(null)
 
-function open(r: Repository) { repo.value = r; isOpen.value = true }
-function close() { isOpen.value = false; repo.value = null }
+function open(r: Repository) {
+	repo.value = r
+	isOpen.value = true
+}
+
+function close() {
+	isOpen.value = false
+	repo.value = null
+}
 
 defineExpose({ open, close })
 </script>
