@@ -3,7 +3,7 @@
 
 <template>
 	<footer class="fixed bottom-4 right-6 text-sm text-muted-foreground backdrop-blur-sm bg-muted/50 px-3 py-1.5 rounded-lg shadow-sm">
-		<span class="text-muted-foreground">{{ resolvedCurrentVersion }}</span>
+		<span class="text-muted-foreground">{{ displayCurrentVersion }}</span>
 		<template v-if="resolvedLatestVersion && hasNewerRelease">
 			<span class="mx-1 text-muted-foreground">•</span>
 			<a :href="resolvedUpdateURL" class="text-primary hover:underline" target="_blank" rel="noreferrer">
@@ -50,6 +50,7 @@ const releaseVersion = ref(cachedRelease.version)
 const releaseURL = ref(cachedRelease.url)
 
 const resolvedCurrentVersion = computed(() => props.currentVersion || props.shared?.appVersion || "dev")
+const displayCurrentVersion = computed(() => formatVersion(resolvedCurrentVersion.value))
 const resolvedLatestVersion = computed(() => props.latestVersion || releaseVersion.value)
 const resolvedUpdateURL = computed(() => props.updateUrl || releaseURL.value || defaultUpdateURL)
 const hasNewerRelease = computed(() => {
@@ -126,5 +127,17 @@ function normalizeSemver(version: string | undefined): string | null {
 
 	const normalizedVersion = version.startsWith("v") ? version.slice(1) : version
 	return valid(normalizedVersion)
+}
+
+function formatVersion(version: string | undefined): string {
+	if (!version) {
+		return "dev"
+	}
+
+	if (version === "dev") {
+		return version
+	}
+
+	return version.startsWith("v") ? version : `v${version}`
 }
 </script>
