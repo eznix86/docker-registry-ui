@@ -508,6 +508,33 @@ func (s *Store) GetRegistryStorageByNamespace(ctx context.Context, host string) 
 	return result, rows.Err()
 }
 
+func (s *Store) GetStorageUsageByRegistry(ctx context.Context) ([]RegistryStorageUsageView, error) {
+	rows, err := s.query(ctx, `
+		SELECT
+			r.host,
+			CASE WHEN r.name = '' THEN r.host ELSE r.name END,
+			COALESCE(SUM(rv.total_size_bytes), 0)
+		FROM registries r
+		LEFT JOIN repositories_view rv ON rv.registry_host = r.host
+		GROUP BY r.host, r.name
+		ORDER BY SUM(rv.total_size_bytes) DESC, r.host ASC`)
+	if err != nil {
+		return nil, fmt.Errorf("get storage usage by registry: %w", err)
+	}
+	defer rows.Close()
+
+	var result []RegistryStorageUsageView
+	for rows.Next() {
+		var item RegistryStorageUsageView
+		if err := rows.Scan(&item.RegistryHost, &item.DisplayName, &item.TotalSizeBytes); err != nil {
+			return nil, fmt.Errorf("scan registry storage usage: %w", err)
+		}
+		result = append(result, item)
+	}
+
+	return result, rows.Err()
+}
+
 func (s *Store) GetRegistryArchitectureCoverage(ctx context.Context, host string) ([]ArchitectureCoverageView, error) {
 	rows, err := s.query(ctx,
 		`SELECT m.architecture,

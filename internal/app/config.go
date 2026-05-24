@@ -25,6 +25,7 @@ type AppConfig struct {
 	VerboseCount       int    `flag:"verbose"`
 	Debug              bool   `env:"APP_DEBUG" envDefault:"false" flag:"debug"`
 	DisableTagDeletion bool   `env:"DISABLE_TAG_DELETION" envDefault:"false"`
+	ShowTotalUsage     bool   `env:"SHOW_TOTAL_USAGE" envDefault:"false"`
 }
 
 type ServerConfig struct {

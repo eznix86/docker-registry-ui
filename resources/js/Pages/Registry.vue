@@ -193,7 +193,7 @@ import Chip from "~/components/ui/Chip.vue"
 import AppLayout from "~/layouts/AppLayout.vue"
 import { normalizeArray } from "~/lib/normalize"
 import { registryPath, repositoryPath } from "~/lib/routes"
-import { formatBytes } from "~/lib/utils"
+import { formatBytes, formatRegistryName } from "~/lib/utils"
 
 const RegistryPieChart = defineAsyncComponent(() => import("~/components/RegistryPieChart.vue"))
 const SegmentedHorizontalBarChart = defineAsyncComponent(() => import("~/components/SegmentedHorizontalBarChart.vue"))
@@ -214,7 +214,7 @@ const registryTitle = computed(() => {
 	if (!name) {
 		return "REGISTRY"
 	}
-	return `${name} registry`.toUpperCase()
+	return `${formatRegistryName(name)} registry`.toUpperCase()
 })
 
 const storageChart = computed(() => storageByNamespace.value.map(item => ({
@@ -251,7 +251,7 @@ function formatCount(value: number) {
 
 function formatRegistryOption(item: { host: string, name?: string, status?: number }) {
 	if (item.name?.trim()) {
-		return `${item.name} (${item.host})`
+		return `${formatRegistryName(item.name)} (${item.host})`
 	}
 
 	return item.host

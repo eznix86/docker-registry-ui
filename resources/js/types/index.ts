@@ -52,6 +52,12 @@ export interface RegistryRepositoryRow {
 	totalSizeInBytes: number
 }
 
+export interface RegistryStorageUsage {
+	registryHost: string
+	displayName: string
+	totalSizeBytes: number
+}
+
 export interface ExploreFilters {
 	registries: string[]
 	architectures: string[]
@@ -65,6 +71,10 @@ export type ExploreProps = PageProps & SharedProps & {
 	totalRepositories: number
 	architectures: string[]
 	filters: ExploreFilters
+	showTotalUsage?: boolean
+	charts?: {
+		storageByRegistry: RegistryStorageUsage[]
+	}
 }
 
 export interface Image {
