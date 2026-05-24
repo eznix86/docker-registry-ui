@@ -1,6 +1,3 @@
-
-
-
 <template>
 	<ListboxButton v-bind="$attrs" class="grid w-full cursor-default grid-cols-1 rounded-md bg-background py-2 pr-2 pl-3 text-left text-foreground outline-1 -outline-offset-1 outline-field focus:outline-2 focus:-outline-offset-2 focus:outline-focus text-sm/6">
 		<span class="col-start-1 row-start-1 truncate pr-6 flex items-center">

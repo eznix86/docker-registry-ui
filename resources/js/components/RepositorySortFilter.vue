@@ -1,6 +1,3 @@
-
-
-
 <template>
 	<div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 sm:justify-between mb-6">
 		<div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-4">
@@ -43,9 +40,9 @@
 
 <script setup lang="ts">
 import type { Tag } from "~/types"
+import { usePage } from "@inertiajs/vue3"
 import { computed } from "vue"
 import { Select, SelectContent, SelectItem, SelectTrigger } from "~/components/ui"
-import { usePage } from "@inertiajs/vue3"
 import { normalizeArray } from "~/lib/normalize"
 
 const props = defineProps<{
@@ -63,7 +60,7 @@ const page = usePage<{ props: { tags?: any } }>()
 const tags = computed(() => normalizeArray((page.props.tags as any)?.data) as Tag[])
 
 const sortByDisplay = computed(() => {
-	const m: Record<string, string> = { newest: "Newest", oldest: "Oldest", "name-asc": "Name (A-Z)", "name-desc": "Name (Z-A)", "size-asc": "Size (Smallest)", "size-desc": "Size (Largest)" }
+	const m: Record<string, string> = { "newest": "Newest", "oldest": "Oldest", "name-asc": "Name (A-Z)", "name-desc": "Name (Z-A)", "size-asc": "Size (Smallest)", "size-desc": "Size (Largest)" }
 	return m[props.sortBy] || "Newest"
 })
 </script>

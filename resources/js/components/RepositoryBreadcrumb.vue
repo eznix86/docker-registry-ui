@@ -1,6 +1,3 @@
-
-
-
 <template>
 	<nav class="mb-4 sm:mb-6">
 		<ol

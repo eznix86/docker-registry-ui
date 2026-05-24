@@ -1,6 +1,3 @@
-
-
-
 <template>
 	<Listbox v-model="model" v-bind="$attrs">
 		<div class="relative w-full">

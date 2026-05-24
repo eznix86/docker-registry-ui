@@ -1,4 +1,3 @@
-
 import type { Directive } from "vue"
 
 export const vRipple: Directive = {

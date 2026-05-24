@@ -1,6 +1,3 @@
-
-
-
 <template>
 	<TransitionRoot appear :show="modelValue" as="template">
 		<HeadlessDialog as="div" class="relative z-50 lg:hidden" @close="modelValue = false">

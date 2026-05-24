@@ -1,6 +1,3 @@
-
-
-
 <template>
 	<component :is="as" v-ripple :type="type" :class="button({ variant, size, class: props.class })" v-bind="$attrs">
 		<slot />

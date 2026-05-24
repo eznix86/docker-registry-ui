@@ -1,4 +1,3 @@
-
 import { router } from "@inertiajs/vue3"
 import { useDebounceFn, useTimeoutFn } from "@vueuse/core"
 import { defineStore } from "pinia"

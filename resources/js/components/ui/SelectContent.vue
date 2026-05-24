@@ -1,6 +1,3 @@
-
-
-
 <template>
 	<transition
 		leave-active-class="transition duration-100 ease-out"

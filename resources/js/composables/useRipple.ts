@@ -1,4 +1,3 @@
-
 export function useRipple() {
 	const createRipple = (e: MouseEvent, element: HTMLElement) => {
 		const ripple = document.createElement("span")

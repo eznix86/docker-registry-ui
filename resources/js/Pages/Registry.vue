@@ -1,6 +1,3 @@
-
-
-
 <template>
 	<AppLayout>
 		<div class="h-screen bg-background text-foreground flex flex-col">

@@ -1,4 +1,3 @@
-
 import type { DefineComponent } from "vue"
 import { autoAnimatePlugin } from "@formkit/auto-animate/vue"
 import { createInertiaApp } from "@inertiajs/vue3"

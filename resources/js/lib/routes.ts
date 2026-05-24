@@ -1,4 +1,3 @@
-
 export interface RepositoryPathInput {
 	name: string
 	namespace: string

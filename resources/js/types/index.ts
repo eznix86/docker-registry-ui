@@ -1,4 +1,3 @@
-
 import type { PageProps } from "@inertiajs/core"
 
 // Shared global props available on all pages

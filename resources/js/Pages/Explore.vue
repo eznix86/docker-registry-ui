@@ -1,6 +1,3 @@
-
-
-
 <template>
 	<AppLayout>
 		<div class="h-screen bg-background text-foreground flex flex-col">
@@ -60,7 +57,6 @@ import { computed, defineAsyncComponent, ref } from "vue"
 import ExploreResultsHeader from "~/components/ExploreResultsHeader.vue"
 import HeaderComponent from "~/components/HeaderComponent.vue"
 import RepositoryCard from "~/components/RepositoryCard.vue"
-import { formatBytes, formatRegistryName } from "~/lib/utils"
 import SidebarComponent from "~/components/SidebarComponent.vue"
 import SyncProgress from "~/components/SyncProgress.vue"
 import MobileDialog from "~/components/ui/MobileDialog.vue"
@@ -68,6 +64,7 @@ import { useAutoRefreshOnSync } from "~/composables/useAutoRefreshOnSync"
 import AppLayout from "~/layouts/AppLayout.vue"
 import { normalizeArray } from "~/lib/normalize"
 import { registryPath } from "~/lib/routes"
+import { formatBytes, formatRegistryName } from "~/lib/utils"
 
 const SegmentedHorizontalBarChart = defineAsyncComponent(() => import("~/components/SegmentedHorizontalBarChart.vue"))
 const UntaggedDialog = defineAsyncComponent(() => import("~/components/UntaggedDialog.vue"))
