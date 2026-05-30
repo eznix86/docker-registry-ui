@@ -61,5 +61,7 @@ USER nobody
 
 EXPOSE 3000
 
+ENV SERVER_HOST=0.0.0.0
+
 ENTRYPOINT ["/app/container-hub"]
 CMD ["start", "-v", "--sync-interval=1h"]
