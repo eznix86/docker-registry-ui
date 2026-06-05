@@ -26,6 +26,7 @@ const (
 	idleConnTimeout         = 90 * time.Second
 	expectContinueTimeout   = 1 * time.Second
 	networkErrorBackoffBase = 200 * time.Millisecond
+	envTrue                 = "true"
 )
 
 type Config struct {
@@ -104,7 +105,7 @@ func (m *Manager) newClient(cfg Config, httpMaxRetries int, disableTagDeletion b
 			MaxConnsPerHost:       64,
 			IdleConnTimeout:       idleConnTimeout,
 			TLSHandshakeTimeout:   tlsTimeout,
-			TLSClientConfig:       &tls.Config{InsecureSkipVerify: cfg.Insecure},
+			TLSClientConfig:       &tls.Config{InsecureSkipVerify: cfg.Insecure}, //nolint:gosec // User-controlled insecure registry support is explicit.
 			ResponseHeaderTimeout: responseHeaderTimeout,
 			ExpectContinueTimeout: expectContinueTimeout,
 		},
@@ -162,16 +163,12 @@ func extractHost(rawURL string) string {
 	return s
 }
 
-func LoadConfigs() ([]Config, error) {
+func loadConfigs() ([]Config, error) {
 	var configs []Config
 	if cfg := loadDefaultConfig(); cfg != nil {
 		configs = append(configs, *cfg)
 	}
-	named, err := loadNamedConfigs()
-	if err != nil {
-		return nil, err
-	}
-	configs = append(configs, named...)
+	configs = append(configs, loadNamedConfigs()...)
 	clog.Debug("Registry configs loaded", "count", len(configs))
 	if len(configs) == 0 {
 		return nil, errors.New("no registry configurations found (REGISTRY_URL or REGISTRY_URL_* required)")
@@ -180,7 +177,7 @@ func LoadConfigs() ([]Config, error) {
 }
 
 func LoadConfigsFallback() []Config {
-	configs, err := LoadConfigs()
+	configs, err := loadConfigs()
 	if err != nil {
 		clog.Warn("Failed to load registry configs, using empty list", "error", err)
 		return nil
@@ -198,15 +195,15 @@ func loadDefaultConfig() *Config {
 		cfg.Username = auth.user
 		cfg.Password = auth.pass
 	}
-	cfg.Insecure = strings.ToLower(os.Getenv("REGISTRY_SETTINGS_INSECURE")) == "true"
+	cfg.Insecure = strings.ToLower(os.Getenv("REGISTRY_SETTINGS_INSECURE")) == envTrue
 	if isGHCR(url) {
 		cfg.IsGitHub = true
-		cfg.IsGitHubOrg = os.Getenv("REGISTRY_SETTINGS_ORG") == "true"
+		cfg.IsGitHubOrg = os.Getenv("REGISTRY_SETTINGS_ORG") == envTrue
 	}
 	return cfg
 }
 
-func loadNamedConfigs() ([]Config, error) {
+func loadNamedConfigs() []Config {
 	var configs []Config
 	seen := make(map[string]bool)
 
@@ -229,14 +226,14 @@ func loadNamedConfigs() ([]Config, error) {
 			cfg.Username = auth.user
 			cfg.Password = auth.pass
 		}
-		cfg.Insecure = strings.ToLower(os.Getenv("REGISTRY_SETTINGS_"+suffix+"_INSECURE")) == "true"
+		cfg.Insecure = strings.ToLower(os.Getenv("REGISTRY_SETTINGS_"+suffix+"_INSECURE")) == envTrue
 		if isGHCR(v) {
 			cfg.IsGitHub = true
-			cfg.IsGitHubOrg = strings.ToLower(os.Getenv("REGISTRY_SETTINGS_"+suffix+"_ORG")) == "true"
+			cfg.IsGitHubOrg = strings.ToLower(os.Getenv("REGISTRY_SETTINGS_"+suffix+"_ORG")) == envTrue
 		}
 		configs = append(configs, cfg)
 	}
-	return configs, nil
+	return configs
 }
 
 type authPair struct{ user, pass string }

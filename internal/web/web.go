@@ -2,6 +2,7 @@ package web
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io/fs"
 	"net/http"
@@ -9,6 +10,7 @@ import (
 
 	clog "github.com/charmbracelet/log"
 	assets "github.com/eznix86/docker-registry-ui"
+	"github.com/eznix86/docker-registry-ui/internal/helm"
 	"github.com/eznix86/docker-registry-ui/internal/progress"
 	"github.com/eznix86/docker-registry-ui/internal/registry"
 	"github.com/eznix86/docker-registry-ui/internal/store"
@@ -30,6 +32,7 @@ type router struct {
 type Options struct {
 	Store           *store.Store
 	RegistryManager *registry.Manager
+	HelmReader      *helm.Reader
 	Inertia         *gonertia.ViteInstance
 	Broadcaster     *progress.WebSocketBroadcaster
 	ManualSyncChan  sync.ManualSyncChannel
@@ -41,10 +44,10 @@ type Options struct {
 
 func New(opts Options) (*Server, error) {
 	if opts.Inertia == nil {
-		return nil, fmt.Errorf("inertia instance is required")
+		return nil, errors.New("inertia instance is required")
 	}
 	if opts.Store == nil {
-		return nil, fmt.Errorf("store is required")
+		return nil, errors.New("store is required")
 	}
 	if opts.Host == "" {
 		opts.Host = "localhost"
@@ -54,12 +57,13 @@ func New(opts Options) (*Server, error) {
 	}
 
 	h := &handler{
-		inertia:     opts.Inertia,
-		store:       opts.Store,
-		regManager:  opts.RegistryManager,
-		broadcaster: opts.Broadcaster,
-		manualCh:    opts.ManualSyncChan,
-		showUsageBar:   opts.ShowUsageBar,
+		inertia:      opts.Inertia,
+		store:        opts.Store,
+		regManager:   opts.RegistryManager,
+		helmReader:   opts.HelmReader,
+		broadcaster:  opts.Broadcaster,
+		manualCh:     opts.ManualSyncChan,
+		showUsageBar: opts.ShowUsageBar,
 	}
 
 	r := chi.NewRouter()
@@ -67,7 +71,6 @@ func New(opts Options) (*Server, error) {
 
 	r.Use(chimw.StripSlashes)
 	r.Use(chimw.RequestID)
-	r.Use(chimw.RealIP)
 	r.Use(chimw.Recoverer)
 
 	// Public routes.
@@ -81,10 +84,18 @@ func New(opts Options) (*Server, error) {
 	r.Delete("/r/{registry}/{repository}/tags", h.deleteTags)
 	r.Delete("/r/{registry}/{namespace}/{repository}/tags", h.deleteTags)
 
+	// Helm chart read-only API.
+	r.Get("/r/{registry}/{namespace}/{repository}/helm/{tag}/values", h.helmValues)
+	r.Get("/r/{registry}/{namespace}/{repository}/helm/{tag}/files", h.helmFiles)
+
 	// Static assets.
 	r.Group(func(group chi.Router) {
 		group.Use(cacheAssets)
-		publicFS, _ := fs.Sub(assets.PublicFS, "public")
+		publicFS, err := fs.Sub(assets.PublicFS, "public")
+		if err != nil {
+			clog.Warn("Failed to load public assets", "error", err)
+			return
+		}
 		if publicFS != nil {
 			group.Handle("/build/*", http.FileServer(http.FS(publicFS)))
 			group.Handle("/public/*", http.StripPrefix("/public/", http.FileServer(http.FS(publicFS))))
@@ -95,9 +106,6 @@ func New(opts Options) (*Server, error) {
 	r.Group(func(group chi.Router) {
 		group.Use(opts.Inertia.CSPMiddleware(gonertia.WithCSPPolicy(cspPolicy())))
 		group.Use(requestLogger(clog.Default()))
-		if opts.Debug {
-			group.Use(serverTiming())
-		}
 		group.Get("/", h.explore)
 		group.Get("/r/{registry}", h.registryPage)
 		group.Get("/r/{registry}/{repository}", h.repositoryPage)
