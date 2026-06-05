@@ -2,6 +2,7 @@ package app
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"os"
@@ -9,10 +10,11 @@ import (
 	"syscall"
 	"time"
 
-	_ "net/http/pprof"
+	_ "net/http/pprof" //nolint:gosec // Debug mode intentionally exposes pprof for local diagnostics.
 
 	clog "github.com/charmbracelet/log"
 	assets "github.com/eznix86/docker-registry-ui"
+	"github.com/eznix86/docker-registry-ui/internal/helm"
 	"github.com/eznix86/docker-registry-ui/internal/progress"
 	"github.com/eznix86/docker-registry-ui/internal/registry"
 	"github.com/eznix86/docker-registry-ui/internal/store"
@@ -30,6 +32,14 @@ func Run() error {
 type ctxKey string
 
 const ctxKeyConfig ctxKey = "config"
+
+func configFromCommand(cmd *cobra.Command) *Config {
+	cfg, ok := cmd.Context().Value(ctxKeyConfig).(*Config)
+	if !ok || cfg == nil {
+		clog.Fatal("Config missing from command context")
+	}
+	return cfg
+}
 
 func rootCmd() *cobra.Command {
 	v := version.New()
@@ -64,8 +74,7 @@ func startCmd() *cobra.Command {
 		Use:   "start",
 		Short: "Start web server and background sync",
 		Run: func(cmd *cobra.Command, _ []string) {
-			cfg := cmd.Context().Value(ctxKeyConfig).(*Config)
-			runStart(cfg)
+			runStart(configFromCommand(cmd))
 		},
 	}
 	addServerFlags(cmd)
@@ -78,8 +87,7 @@ func serveCmd() *cobra.Command {
 		Use:   "serve",
 		Short: "Start web server only",
 		Run: func(cmd *cobra.Command, _ []string) {
-			cfg := cmd.Context().Value(ctxKeyConfig).(*Config)
-			runServe(cfg)
+			runServe(configFromCommand(cmd))
 		},
 	}
 	addServerFlags(cmd)
@@ -91,8 +99,7 @@ func syncCmd() *cobra.Command {
 		Use:   "sync",
 		Short: "Run sync once",
 		Run: func(cmd *cobra.Command, _ []string) {
-			cfg := cmd.Context().Value(ctxKeyConfig).(*Config)
-			runSync(cfg)
+			runSync(configFromCommand(cmd))
 		},
 	}
 	addSyncFlags(cmd)
@@ -104,8 +111,7 @@ func seedCmd() *cobra.Command {
 		Use:   "seed",
 		Short: "Seed database with test data",
 		Run: func(cmd *cobra.Command, _ []string) {
-			cfg := cmd.Context().Value(ctxKeyConfig).(*Config)
-			runSeed(cfg)
+			runSeed(configFromCommand(cmd))
 		},
 	}
 	addDBFlags(cmd)
@@ -212,6 +218,7 @@ func (r *runtime) initServer(cfg *Config, withSync bool) error {
 	srv, err := web.New(web.Options{
 		Store:           r.store,
 		RegistryManager: r.regManager,
+		HelmReader:      helm.NewReader(50),
 		Inertia:         inertia,
 		Broadcaster:     ws,
 		ManualSyncChan:  manualCh,
@@ -274,7 +281,11 @@ func runStart(cfg *Config) {
 		clog.Fatal(err)
 	}
 
-	go r.server.Start()
+	go func() {
+		if err := r.server.Start(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			clog.Error("Server failed", "error", err)
+		}
+	}()
 	go r.syncSvc.StartBackground(ctx)
 
 	waitForSignal()
@@ -292,7 +303,11 @@ func runServe(cfg *Config) {
 		clog.Fatal(err)
 	}
 
-	go r.server.Start()
+	go func() {
+		if err := r.server.Start(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			clog.Error("Server failed", "error", err)
+		}
+	}()
 	waitForSignal()
 }
 
