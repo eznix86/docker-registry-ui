@@ -8,7 +8,11 @@
 
 				<RepositoryHeader :repository="repository" :disable-tag-deletion="page.props.disableTagDeletion" @bulk-delete="openBulkDelete" />
 
-				<RepositoryMetadata :repository="repository" />
+				<RepositoryMetadata
+					:repository="repository"
+					:is-helm-repository="isHelmRepository"
+					:helm-chart-name="helmChartName"
+				/>
 
 				<RepositorySortFilter
 					:sort-by="currentSortBy"
@@ -19,14 +23,22 @@
 				/>
 
 				<InfiniteScroll data="tags" class="space-y-6">
-					<RepositoryTagCard
-						v-for="tag in tags"
-						:key="tag.name"
-						:tag="tag"
-						:repository="repository"
-						:disable-tag-deletion="page.props.disableTagDeletion"
-						@delete-tag="openDeleteTag"
-					/>
+					<template v-for="tag in tags" :key="tag.name">
+						<RepositoryHelmTagCard
+							v-if="tag.kind === 'helm'"
+							:tag="tag"
+							:repository="repository"
+							:disable-tag-deletion="page.props.disableTagDeletion"
+							@delete-tag="openDeleteTag"
+						/>
+						<RepositoryTagCard
+							v-else
+							:tag="tag"
+							:repository="repository"
+							:disable-tag-deletion="page.props.disableTagDeletion"
+							@delete-tag="openDeleteTag"
+						/>
+					</template>
 				</InfiniteScroll>
 			</main>
 
@@ -52,6 +64,7 @@ import { computed, ref } from "vue"
 import BulkDeleteTagsDialog from "~/components/BulkDeleteTagsDialog.vue"
 import DeleteTagDialog from "~/components/DeleteTagDialog.vue"
 import HeaderComponent from "~/components/HeaderComponent.vue"
+import RepositoryHelmTagCard from "~/components/RepositoryHelmTagCard.vue"
 import RepositoryBreadcrumb from "~/components/RepositoryBreadcrumb.vue"
 import RepositoryHeader from "~/components/RepositoryHeader.vue"
 import RepositoryMetadata from "~/components/RepositoryMetadata.vue"
@@ -67,6 +80,8 @@ const page = usePage<RepositoryProps>()
 const repository = computed(() => page.props.repository)
 const tags = computed(() => normalizeArray(page.props.tags?.data) as Tag[])
 const bulkDeleteTags = computed(() => (page.props as any).bulkDeleteTags ?? [])
+const isHelmRepository = computed(() => tags.value.some(tag => tag.kind === "helm"))
+const helmChartName = computed(() => tags.value.find(tag => tag.kind === "helm")?.chartName || "")
 
 const tagToDelete = ref<Tag | null>(null)
 const bulkDeleteRef = ref<InstanceType<typeof BulkDeleteTagsDialog> | null>(null)
