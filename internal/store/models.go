@@ -104,6 +104,8 @@ type TagView struct {
 	ChartName         string      `json:"chartName"`
 	ChartVersion      string      `json:"chartVersion"`
 	ChartDesc         string      `json:"chartDesc"`
+	ChartAPIVersion   string      `json:"chartApiVersion"`
+	ChartType         string      `json:"chartType"`
 }
 
 type ImageView struct {
@@ -144,9 +146,9 @@ type RegistryRepositoryRow struct {
 }
 
 type RegistryStorageUsageView struct {
-	RegistryHost    string `json:"registryHost"`
-	DisplayName     string `json:"displayName"`
-	TotalSizeBytes  int64  `json:"totalSizeBytes"`
+	RegistryHost   string `json:"registryHost"`
+	DisplayName    string `json:"displayName"`
+	TotalSizeBytes int64  `json:"totalSizeBytes"`
 }
 
 // Filter and pagination types.
