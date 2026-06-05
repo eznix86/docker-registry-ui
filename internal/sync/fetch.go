@@ -166,41 +166,7 @@ func (g *ManifestGraph) buildSingle(ctx context.Context, client *registry.Client
 	}
 
 	if parsed.Config.Digest != "" {
-		entry.ConfigDigest = parsed.Config.Digest
-		entry.ConfigSize = int64(parsed.Config.Size)
-		entry.Size += entry.ConfigSize
-
-		blob, _, err := f.fetchConfigBlob(ctx, client, repoPath, parsed.Config.Digest, regName)
-		if err != nil {
-			clog.Warn("Failed to fetch config blob", "digest", parsed.Config.Digest, "tag", g.Digest, "error", err)
-		}
-		if blob != nil {
-			entry.ConfigRaw = []byte(blob.json)
-			if g.Kind == KindHelm {
-				if hc, err := parseHelmConfig([]byte(blob.json)); err == nil {
-					entry.ChartName = hc.Name
-					entry.ChartVersion = hc.Version
-					entry.ChartDesc = hc.Description
-				}
-				if created, ok := parsed.Annotations["org.opencontainers.image.created"]; ok {
-					if t, err := parseCreatedTime(created); err == nil {
-						entry.ConfigCreated = &t
-					}
-				}
-			} else {
-				entry.ConfigOS = blob.blob.OS
-				entry.ConfigArch = blob.blob.Architecture
-				if blob.blob.Created != "" {
-					if t, err := parseCreatedTime(blob.blob.Created); err == nil {
-						entry.ConfigCreated = &t
-					}
-				}
-			}
-		}
-		if g.Kind != KindHelm {
-			entry.OS = entry.ConfigOS
-			entry.Architecture = entry.ConfigArch
-		}
+		g.populateSingleConfig(ctx, client, f, repoPath, regName, parsed, &entry)
 	}
 
 	for _, l := range parsed.Layers {
@@ -214,6 +180,64 @@ func (g *ManifestGraph) buildSingle(ctx context.Context, client *registry.Client
 	return nil
 }
 
+func (g *ManifestGraph) populateSingleConfig(
+	ctx context.Context,
+	client *registry.Client,
+	f *fetcher,
+	repoPath, regName string,
+	parsed *singleManifest,
+	entry *PlatformEntry,
+) {
+	entry.ConfigDigest = parsed.Config.Digest
+	entry.ConfigSize = int64(parsed.Config.Size)
+	entry.Size += entry.ConfigSize
+
+	blob, err := f.fetchConfigBlob(ctx, client, repoPath, parsed.Config.Digest, regName)
+	if err != nil {
+		clog.Warn("Failed to fetch config blob", "digest", parsed.Config.Digest, "tag", g.Digest, "error", err)
+		return
+	}
+	if blob == nil {
+		return
+	}
+	entry.ConfigRaw = []byte(blob.json)
+	if g.Kind == KindHelm {
+		g.applyHelmConfigFields(parsed, blob, entry)
+		return
+	}
+	g.applyImageConfigFields(blob, entry)
+	entry.OS = entry.ConfigOS
+	entry.Architecture = entry.ConfigArch
+}
+
+func (g *ManifestGraph) applyHelmConfigFields(parsed *singleManifest, blob *cachedBlob, entry *PlatformEntry) {
+	if hc, err := parseHelmConfig([]byte(blob.json)); err == nil {
+		entry.ChartName = hc.Name
+		entry.ChartVersion = hc.Version
+		entry.ChartDesc = hc.Description
+	}
+	if created, ok := parsed.Annotations["org.opencontainers.image.created"]; ok {
+		if t, err := parseCreatedTime(created); err == nil {
+			entry.ConfigCreated = &t
+		}
+	}
+}
+
+func (g *ManifestGraph) applyImageConfigFields(blob *cachedBlob, entry *PlatformEntry) {
+	entry.ConfigOS = blob.blob.OS
+	entry.ConfigArch = blob.blob.Architecture
+	if blob.blob.Created != "" {
+		if t, err := parseCreatedTime(blob.blob.Created); err == nil {
+			entry.ConfigCreated = &t
+		}
+	}
+}
+
+type idxEntry struct {
+	pos   int
+	entry manifestListEntry
+}
+
 func (g *ManifestGraph) buildIndex(
 	ctx context.Context,
 	client *registry.Client,
@@ -223,11 +247,6 @@ func (g *ManifestGraph) buildIndex(
 	ml, err := parseManifestList(g.Raw)
 	if err != nil {
 		return err
-	}
-
-	type idxEntry struct {
-		pos   int
-		entry manifestListEntry
 	}
 
 	var entries []idxEntry
@@ -262,7 +281,6 @@ func (g *ManifestGraph) buildIndex(
 
 	grp, gctx := errgroup.WithContext(ctx)
 	for _, e := range entries {
-		e := e
 		grp.Go(func() error {
 			childResp, err := f.fetchManifest(gctx, client, repoPath, e.entry.Digest, regName)
 			if err != nil {
@@ -288,24 +306,7 @@ func (g *ManifestGraph) buildIndex(
 			pe.Size = 0
 
 			if parsed.Config.Digest != "" {
-				pe.ConfigDigest = parsed.Config.Digest
-				pe.ConfigSize = int64(parsed.Config.Size)
-				pe.Size += pe.ConfigSize
-
-				blob, _, err := f.fetchConfigBlob(gctx, client, repoPath, parsed.Config.Digest, regName)
-				if err != nil {
-					clog.Warn("Failed to fetch child config blob", "digest", parsed.Config.Digest, "platform", e.entry.Digest, "error", err)
-				}
-				if blob != nil {
-					pe.ConfigRaw = []byte(blob.json)
-					if blob.blob.Created != "" {
-						if t, err := parseCreatedTime(blob.blob.Created); err == nil {
-							pe.ConfigCreated = &t
-						} else {
-							clog.Debug("Failed to parse child config created time", "digest", parsed.Config.Digest, "created", blob.blob.Created, "error", err)
-						}
-					}
-				}
+				g.populateChildConfig(gctx, client, f, repoPath, regName, e, parsed, pe)
 			}
 
 			for _, l := range parsed.Layers {
@@ -332,33 +333,66 @@ func (g *ManifestGraph) buildIndex(
 	return nil
 }
 
-func (f *fetcher) fetchConfigBlob(ctx context.Context, client *registry.Client, repoPath, digest, regName string) (*cachedBlob, time.Duration, error) {
+func (g *ManifestGraph) populateChildConfig(
+	ctx context.Context,
+	client *registry.Client,
+	f *fetcher,
+	repoPath, regName string,
+	e idxEntry,
+	parsed *singleManifest,
+	pe *PlatformEntry,
+) {
+	pe.ConfigDigest = parsed.Config.Digest
+	pe.ConfigSize = int64(parsed.Config.Size)
+	pe.Size += pe.ConfigSize
+
+	blob, err := f.fetchConfigBlob(ctx, client, repoPath, parsed.Config.Digest, regName)
+	if err != nil {
+		clog.Warn("Failed to fetch child config blob", "digest", parsed.Config.Digest, "platform", e.entry.Digest, "error", err)
+		return
+	}
+	if blob == nil {
+		return
+	}
+	pe.ConfigRaw = []byte(blob.json)
+	if blob.blob.Created == "" {
+		return
+	}
+	t, err := parseCreatedTime(blob.blob.Created)
+	if err != nil {
+		clog.Debug("Failed to parse child config created time", "digest", parsed.Config.Digest, "created", blob.blob.Created, "error", err)
+		return
+	}
+	pe.ConfigCreated = &t
+}
+
+func (f *fetcher) fetchConfigBlob(ctx context.Context, client *registry.Client, repoPath, digest, regName string) (*cachedBlob, error) {
 	if cached, ok := f.configs.get(digest); ok {
-		return cached, 0, nil
+		return cached, nil
 	}
 
 	release, err := f.limiter.acquire(ctx, regName)
 	if err != nil {
 		f.limiter.markFailure(regName)
-		return nil, 0, err
+		return nil, err
 	}
 	defer release()
 	resp, err := client.GetBlob(ctx, repoPath, digest)
 	if err != nil {
 		f.limiter.markFailure(regName)
-		return nil, 0, err
+		return nil, err
 	}
 	f.limiter.resetFailures(regName)
 
 	cb, err := parseConfigBlob(resp.Content)
 	if err != nil {
 		f.limiter.resetFailures(regName)
-		return nil, 0, fmt.Errorf("parse config blob %s: %w", digest, err)
+		return nil, fmt.Errorf("parse config blob %s: %w", digest, err)
 	}
 
 	cached := &cachedBlob{blob: cb, json: string(resp.Content)}
 	f.configs.set(digest, cached)
-	return cached, time.Duration(0), nil
+	return cached, nil
 }
 
 // Manifest parsing types (internal, not exported).
