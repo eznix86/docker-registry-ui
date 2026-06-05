@@ -9,6 +9,7 @@ export { default as CardHeader } from "./CardHeader.vue"
 export { default as Checkbox } from "./Checkbox.vue"
 // UI components
 export { default as Chip } from "./Chip.vue"
+export { default as CodeBlock } from "./CodeBlock.vue"
 export { default as CopyCommand } from "./CopyCommand.vue"
 // Dialog components
 export { default as Dialog } from "./Dialog.vue"

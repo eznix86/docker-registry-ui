@@ -41,6 +41,10 @@
     --color-field: #d0d7de;
     --color-focus: #1d63ed;
 
+    /* Syntax highlighting */
+    --color-syntax-string: #ff9800;
+    --color-syntax-number: #dc3545;
+
     /* Typography */
     --font-sans: "Roboto", sans-serif;
     --font-mono: "Roboto Mono", monospace;
@@ -97,6 +101,9 @@
         --color-stroke: #30363d;
         --color-field: #30363d;
         --color-focus: #1d63ed;
+
+        --color-syntax-string: #ffc107;
+        --color-syntax-number: var(--color-destructive);
 
         --font-sans: "Roboto", sans-serif;
         --font-mono: "Roboto Mono", monospace;
@@ -186,6 +193,9 @@
         --color-field: #49483e;
         --color-focus: #f92672;
 
+        --color-syntax-string: #e6db74;
+        --color-syntax-number: var(--color-destructive);
+
         --font-sans: "Instrument Sans", system-ui, sans-serif;
         --font-mono: "Geist Mono", "Roboto Mono", monospace;
 
@@ -237,6 +247,9 @@
         --color-stroke: #4c566a;
         --color-field: #4c566a;
         --color-focus: #88c0d0;
+
+        --color-syntax-string: #ebcb8b;
+        --color-syntax-number: var(--color-destructive);
 
         --font-sans: "Roboto", sans-serif;
         --font-mono: "Roboto Mono", monospace;
@@ -326,6 +339,9 @@
         --color-field: #3e4451;
         --color-focus: #61afef;
 
+        --color-syntax-string: #e5c07b;
+        --color-syntax-number: var(--color-destructive);
+
         --font-sans: "Instrument Sans", system-ui, sans-serif;
         --font-mono: "Geist Mono", "Roboto Mono", monospace;
 
@@ -377,6 +393,9 @@
         --color-stroke: #2f334d;
         --color-field: #2f334d;
         --color-focus: #7aa2f7;
+
+        --color-syntax-string: #9ece6e;
+        --color-syntax-number: var(--color-destructive);
 
         --font-sans: "Instrument Sans", system-ui, sans-serif;
         --font-mono: "Geist Mono", "Roboto Mono", monospace;
@@ -430,6 +449,9 @@
         --color-field: #2b1459;
         --color-focus: #ff379b;
 
+        --color-syntax-string: #f9e64f;
+        --color-syntax-number: var(--color-destructive);
+
         --font-sans: "Instrument Sans", system-ui, sans-serif;
         --font-mono: "Geist Mono", "Roboto Mono", monospace;
 
@@ -481,6 +503,9 @@
         --color-stroke: #30363d;
         --color-field: #30363d;
         --color-focus: #238636;
+
+        --color-syntax-string: #a5d6ff;
+        --color-syntax-number: var(--color-destructive);
 
         --font-sans: "Roboto", sans-serif;
         --font-mono: "Roboto Mono", monospace;
@@ -569,6 +594,9 @@
         --color-stroke: #45475a;
         --color-field: #45475a;
         --color-focus: #f5c2e7;
+
+        --color-syntax-string: #a6e3a1;
+        --color-syntax-number: var(--color-destructive);
 
         --font-sans: "Instrument Sans", system-ui, sans-serif;
         --font-mono: "Geist Mono", "Roboto Mono", monospace;
@@ -821,4 +849,173 @@ body {
         transform: scale(1);
         opacity: 0;
     }
+}
+
+/* Code block — used by <CodeBlock> for Helm values/templates viewer. */
+.customYAML [data-line-number] {
+    display: block;
+    position: relative;
+}
+
+.customYAML [data-line-number]::before {
+    content: attr(data-line-number);
+    position: absolute;
+    width: 4rem;
+    text-align: right;
+    left: -4.25rem;
+    top: 0;
+    padding-right: 1rem;
+    color: var(--color-muted-foreground);
+    user-select: none;
+    font-size: 0.8rem;
+    line-height: 1.5rem;
+}
+
+.customYAML span,
+.customYAML .hljs-string {
+    line-height: 1.5rem;
+    color: var(--color-syntax-string);
+}
+
+.customYAML .hljs-attr,
+.customYAML .hljs-bullet {
+    color: var(--color-foreground);
+}
+
+.customYAML .hljs-comment {
+    color: var(--color-muted-foreground);
+}
+
+.customYAML .hljs-number,
+.customYAML .hljs-literal {
+    color: var(--color-syntax-number);
+}
+
+.customYAML .hljs-string ~ .hljs-number {
+    color: var(--color-syntax-string);
+}
+
+.customYAML .hljs-keyword,
+.customYAML .hljs-built_in,
+.customYAML .hljs-section,
+.customYAML .hljs-type,
+.customYAML .hljs-class .hljs-title {
+    color: var(--color-primary);
+}
+
+.customYAML .hljs-symbol,
+.customYAML .hljs-meta,
+.customYAML .hljs-tag {
+    color: var(--color-accent);
+}
+
+.customYAML .hljs-deletion {
+    color: var(--color-destructive);
+}
+
+.customYAML .hljs-addition {
+    color: var(--color-success);
+}
+
+.customYAML .hljs-template-expression {
+    display: inline-block;
+    padding: 0 0.35rem;
+    margin: 0.0625rem 0;
+    color: var(--color-foreground);
+    background-color: color-mix(in srgb, var(--color-muted) 72%, var(--color-foreground) 8%);
+    box-shadow: inset 0 0 0 1px var(--color-outline);
+}
+
+.customYAML .hljs-template-delimiter {
+    color: var(--color-muted-foreground);
+}
+
+.customYAML .hljs-template-built-in {
+    color: #60788d;
+}
+
+[data-theme="the-hub-dark"] .customYAML .hljs-template-built-in,
+[data-theme="monokai"] .customYAML .hljs-template-built-in,
+[data-theme="nord-dark"] .customYAML .hljs-template-built-in,
+[data-theme="one-dark"] .customYAML .hljs-template-built-in,
+[data-theme="tokyo-night"] .customYAML .hljs-template-built-in,
+[data-theme="cyberpunk"] .customYAML .hljs-template-built-in,
+[data-theme="github-dark"] .customYAML .hljs-template-built-in,
+[data-theme="catppuccin-mocha"] .customYAML .hljs-template-built-in {
+    color: #90b4d4;
+}
+
+.customYAML .hljs-template-flow {
+    color: #667e00;
+}
+
+[data-theme="the-hub-dark"] .customYAML .hljs-template-flow,
+[data-theme="monokai"] .customYAML .hljs-template-flow,
+[data-theme="nord-dark"] .customYAML .hljs-template-flow,
+[data-theme="one-dark"] .customYAML .hljs-template-flow,
+[data-theme="tokyo-night"] .customYAML .hljs-template-flow,
+[data-theme="cyberpunk"] .customYAML .hljs-template-flow,
+[data-theme="github-dark"] .customYAML .hljs-template-flow,
+[data-theme="catppuccin-mocha"] .customYAML .hljs-template-flow {
+    color: #99be00;
+}
+
+.customYAML .hljs-template-function {
+    color: #8959a8;
+}
+
+[data-theme="the-hub-dark"] .customYAML .hljs-template-function,
+[data-theme="monokai"] .customYAML .hljs-template-function,
+[data-theme="nord-dark"] .customYAML .hljs-template-function,
+[data-theme="one-dark"] .customYAML .hljs-template-function,
+[data-theme="tokyo-night"] .customYAML .hljs-template-function,
+[data-theme="cyberpunk"] .customYAML .hljs-template-function,
+[data-theme="github-dark"] .customYAML .hljs-template-function,
+[data-theme="catppuccin-mocha"] .customYAML .hljs-template-function {
+    color: #d696ff;
+}
+
+.customYAML .hljs-template-value {
+    color: #b06116;
+}
+
+[data-theme="the-hub-dark"] .customYAML .hljs-template-value,
+[data-theme="monokai"] .customYAML .hljs-template-value,
+[data-theme="nord-dark"] .customYAML .hljs-template-value,
+[data-theme="one-dark"] .customYAML .hljs-template-value,
+[data-theme="tokyo-night"] .customYAML .hljs-template-value,
+[data-theme="cyberpunk"] .customYAML .hljs-template-value,
+[data-theme="github-dark"] .customYAML .hljs-template-value,
+[data-theme="catppuccin-mocha"] .customYAML .hljs-template-value {
+    color: #f5871f;
+}
+
+.customYAML .hljs-template-variable {
+    color: #b45a5a;
+}
+
+[data-theme="the-hub-dark"] .customYAML .hljs-template-variable,
+[data-theme="monokai"] .customYAML .hljs-template-variable,
+[data-theme="nord-dark"] .customYAML .hljs-template-variable,
+[data-theme="one-dark"] .customYAML .hljs-template-variable,
+[data-theme="tokyo-night"] .customYAML .hljs-template-variable,
+[data-theme="cyberpunk"] .customYAML .hljs-template-variable,
+[data-theme="github-dark"] .customYAML .hljs-template-variable,
+[data-theme="catppuccin-mocha"] .customYAML .hljs-template-variable {
+    color: #ff9191;
+}
+
+.customYAML .hljs-template-defined {
+    color: #c09b28;
+}
+
+[data-theme="the-hub-dark"] .customYAML .hljs-template-defined,
+[data-theme="monokai"] .customYAML .hljs-template-defined,
+[data-theme="nord-dark"] .customYAML .hljs-template-defined,
+[data-theme="one-dark"] .customYAML .hljs-template-defined,
+[data-theme="tokyo-night"] .customYAML .hljs-template-defined,
+[data-theme="cyberpunk"] .customYAML .hljs-template-defined,
+[data-theme="github-dark"] .customYAML .hljs-template-defined,
+[data-theme="catppuccin-mocha"] .customYAML .hljs-template-defined {
+    color: #f1c232;
 }
