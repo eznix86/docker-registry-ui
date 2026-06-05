@@ -24,7 +24,7 @@
 						leave-from="opacity-100 scale-100 translate-y-0"
 						leave-to="opacity-0 scale-95 translate-y-4"
 					>
-						<DialogPanel class="w-full transform overflow-visible rounded-2xl bg-popover p-6 text-left align-middle shadow-xl transition-all" :class="[wide ? 'max-w-2xl' : 'max-w-md']">
+						<DialogPanel class="w-full transform overflow-visible rounded-2xl bg-popover p-6 text-left align-middle shadow-xl transition-all" :class="[wide ? 'max-w-5xl' : 'max-w-md']">
 							<slot />
 						</DialogPanel>
 					</TransitionChild>
