@@ -9,6 +9,7 @@ import (
 	"github.com/gorilla/websocket"
 )
 
+//nolint:gochecknoglobals // websocket.Upgrader is a stateless connection upgrader reused across requests.
 var wsUpgrader = websocket.Upgrader{
 	ReadBufferSize:  1024,
 	WriteBufferSize: 1024,

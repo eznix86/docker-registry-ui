@@ -89,17 +89,19 @@ type tagDataRow struct {
 	tagName       string
 	tagDigest     string
 	tagKind       string
-	tagCreatedAt  sqlStr
-	mDigest       sqlStr
-	mOS           sqlStr
-	mArch         sqlStr
-	mVariant      sqlStr
+	tagCreatedAt  sql.NullString
+	mDigest       sql.NullString
+	mOS           sql.NullString
+	mArch         sql.NullString
+	mVariant      sql.NullString
 	configSize    *int64
-	configCreated sqlStr
+	configCreated sql.NullString
 	isStub        bool
-	chartName     sqlStr
-	chartVersion  sqlStr
-	chartDesc     sqlStr
+	chartName     sql.NullString
+	chartVersion  sql.NullString
+	chartDesc     sql.NullString
+	chartAPIVer   sql.NullString
+	chartType     sql.NullString
 }
 
 func (s *Store) queryTagData(ctx context.Context, repositoryID uint, nameFilter, order string, limit, offset int) ([]tagDataRow, error) {
@@ -122,6 +124,7 @@ func (s *Store) queryTagData(ctx context.Context, repositoryID uint, nameFilter,
 		WITH filtered_tags AS (
 			SELECT
 				id, name, digest, kind, created_at, chart_name, chart_version, chart_desc,
+				chart_api_version, chart_type,
 				ROW_NUMBER() OVER (ORDER BY %s) AS sort_order
 			FROM tags_view
 			WHERE repository_id = ? %s
@@ -132,7 +135,8 @@ func (s *Store) queryTagData(ctx context.Context, repositoryID uint, nameFilter,
 			ft.id, ft.name, ft.digest, ft.kind, ft.created_at,
 			m.digest, m.os, m.architecture, m.variant,
 			m.size_bytes, m.created,
-			ft.chart_name, ft.chart_version, ft.chart_desc
+			ft.chart_name, ft.chart_version, ft.chart_desc,
+			ft.chart_api_version, ft.chart_type
 		FROM filtered_tags ft
 		LEFT JOIN manifests m ON m.digest = ft.digest AND ft.kind IN ('image', 'helm')
 		ORDER BY ft.sort_order, m.digest`, order, nameCond, order, limitClause)
@@ -141,14 +145,15 @@ func (s *Store) queryTagData(ctx context.Context, repositoryID uint, nameFilter,
 	if err != nil {
 		return nil, fmt.Errorf("query tag data: %w", err)
 	}
-	defer rows.Close()
+	defer closeRows(rows)
 
 	var out []tagDataRow
 	for rows.Next() {
 		var r tagDataRow
 		if err := rows.Scan(&r.tagID, &r.tagName, &r.tagDigest, &r.tagKind, &r.tagCreatedAt,
 			&r.mDigest, &r.mOS, &r.mArch, &r.mVariant,
-			&r.configSize, &r.configCreated, &r.chartName, &r.chartVersion, &r.chartDesc); err != nil {
+			&r.configSize, &r.configCreated, &r.chartName, &r.chartVersion, &r.chartDesc,
+			&r.chartAPIVer, &r.chartType); err != nil {
 			return nil, fmt.Errorf("scan tag row: %w", err)
 		}
 		out = append(out, r)
@@ -157,23 +162,26 @@ func (s *Store) queryTagData(ctx context.Context, repositoryID uint, nameFilter,
 		return nil, rows.Err()
 	}
 
-	out = s.appendIndexChildren(ctx, out)
+	out, err = s.appendIndexChildren(ctx, out)
+	if err != nil {
+		return nil, err
+	}
 
 	return out, nil
 }
 
-func (s *Store) appendIndexChildren(ctx context.Context, rows []tagDataRow) []tagDataRow {
+func (s *Store) appendIndexChildren(ctx context.Context, rows []tagDataRow) ([]tagDataRow, error) {
 	var indexIDs []uint
 	indexRows := make(map[uint]int)
 	for i, row := range rows {
-		if row.mDigest.valid {
+		if row.mDigest.Valid {
 			continue
 		}
 		indexIDs = append(indexIDs, row.tagID)
 		indexRows[row.tagID] = i
 	}
 	if len(indexIDs) == 0 {
-		return rows
+		return rows, nil
 	}
 
 	phs := make([]string, len(indexIDs))
@@ -187,29 +195,31 @@ func (s *Store) appendIndexChildren(ctx context.Context, rows []tagDataRow) []ta
 		fmt.Sprintf("SELECT id, kind, digest, last_sync_at, priority FROM tags WHERE id IN (%s)", strings.Join(phs, ",")),
 		args...)
 	if err != nil {
-		return rows
+		return nil, fmt.Errorf("query index tag metadata: %w", err)
 	}
-	defer kindRows.Close()
+	defer closeRows(kindRows)
 
 	var indexDigests []string
 	indexMeta := make(map[uint]tagMeta)
 	for kindRows.Next() {
 		var id uint
 		var kind, digest string
-		var lastSync sqlStr
+		var lastSync sql.NullString
 		var priority sql.NullFloat64
 		if err := kindRows.Scan(&id, &kind, &digest, &lastSync, &priority); err != nil {
-			continue
+			return nil, fmt.Errorf("scan index tag metadata: %w", err)
 		}
 		if kind == "index" {
 			indexDigests = append(indexDigests, digest)
-			indexMeta[id] = tagMeta{digest: digest, lastSync: lastSync, priority: priority}
+			indexMeta[id] = tagMeta{digest: digest}
 		}
 	}
-	kindRows.Close()
+	if err := kindRows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate index tag metadata: %w", err)
+	}
 
 	if len(indexDigests) == 0 {
-		return rows
+		return rows, nil
 	}
 
 	dphs := make([]string, len(indexDigests))
@@ -227,29 +237,31 @@ func (s *Store) appendIndexChildren(ctx context.Context, rows []tagDataRow) []ta
 		 WHERE mp.index_digest IN (%s) ORDER BY mp.position`, strings.Join(dphs, ",")),
 		dargs...)
 	if err != nil {
-		return rows
+		return nil, fmt.Errorf("query index child manifests: %w", err)
 	}
-	defer childRows.Close()
+	defer closeRows(childRows)
 
 	type childRow struct {
-		indexDigest  string
-		childDigest  sqlStr
-		os           sqlStr
-		arch         sqlStr
-		variant      sqlStr
-		size         int64
-		created      sqlStr
-		isStub       int64
+		indexDigest string
+		childDigest sql.NullString
+		os          sql.NullString
+		arch        sql.NullString
+		variant     sql.NullString
+		size        int64
+		created     sql.NullString
+		isStub      int64
 	}
 	childrenByIndex := make(map[string][]childRow)
 	for childRows.Next() {
 		var cr childRow
 		if err := childRows.Scan(&cr.indexDigest, &cr.childDigest, &cr.os, &cr.arch, &cr.variant, &cr.size, &cr.created, &cr.isStub); err != nil {
-			continue
+			return nil, fmt.Errorf("scan index child manifest: %w", err)
 		}
 		childrenByIndex[cr.indexDigest] = append(childrenByIndex[cr.indexDigest], cr)
 	}
-	childRows.Close()
+	if err := childRows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate index child manifests: %w", err)
+	}
 
 	for tagID, rowIdx := range indexRows {
 		meta, ok := indexMeta[tagID]
@@ -276,16 +288,14 @@ func (s *Store) appendIndexChildren(ctx context.Context, rows []tagDataRow) []ta
 			childRow.configSize = &cr.size
 			rows = append(rows, childRow)
 		}
-		rows[rowIdx].mDigest = sqlStr{valid: false}
+		rows[rowIdx].mDigest = sql.NullString{}
 	}
 
-	return rows
+	return rows, nil
 }
 
 type tagMeta struct {
-	digest   string
-	lastSync sqlStr
-	priority sql.NullFloat64
+	digest string
 }
 
 func (s *Store) buildTagViews(rows []tagDataRow) []TagView {
@@ -296,16 +306,18 @@ func (s *Store) buildTagViews(rows []tagDataRow) []TagView {
 		tv, exists := tagMap[row.tagID]
 		if !exists {
 			tv = &TagView{
-				ID:           row.tagID,
-				Name:         row.tagName,
-				Digest:       row.tagDigest,
-				Kind:         row.tagKind,
-				ChartName:    row.chartName.value,
-				ChartVersion: row.chartVersion.value,
-				ChartDesc:    row.chartDesc.value,
+				ID:              row.tagID,
+				Name:            row.tagName,
+				Digest:          row.tagDigest,
+				Kind:            row.tagKind,
+				ChartName:       row.chartName.String,
+				ChartVersion:    row.chartVersion.String,
+				ChartDesc:       row.chartDesc.String,
+				ChartAPIVersion: row.chartAPIVer.String,
+				ChartType:       row.chartType.String,
 			}
-			if row.tagCreatedAt.valid {
-				if t, err := parseTime(row.tagCreatedAt.value); err == nil {
+			if row.tagCreatedAt.Valid {
+				if t, err := parseTime(row.tagCreatedAt.String); err == nil {
 					tv.CreatedAt = t
 				}
 			}
@@ -313,17 +325,17 @@ func (s *Store) buildTagViews(rows []tagDataRow) []TagView {
 			tagOrder = append(tagOrder, row.tagID)
 		}
 
-		if row.mDigest.valid && row.configSize != nil {
+		if row.mDigest.Valid && row.configSize != nil {
 			img := ImageView{
-				Digest:       row.mDigest.value,
-				OS:           row.mOS.value,
-				Architecture: row.mArch.value,
-				Variant:      row.mVariant.value,
+				Digest:       row.mDigest.String,
+				OS:           row.mOS.String,
+				Architecture: row.mArch.String,
+				Variant:      row.mVariant.String,
 				Size:         *row.configSize,
 				Stub:         row.isStub,
 			}
-			if row.configCreated.valid {
-				if t, err := parseTime(row.configCreated.value); err == nil {
+			if row.configCreated.Valid {
+				if t, err := parseTime(row.configCreated.String); err == nil {
 					img.CreatedAt = t
 				}
 			}
@@ -369,7 +381,7 @@ func (s *Store) populateAliases(ctx context.Context, repositoryID uint, tagViews
 	if err != nil {
 		return
 	}
-	defer rows.Close()
+	defer closeRows(rows)
 
 	for rows.Next() {
 		var digest, name string
@@ -377,6 +389,9 @@ func (s *Store) populateAliases(ctx context.Context, repositoryID uint, tagViews
 			continue
 		}
 		digestToNames[digest] = append(digestToNames[digest], name)
+	}
+	if err := rows.Err(); err != nil {
+		return
 	}
 
 	for i := range tagViews {
@@ -420,10 +435,7 @@ func paginateTagViews(tagViews []TagView, offset, pageSize int) []TagView {
 		return []TagView{}
 	}
 
-	end := offset + pageSize
-	if end > len(tagViews) {
-		end = len(tagViews)
-	}
+	end := min(offset+pageSize, len(tagViews))
 
 	return tagViews[offset:end]
 }
@@ -494,7 +506,7 @@ func (s *Store) GetRegistryStorageByNamespace(ctx context.Context, host string) 
 	if err != nil {
 		return nil, fmt.Errorf("get storage by namespace: %w", err)
 	}
-	defer rows.Close()
+	defer closeRows(rows)
 
 	var result []NamespaceStorageView
 	for rows.Next() {
@@ -521,7 +533,7 @@ func (s *Store) GetStorageUsageByRegistry(ctx context.Context) ([]RegistryStorag
 	if err != nil {
 		return nil, fmt.Errorf("get storage usage by registry: %w", err)
 	}
-	defer rows.Close()
+	defer closeRows(rows)
 
 	var result []RegistryStorageUsageView
 	for rows.Next() {
@@ -551,7 +563,7 @@ func (s *Store) GetRegistryArchitectureCoverage(ctx context.Context, host string
 	if err != nil {
 		return nil, fmt.Errorf("get architecture coverage: %w", err)
 	}
-	defer rows.Close()
+	defer closeRows(rows)
 
 	var result []ArchitectureCoverageView
 	for rows.Next() {
@@ -575,7 +587,7 @@ func (s *Store) GetRegistryRepositories(ctx context.Context, host string) ([]Reg
 	if err != nil {
 		return nil, fmt.Errorf("get registry repositories: %w", err)
 	}
-	defer rows.Close()
+	defer closeRows(rows)
 
 	var result []RegistryRepositoryRow
 	for rows.Next() {
@@ -597,7 +609,7 @@ func (s *Store) GetUniqueArchitectures(ctx context.Context) ([]string, error) {
 	if err != nil {
 		return nil, fmt.Errorf("get unique architectures: %w", err)
 	}
-	defer rows.Close()
+	defer closeRows(rows)
 
 	var result []string
 	for rows.Next() {
@@ -621,53 +633,6 @@ func (s *Store) GetTotalRepositoriesCount(ctx context.Context) (int, error) {
 	return count, nil
 }
 
-// Seed inserts test data for development.
-func (s *Store) Seed(ctx context.Context) error {
-	return s.WithinTx(ctx, func(tx *Store) error {
-		return seedData(tx)
-	})
-}
-
-func seedData(s *Store) error {
-	ctx := context.Background()
-	if _, err := s.exec(ctx,
-		"INSERT OR IGNORE INTO registries (name, host, url, status) VALUES ('dockerhub', 'registry-1.docker.io', 'https://registry-1.docker.io', 1)"); err != nil {
-		return err
-	}
-	if _, err := s.exec(ctx,
-		"INSERT OR IGNORE INTO registries (name, host, url, status) VALUES ('ghcr', 'ghcr.io', 'https://ghcr.io', 1)"); err != nil {
-		return err
-	}
-
-	repos := []struct{ reg, ns, name string }{
-		{"dockerhub", "library", "nginx"},
-		{"dockerhub", "library", "redis"},
-		{"dockerhub", "library", "alpine"},
-		{"dockerhub", "", "myapp"},
-		{"ghcr", "", "backend"},
-	}
-	now := time.Now()
-
-	for _, repo := range repos {
-		var regID uint
-		if err := s.queryRow(ctx, "SELECT id FROM registries WHERE name = ?", repo.reg).Scan(&regID); err != nil {
-			return err
-		}
-		if _, err := s.exec(ctx,
-			`INSERT OR IGNORE INTO repositories (registry_id, namespace, name, last_sync_at)
-			 VALUES (?, ?, ?, ?)`, regID, repo.ns, repo.name, now); err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-type sqlStr struct {
-	value string
-	valid bool
-}
-
 func parseTime(value string) (time.Time, error) {
 	t, err := time.Parse("2006-01-02 15:04:05.999999999-07:00", value)
 	if err != nil {
@@ -677,18 +642,4 @@ func parseTime(value string) (time.Time, error) {
 		t, err = time.Parse(time.RFC3339Nano, value)
 	}
 	return t, err
-}
-
-func (s *sqlStr) Scan(value any) error {
-	if value == nil {
-		s.value, s.valid = "", false
-		return nil
-	}
-	switch v := value.(type) {
-	case string:
-		s.value, s.valid = v, true
-	case []byte:
-		s.value, s.valid = string(v), true
-	}
-	return nil
 }

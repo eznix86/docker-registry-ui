@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/eznix86/docker-registry-ui/internal/store"
+	"github.com/eznix86/docker-registry-ui/internal/sync/planning"
 )
 
 type persister struct {
@@ -18,12 +19,20 @@ func newPersister(s *store.Store) *persister {
 
 func (p *persister) save(
 	ctx context.Context,
-	job TagJob,
+	job planning.Job,
 	digest string,
 	graph *ManifestGraph,
 ) error {
 	return p.s.WithinTx(ctx, func(tx *store.Store) error {
-		_, err := tx.UpsertTagWithSync(ctx, job.RepositoryID, job.TagName, digest, string(graph.Kind), graph.MediaType, job.PriorityScore)
+		_, err := tx.UpsertTagWithSync(
+			ctx,
+			job.RepositoryID,
+			job.TagName,
+			digest,
+			string(graph.Kind),
+			graph.MediaType,
+			job.PriorityScore,
+		)
 		if err != nil {
 			return fmt.Errorf("upsert tag: %w", err)
 		}
@@ -33,9 +42,13 @@ func (p *persister) save(
 			var indexCreated *time.Time
 			for _, pe := range graph.Platforms {
 				if len(pe.Raw) > 0 {
-					p.savePlatform(ctx, tx, &pe)
+					if err := p.savePlatform(ctx, tx, &pe); err != nil {
+						return err
+					}
 				} else {
-					p.savePlatformStub(ctx, tx, &pe)
+					if err := p.savePlatformStub(ctx, tx, &pe); err != nil {
+						return err
+					}
 				}
 				indexSize += pe.Size
 				if pe.ConfigCreated != nil {
@@ -58,7 +71,9 @@ func (p *persister) save(
 			}
 		} else {
 			for _, pe := range graph.Platforms {
-				p.savePlatform(ctx, tx, &pe)
+				if err := p.savePlatform(ctx, tx, &pe); err != nil {
+					return err
+				}
 			}
 		}
 
@@ -69,43 +84,78 @@ func (p *persister) save(
 	})
 }
 
-func (p *persister) savePlatformStub(ctx context.Context, tx *store.Store, pe *PlatformEntry) {
-	if _, err := tx.UpsertManifestByFields(ctx,
-		pe.Digest, pe.MediaType, string(KindImage),
-		"", "", pe.OS, pe.Architecture, pe.Variant, pe.Size, nil,
+func (p *persister) savePlatformStub(
+	ctx context.Context,
+	tx *store.Store,
+	pe *PlatformEntry,
+) error {
+	if _, err := tx.UpsertManifestByFields(
+		ctx,
+		pe.Digest,
+		pe.MediaType,
+		string(KindImage),
+		"",
+		"",
+		pe.OS,
+		pe.Architecture,
+		pe.Variant,
+		pe.Size,
+		nil,
 	); err != nil {
-		_ = err
+		return fmt.Errorf("upsert platform stub %s: %w", pe.Digest, err)
 	}
+
+	return nil
 }
 
-func (p *persister) savePlatform(ctx context.Context, tx *store.Store, pe *PlatformEntry) {
+func (p *persister) savePlatform(
+	ctx context.Context,
+	tx *store.Store,
+	pe *PlatformEntry,
+) error {
 	if pe.ConfigDigest != "" {
-		if _, err := tx.UpsertConfigBlobByFields(ctx,
-			pe.ConfigDigest, pe.ConfigSize,
-			string(pe.ConfigRaw), pe.ConfigOS, pe.ConfigArch, pe.ConfigCreated,
+		if _, err := tx.UpsertConfigBlobByFields(
+			ctx,
+			pe.ConfigDigest,
+			pe.ConfigSize,
+			string(pe.ConfigRaw),
+			pe.ConfigOS,
+			pe.ConfigArch,
+			pe.ConfigCreated,
 		); err != nil {
-			_ = err
+			return fmt.Errorf("upsert config blob %s: %w", pe.ConfigDigest, err)
 		}
 	}
 
 	var layerDigests []string
 	for _, l := range pe.Layers {
 		if _, err := tx.UpsertLayerByFields(ctx, l.Digest, l.Size, l.MediaType); err != nil {
-			_ = err
+			return fmt.Errorf("upsert layer %s: %w", l.Digest, err)
 		}
 		layerDigests = append(layerDigests, l.Digest)
 	}
 
-	if _, err := tx.UpsertManifestByFields(ctx,
-		pe.Digest, pe.MediaType, string(KindImage),
-		string(pe.Raw), pe.ConfigDigest, pe.OS, pe.Architecture, pe.Variant, pe.Size, pe.ConfigCreated,
+	if _, err := tx.UpsertManifestByFields(
+		ctx,
+		pe.Digest,
+		pe.MediaType,
+		string(KindImage),
+		string(pe.Raw),
+		pe.ConfigDigest,
+		pe.OS,
+		pe.Architecture,
+		pe.Variant,
+		pe.Size,
+		pe.ConfigCreated,
 	); err != nil {
-		_ = err
+		return fmt.Errorf("upsert manifest %s: %w", pe.Digest, err)
 	}
 
 	if len(layerDigests) > 0 {
 		if err := tx.LinkManifestLayers(ctx, pe.Digest, layerDigests); err != nil {
-			_ = err
+			return fmt.Errorf("link manifest layers %s: %w", pe.Digest, err)
 		}
 	}
+
+	return nil
 }

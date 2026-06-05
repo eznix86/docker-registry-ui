@@ -2,17 +2,20 @@ package sync
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/eznix86/docker-registry-ui/internal/progress"
 	"github.com/eznix86/docker-registry-ui/internal/registry"
 	"github.com/eznix86/docker-registry-ui/internal/store"
+	"github.com/eznix86/docker-registry-ui/internal/sync/planning"
 )
+
+const unchangedTagRecheckInterval = 30 * time.Second
 
 func processTag(
 	ctx context.Context,
-	workerID int,
-	job TagJob,
+	job planning.Job,
 	stats *SyncStats,
 	f *fetcher,
 	p *persister,
@@ -24,29 +27,22 @@ func processTag(
 	client, err := rm.GetClient(job.RegistryName)
 	if err != nil {
 		stats.Record(TagStateError)
-		return err
+		return fmt.Errorf("get client %s: %w", job.RegistryName, err)
 	}
 
-	repoPath := job.RepoName
-	if job.Namespace != "" {
-		repoPath = job.Namespace + "/" + job.RepoName
-	}
-
+	repoPath := job.RepoPath()
 	label := repoPath + ":" + job.TagName
 	task := prog.Track(label, "Processing")
 	defer task.Done()
 
 	digest, err := f.fetchDigest(ctx, client, repoPath, job.TagName, job.RegistryName)
 	if err != nil {
-		if dbErr := s.MarkTagSyncError(ctx, job.RepositoryID, job.TagName, err.Error()); dbErr != nil {
-			logger.Error("Failed to record tag error", "tag", label, "dbError", dbErr)
-		}
-		stats.Record(TagStateError)
+		handleTagSyncError(ctx, s, stats, logger, job, label, err)
 		return nil
 	}
 
 	if job.ExistingDigest != "" && job.ExistingDigest == digest {
-		if dbErr := s.UpdateTagSyncMetadata(ctx, job.RepositoryID, job.TagName, job.PriorityScore, 30*time.Second); dbErr != nil {
+		if dbErr := s.UpdateTagSyncMetadata(ctx, job.RepositoryID, job.TagName, job.PriorityScore, unchangedTagRecheckInterval); dbErr != nil {
 			logger.Error("Failed to update tag metadata", "tag", label, "dbError", dbErr)
 		}
 		stats.Record(TagStateUnchanged)
@@ -55,20 +51,14 @@ func processTag(
 
 	manifestResp, err := f.fetchManifest(ctx, client, repoPath, job.TagName, job.RegistryName)
 	if err != nil {
-		if dbErr := s.MarkTagSyncError(ctx, job.RepositoryID, job.TagName, err.Error()); dbErr != nil {
-			logger.Error("Failed to record tag error", "tag", label, "dbError", dbErr)
-		}
-		stats.Record(TagStateError)
+		handleTagSyncError(ctx, s, stats, logger, job, label, err)
 		return nil
 	}
 
 	graph, err := buildManifestGraph(ctx, manifestResp, client, f, repoPath, job.RegistryName, label)
 	if err != nil {
 		logger.Error("Failed to build manifest graph", "tag", label, "error", err)
-		if dbErr := s.MarkTagSyncError(ctx, job.RepositoryID, job.TagName, err.Error()); dbErr != nil {
-			logger.Error("Failed to record tag error", "tag", label, "dbError", dbErr)
-		}
-		stats.Record(TagStateError)
+		handleTagSyncError(ctx, s, stats, logger, job, label, err)
 		return nil
 	}
 
@@ -84,4 +74,20 @@ func processTag(
 		stats.Record(TagStateChanged)
 	}
 	return nil
+}
+
+func handleTagSyncError(
+	ctx context.Context,
+	s *store.Store,
+	stats *SyncStats,
+	logger Logger,
+	job planning.Job,
+	label string,
+	err error,
+) {
+	if dbErr := s.MarkTagSyncError(ctx, job.RepositoryID, job.TagName, err.Error()); dbErr != nil {
+		logger.Error("Failed to record tag error", "tag", label, "dbError", dbErr)
+	}
+
+	stats.Record(TagStateError)
 }

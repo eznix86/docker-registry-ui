@@ -135,23 +135,6 @@ func (tk *Task) Done() {
 	tk.tracker.broadcast()
 }
 
-// Silent progress reporter for non-interactive use.
-type silentReporter struct{}
-
-func NewSilent() ProgressReporter { return &silentReporter{} }
-
-func (s *silentReporter) SetTotal(_ int)                    {}
-func (s *silentReporter) Track(_, _ string) TaskReporter    { return &silentTask{} }
-func (s *silentReporter) UpdateMessage(_ string)            {}
-func (s *silentReporter) UpdateStep(_ string)               {}
-func (s *silentReporter) Complete()                         {}
-func (s *silentReporter) Reset()                            {}
-func (s *silentReporter) Subscribe() <-chan Update          { ch := make(chan Update, 1); close(ch); return ch }
-
-type silentTask struct{}
-
-func (st *silentTask) Done() {}
-
 // CLI renderer.
 func RenderCLI(tracker *Tracker) {
 	updates := tracker.Subscribe()
@@ -206,7 +189,9 @@ func (b *WebSocketBroadcaster) Run() {
 			b.mu.Lock()
 			if _, ok := b.clients[client]; ok {
 				delete(b.clients, client)
-				_ = client.Close()
+				if err := client.Close(); err != nil {
+					clog.Warn("Failed to close websocket client", "error", err)
+				}
 			}
 			b.mu.Unlock()
 		case msg := <-b.messages:

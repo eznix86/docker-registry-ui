@@ -76,15 +76,3 @@ func (l *limiter) resetFailures(registry string) {
 	defer l.mu.Unlock()
 	l.failures[registry] = 0
 }
-
-func (l *limiter) getCircuitStatus() map[string]bool {
-	l.mu.RLock()
-	defer l.mu.RUnlock()
-	result := make(map[string]bool)
-	for reg, open := range l.circuitOpen {
-		if open {
-			result[reg] = true
-		}
-	}
-	return result
-}

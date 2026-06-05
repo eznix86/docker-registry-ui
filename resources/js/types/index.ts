@@ -97,6 +97,8 @@ export interface Tag {
 	chartName?: string
 	chartVersion?: string
 	chartDesc?: string
+	chartApiVersion?: string
+	chartType?: string
 }
 
 export interface RepositoryFilters {

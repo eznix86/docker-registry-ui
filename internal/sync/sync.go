@@ -11,6 +11,7 @@ import (
 	"github.com/eznix86/docker-registry-ui/internal/progress"
 	"github.com/eznix86/docker-registry-ui/internal/registry"
 	"github.com/eznix86/docker-registry-ui/internal/store"
+	"github.com/eznix86/docker-registry-ui/internal/sync/planning"
 )
 
 // Config holds sync engine configuration values.
@@ -46,24 +47,6 @@ type ManualSyncChannel chan struct{}
 
 // ErrNoRegistries indicates no registries are configured.
 var ErrNoRegistries = errors.New("no registries configured")
-
-// TagJobInput holds the user-visible fields needed to identify a tag to sync.
-type TagJobInput struct {
-	RegistryName string
-	Namespace    string
-	RepoName     string
-	TagName      string
-}
-
-// TagJob describes a single tag sync job with internal state.
-type TagJob struct {
-	TagJobInput
-	RegistryID     uint
-	RegistryHost   string
-	RepositoryID   uint
-	PriorityScore  float64
-	ExistingDigest string
-}
 
 // ManifestKind is the kind of manifest.
 type ManifestKind string
@@ -236,9 +219,7 @@ func (s *Service) runAsync(ctx context.Context, reason string) {
 		clog.Warn("Sync skipped, previous run still active", "reason", reason)
 		return
 	}
-	s.wg.Add(1)
-	go func() {
-		defer s.wg.Done()
+	s.wg.Go(func() {
 		defer s.running.Unlock()
 		result, err := s.Run(ctx)
 		if err != nil {
@@ -246,7 +227,7 @@ func (s *Service) runAsync(ctx context.Context, reason string) {
 			return
 		}
 		ShowResult(result)
-	}()
+	})
 }
 
 // TriggerManualSync sends a non-blocking trigger on the manual sync channel.
@@ -330,12 +311,12 @@ func (e *engine) buildResult(stats *SyncStats) *Result {
 	}
 }
 
-func (e *engine) processTags(ctx context.Context, jobs []TagJob) *SyncStats {
+func (e *engine) processTags(ctx context.Context, jobs []planning.Job) *SyncStats {
 	e.progress.UpdateStep("Syncing")
 	e.progress.UpdateMessage("Processing tags")
 	e.progress.SetTotal(len(jobs))
 
-	scheduler := newRegistryScheduler(jobs)
+	scheduler := planning.NewScheduler(jobs)
 	lim := newLimiter(e.maxPerReg, e.cbThresh)
 	stats := &SyncStats{TotalTags: len(jobs)}
 	f := newFetcher(lim)
@@ -352,7 +333,7 @@ func (e *engine) processTags(ctx context.Context, jobs []TagJob) *SyncStats {
 
 func (e *engine) runWorker(
 	ctx context.Context, wg *sync.WaitGroup, workerID int,
-	stats *SyncStats, f *fetcher, p *persister, scheduler *registryScheduler,
+	stats *SyncStats, f *fetcher, p *persister, scheduler *planning.Scheduler,
 ) {
 	defer wg.Done()
 	for {
@@ -365,7 +346,7 @@ func (e *engine) runWorker(
 		if !ok {
 			return
 		}
-		if err := processTag(ctx, workerID, job, stats, f, p, e.store, e.manager, e.progress, e.logger); err != nil {
+		if err := processTag(ctx, job, stats, f, p, e.store, e.manager, e.progress, e.logger); err != nil {
 			e.logger.Error("Tag error", "worker", workerID, "tag", job.TagName, "error", err)
 		}
 	}
@@ -405,7 +386,10 @@ func (e *engine) syncRegistries(ctx context.Context) error {
 
 	configHosts := make(map[string]bool)
 	for _, name := range names {
-		client, _ := e.manager.GetClient(name)
+		client, err := e.manager.GetClient(name)
+		if err != nil {
+			return fmt.Errorf("get registry client %s: %w", name, err)
+		}
 		if client != nil {
 			configHosts[client.Host()] = true
 		}
@@ -441,7 +425,6 @@ func (e *engine) pruneStaleTags(ctx context.Context, report *discoveryReport) er
 	return pruneStaleTags(ctx, e.store, e.logger, report.Repos)
 }
 
-func (e *engine) prepareJobs(ctx context.Context, report *discoveryReport) ([]TagJob, error) {
-	_, jobs, err := prepareJobs(ctx, e.store, e.logger, report.Jobs, e.progress)
-	return jobs, err
+func (e *engine) prepareJobs(ctx context.Context, report *discoveryReport) ([]planning.Job, error) {
+	return planning.PrepareJobs(ctx, e.store, e.logger, report.Jobs, e.progress)
 }

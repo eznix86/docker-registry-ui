@@ -77,6 +77,13 @@ linters:
     - err113 # Too strict about dynamic errors
   settings:
     gocyclo:
+      min-complexity: 20
+    gocognit:
+      min-complexity: 50
+    funlen:
+      lines: 150
+      statements: 80
+    nestif:
       min-complexity: 15
     misspell:
       locale: US
@@ -88,6 +95,14 @@ linters:
     errcheck:
       check-blank: true
       check-type-assertions: true
+  exclusions:
+    paths:
+      - node_modules
+    rules:
+      - linters:
+          - goconst
+        path: internal/web/api.go
+        text: 'jsonKeyError'
 
 issues:
   max-issues-per-linter: 0

@@ -7,6 +7,7 @@ import (
 	"time"
 )
 
+//nolint:gochecknoglobals // These variables are set at build time via -ldflags -X.
 var (
 	BuildTime = ""
 	GitCommit = ""
@@ -23,24 +24,35 @@ func (i *Info) Short() string {
 	if Version != "" {
 		return Version
 	}
-	commit := GitCommit
-	if commit == "" {
-		if bi, ok := debug.ReadBuildInfo(); ok {
-			for _, s := range bi.Settings {
-				if s.Key == "vcs.revision" {
-					commit = s.Value
-					if len(commit) > 7 {
-						commit = commit[:7]
-					}
-					break
-				}
-			}
+	if commit := resolveCommit(); commit != "" {
+		return commit
+	}
+	return "dev"
+}
+
+func resolveCommit() string {
+	if GitCommit != "" {
+		return GitCommit
+	}
+	return readCommitFromBuildInfo()
+}
+
+func readCommitFromBuildInfo() string {
+	bi, ok := debug.ReadBuildInfo()
+	if !ok {
+		return ""
+	}
+	for _, s := range bi.Settings {
+		if s.Key != "vcs.revision" {
+			continue
 		}
+		commit := s.Value
+		if len(commit) > 7 {
+			commit = commit[:7]
+		}
+		return commit
 	}
-	if commit == "" {
-		commit = "dev"
-	}
-	return commit
+	return ""
 }
 
 func (i *Info) String() string {

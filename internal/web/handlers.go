@@ -5,6 +5,7 @@ import (
 	"net/url"
 	"strings"
 
+	"github.com/eznix86/docker-registry-ui/internal/helm"
 	"github.com/eznix86/docker-registry-ui/internal/progress"
 	"github.com/eznix86/docker-registry-ui/internal/registry"
 	"github.com/eznix86/docker-registry-ui/internal/store"
@@ -14,12 +15,13 @@ import (
 )
 
 type handler struct {
-	inertia        *gonertia.ViteInstance
-	store          *store.Store
-	regManager     *registry.Manager
-	broadcaster    *progress.WebSocketBroadcaster
-	manualCh       sync.ManualSyncChannel
-	showUsageBar   bool
+	inertia      *gonertia.ViteInstance
+	store        *store.Store
+	regManager   *registry.Manager
+	helmReader   *helm.Reader
+	broadcaster  *progress.WebSocketBroadcaster
+	manualCh     sync.ManualSyncChannel
+	showUsageBar bool
 }
 
 func (h *handler) explore(w http.ResponseWriter, r *http.Request) {
@@ -38,8 +40,16 @@ func (h *handler) explore(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	archs, _ := h.store.GetUniqueArchitectures(ctx)
-	total, _ := h.store.GetTotalRepositoriesCount(ctx)
+	archs, err := h.store.GetUniqueArchitectures(ctx)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	total, err := h.store.GetTotalRepositoriesCount(ctx)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 
 	props := gonertia.Props{
 		"repositories":      repos,
@@ -75,17 +85,37 @@ func (h *handler) registryPage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	registries, _ := h.store.GetAllRegistries(ctx)
-	stats, _ := h.store.GetRegistryStats(ctx, host)
-	storageByNS, _ := h.store.GetRegistryStorageByNamespace(ctx, host)
-	archCoverage, _ := h.store.GetRegistryArchitectureCoverage(ctx, host)
-	repoList, _ := h.store.GetRegistryRepositories(ctx, host)
+	registries, err := h.store.GetAllRegistries(ctx)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	stats, err := h.store.GetRegistryStats(ctx, host)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	storageByNS, err := h.store.GetRegistryStorageByNamespace(ctx, host)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	archCoverage, err := h.store.GetRegistryArchitectureCoverage(ctx, host)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	repoList, err := h.store.GetRegistryRepositories(ctx, host)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 
 	props := gonertia.Props{
 		"registry": gonertia.Props{
-			"name":   reg.Name,
-			"host":   reg.Host,
-			"status": reg.Status,
+			"name":        reg.Name,
+			"host":        reg.Host,
+			jsonKeyStatus: reg.Status,
 		},
 		"registries":   toRegistryOptions(registries),
 		"stats":        stats,

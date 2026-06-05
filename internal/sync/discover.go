@@ -5,17 +5,19 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/eznix86/docker-registry-ui/internal/progress"
 	"github.com/eznix86/docker-registry-ui/internal/registry"
 	"github.com/eznix86/docker-registry-ui/internal/store"
+	"github.com/eznix86/docker-registry-ui/internal/sync/planning"
 	registryclient "github.com/eznix86/registry-client"
 )
 
+const registryPageSize = 100
+
 // discoveryReport bundles all results from the discovery phase.
 type discoveryReport struct {
-	Jobs       []TagJob
+	Jobs       []planning.Job
 	Repos      []DiscoveredRepository
 	Registries []DiscoveredRegistry
 	Errors     map[string]error
@@ -109,12 +111,12 @@ func discoverOneRegistry(
 	var repositories []string
 	last := ""
 	for {
-		resp, err := client.GetCatalog(ctx, &registryclient.PaginationParams{N: 100, Last: last})
+		resp, err := client.GetCatalog(ctx, &registryclient.PaginationParams{N: registryPageSize, Last: last})
 		if err != nil {
 			return nil, status, fmt.Errorf("catalog %s: %w", reg.Name, err)
 		}
 		repositories = append(repositories, resp.Repositories...)
-		if len(resp.Repositories) < 100 {
+		if len(resp.Repositories) < registryPageSize {
 			break
 		}
 		last = resp.Repositories[len(resp.Repositories)-1]
@@ -134,14 +136,14 @@ func discoverOneRegistry(
 		lastTag := ""
 	fetchTags:
 		for {
-			resp, err := client.ListTags(ctx, repoFull, &registryclient.PaginationParams{N: 100, Last: lastTag})
+			resp, err := client.ListTags(ctx, repoFull, &registryclient.PaginationParams{N: registryPageSize, Last: lastTag})
 			if err != nil {
 				logger.Warn("Failed to list tags", "registry", reg.Name, "repo", repoFull, "error", err)
 				tagsFetched = false
 				break
 			}
 			tags = append(tags, resp.Tags...)
-			if len(resp.Tags) < 100 {
+			if len(resp.Tags) < registryPageSize {
 				break
 			}
 			lastTag = resp.Tags[len(resp.Tags)-1]
@@ -164,9 +166,9 @@ func discoverOneRegistry(
 	return discovered, status, nil
 }
 
-func processDiscovered(r discoveryResult) ([]TagJob, []DiscoveredRepository) {
-	var jobs []TagJob
-	var repos []DiscoveredRepository
+func processDiscovered(r discoveryResult) ([]planning.Job, []DiscoveredRepository) {
+	var jobs []planning.Job
+	repos := make([]DiscoveredRepository, 0, len(r.repos))
 	for _, repo := range r.repos {
 		repos = append(repos, DiscoveredRepository{
 			RegistryName: r.regName,
@@ -177,15 +179,15 @@ func processDiscovered(r discoveryResult) ([]TagJob, []DiscoveredRepository) {
 			TagsFetched:  repo.TagsFetched,
 		})
 		for _, tag := range repo.Tags {
-			jobs = append(jobs, TagJob{
-				TagJobInput: TagJobInput{
+			jobs = append(jobs, planning.Job{
+				JobInput: planning.JobInput{
 					RegistryName: r.regName,
 					Namespace:    repo.Namespace,
 					RepoName:     repo.Name,
 					TagName:      tag,
 				},
 				RegistryHost:  r.regHost,
-				PriorityScore: CalculatePriorityScore(tag),
+				PriorityScore: planning.CalculatePriorityScore(tag),
 			})
 		}
 	}
@@ -239,14 +241,14 @@ func pruneStaleRepos(
 	}
 	validRepos := make(map[string]bool)
 	for _, repo := range discoveredRepos {
-		validRepos[makeRepoKey(repo.RegistryHost, repo.Namespace, repo.Name)] = true
+		validRepos[repoIdentityKey(repo.RegistryHost, repo.Namespace, repo.Name)] = true
 	}
 	deleted := 0
 	for _, repo := range allRepos {
 		if !validHosts[repo.RegistryHost] {
 			continue
 		}
-		key := makeRepoKey(repo.RegistryHost, repo.Namespace, repo.Name)
+		key := repoIdentityKey(repo.RegistryHost, repo.Namespace, repo.Name)
 		if validRepos[key] {
 			continue
 		}
@@ -279,7 +281,10 @@ func pruneStaleTags(
 	if err != nil {
 		return fmt.Errorf("get tags for pruning: %w", err)
 	}
-	repoMap := buildRepoMap(repos)
+	repoMap := make(map[string]*store.RepositoryView, len(repos))
+	for i := range repos {
+		repoMap[repoIdentityKey(repos[i].RegistryHost, repos[i].Namespace, repos[i].Name)] = &repos[i]
+	}
 	tagsByRepo := groupTagsByRepo(tags)
 	deleted := 0
 	skipped := 0
@@ -288,7 +293,7 @@ func pruneStaleTags(
 			skipped++
 			continue
 		}
-		key := makeRepoKey(dr.RegistryHost, dr.Namespace, dr.Name)
+		key := repoIdentityKey(dr.RegistryHost, dr.Namespace, dr.Name)
 		repo, ok := repoMap[key]
 		if !ok {
 			continue
@@ -308,58 +313,6 @@ func pruneStaleTags(
 		logger.Info("Stale tags pruned", "deleted", deleted, "skipped_repos", skipped)
 	}
 	return nil
-}
-
-func prepareJobs(
-	ctx context.Context,
-	s *store.Store,
-	logger Logger,
-	jobs []TagJob,
-	prog progress.ProgressReporter,
-) (map[string]*store.Tag, []TagJob, error) {
-	select {
-	case <-ctx.Done():
-		return nil, nil, ctx.Err()
-	default:
-	}
-	prog.UpdateStep("Preparation")
-	prog.UpdateMessage("Loading existing tags")
-	repos, err := s.GetRepositoriesViewFiltered(ctx, store.RepositoryFilters{ShowUntagged: true})
-	if err != nil {
-		return nil, nil, fmt.Errorf("get repos: %w", err)
-	}
-	repoMap := buildRepoMap(repos)
-	allTags, err := s.GetAllTags(ctx)
-	if err != nil {
-		return nil, nil, fmt.Errorf("get tags: %w", err)
-	}
-	tagMap := buildTagMap(allTags)
-	existingCount := 0
-	for i := range jobs {
-		key := makeRepoKey(jobs[i].RegistryHost, jobs[i].Namespace, jobs[i].RepoName)
-		repo, ok := repoMap[key]
-		if !ok {
-			continue
-		}
-		jobs[i].RepositoryID = repo.ID
-		if tag, ok := tagMap[makeTagKey(repo.ID, jobs[i].TagName)]; ok {
-			jobs[i].ExistingDigest = tag.Digest
-			existingCount++
-		}
-	}
-	logger.Info("Loaded existing tags", "count", existingCount)
-	prog.UpdateMessage("Filtering by schedule")
-	now := time.Now()
-	jobsToProcess := filterBySchedule(jobs, tagMap, now)
-	if skipped := len(jobs) - len(jobsToProcess); skipped > 0 {
-		logger.Info("Schedule filter", "skipped", skipped, "processing", len(jobsToProcess))
-	}
-	if len(jobsToProcess) == 0 {
-		return tagMap, nil, nil
-	}
-	prog.UpdateMessage("Sorting by priority")
-	jobsToProcess = sortByPriority(jobsToProcess)
-	return tagMap, jobsToProcess, nil
 }
 
 // DiscoveredRepository represents a repository found during discovery.
@@ -383,14 +336,6 @@ type DiscoveredRepo struct {
 	TagsFetched bool
 }
 
-func makeRepoKey(host, ns, name string) string {
-	return fmt.Sprintf("%s|%s|%s", host, ns, name)
-}
-
-func makeTagKey(repoID uint, name string) string {
-	return fmt.Sprintf("%d|%s", repoID, name)
-}
-
 func splitRepoName(full string) (ns, name string) {
 	parts := strings.SplitN(full, "/", 2)
 	if len(parts) == 2 {
@@ -399,20 +344,8 @@ func splitRepoName(full string) (ns, name string) {
 	return "", parts[0]
 }
 
-func buildRepoMap(repos []store.RepositoryView) map[string]*store.RepositoryView {
-	m := make(map[string]*store.RepositoryView, len(repos))
-	for i := range repos {
-		m[makeRepoKey(repos[i].RegistryHost, repos[i].Namespace, repos[i].Name)] = &repos[i]
-	}
-	return m
-}
-
-func buildTagMap(tags []store.Tag) map[string]*store.Tag {
-	m := make(map[string]*store.Tag, len(tags))
-	for i := range tags {
-		m[makeTagKey(tags[i].RepositoryID, tags[i].Name)] = &tags[i]
-	}
-	return m
+func repoIdentityKey(host, namespace, name string) string {
+	return host + "|" + namespace + "|" + name
 }
 
 func groupTagsByRepo(tags []store.Tag) map[uint][]store.Tag {

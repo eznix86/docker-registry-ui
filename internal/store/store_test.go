@@ -19,6 +19,57 @@ func setupStore(t *testing.T) (*store.Store, context.Context) {
 	return s, ctx
 }
 
+func mustRegistry(t *testing.T, s *store.Store, ctx context.Context, name, url, host string) *store.Registry {
+	t.Helper()
+	reg, err := s.UpsertRegistryByFields(ctx, name, url, host, 1)
+	if err != nil {
+		t.Fatalf("UpsertRegistryByFields: %v", err)
+	}
+	return reg
+}
+
+func mustRepository(t *testing.T, s *store.Store, ctx context.Context, registryID uint, namespace, name string) *store.Repository {
+	t.Helper()
+	repo, err := s.UpsertRepositoryByFields(ctx, registryID, namespace, name)
+	if err != nil {
+		t.Fatalf("UpsertRepositoryByFields: %v", err)
+	}
+	return repo
+}
+
+func mustTag(t *testing.T, s *store.Store, ctx context.Context, repoID uint, name, digest string) *store.Tag {
+	t.Helper()
+	tag, err := s.UpsertTagWithSync(ctx, repoID, name, digest, "image", "app/json", 1.0)
+	if err != nil {
+		t.Fatalf("UpsertTagWithSync: %v", err)
+	}
+	return tag
+}
+
+func mustManifest(
+	t *testing.T,
+	s *store.Store,
+	ctx context.Context,
+	digest, mediaType, kind, rawJSON, configDigest, osName, arch string,
+	size int64,
+) *store.Manifest {
+	t.Helper()
+	manifest, err := s.UpsertManifestByFields(ctx, digest, mediaType, kind, rawJSON, configDigest, osName, arch, "", size, nil)
+	if err != nil {
+		t.Fatalf("UpsertManifestByFields: %v", err)
+	}
+	return manifest
+}
+
+func mustLayer(t *testing.T, s *store.Store, ctx context.Context, digest string, size int64) *store.Layer {
+	t.Helper()
+	layer, err := s.UpsertLayerByFields(ctx, digest, size, "application/vnd.docker.image.rootfs.diff.tar.gzip")
+	if err != nil {
+		t.Fatalf("UpsertLayerByFields: %v", err)
+	}
+	return layer
+}
+
 func TestNewStoreCreatesSchema(t *testing.T) {
 	s, ctx := setupStore(t)
 
@@ -57,7 +108,7 @@ func TestUpsertAndGetRegistry(t *testing.T) {
 func TestUpsertAndGetRepository(t *testing.T) {
 	s, ctx := setupStore(t)
 
-	reg, _ := s.UpsertRegistryByFields(ctx, "ghcr", "https://ghcr.io", "ghcr.io", 1)
+	reg := mustRegistry(t, s, ctx, "ghcr", "https://ghcr.io", "ghcr.io")
 
 	repo, err := s.UpsertRepositoryByFields(ctx, reg.ID, "myorg", "myapp")
 	if err != nil {
@@ -82,14 +133,17 @@ func TestUpsertAndGetRepository(t *testing.T) {
 func TestHardDeleteRepository(t *testing.T) {
 	s, ctx := setupStore(t)
 
-	reg, _ := s.UpsertRegistryByFields(ctx, "test", "https://test.io", "test.io", 1)
-	repo, _ := s.UpsertRepositoryByFields(ctx, reg.ID, "", "todelete")
+	reg := mustRegistry(t, s, ctx, "test", "https://test.io", "test.io")
+	repo := mustRepository(t, s, ctx, reg.ID, "", "todelete")
 
 	if err := s.DeleteRepository(ctx, repo); err != nil {
 		t.Fatalf("DeleteRepository: %v", err)
 	}
 
-	views, _ := s.GetRepositoriesView(ctx)
+	views, err := s.GetRepositoriesView(ctx)
+	if err != nil {
+		t.Fatalf("GetRepositoriesView: %v", err)
+	}
 	for _, v := range views {
 		if v.ID == repo.ID {
 			t.Fatal("expected deleted repository to be absent from view")
@@ -100,8 +154,8 @@ func TestHardDeleteRepository(t *testing.T) {
 func TestUpsertTagWithSync(t *testing.T) {
 	s, ctx := setupStore(t)
 
-	reg, _ := s.UpsertRegistryByFields(ctx, "test", "https://test.io", "test.io", 1)
-	repo, _ := s.UpsertRepositoryByFields(ctx, reg.ID, "lib", "nginx")
+	reg := mustRegistry(t, s, ctx, "test", "https://test.io", "test.io")
+	repo := mustRepository(t, s, ctx, reg.ID, "lib", "nginx")
 
 	tag, err := s.UpsertTagWithSync(ctx, repo.ID, "latest",
 		"sha256:abc123", "image", "application/vnd.docker.distribution.manifest.v2+json", 5.0)
@@ -119,8 +173,8 @@ func TestUpsertTagWithSync(t *testing.T) {
 func TestMarkTagSyncError(t *testing.T) {
 	s, ctx := setupStore(t)
 
-	reg, _ := s.UpsertRegistryByFields(ctx, "test", "https://test.io", "test.io", 1)
-	repo, _ := s.UpsertRepositoryByFields(ctx, reg.ID, "lib", "error-test")
+	reg := mustRegistry(t, s, ctx, "test", "https://test.io", "test.io")
+	repo := mustRepository(t, s, ctx, reg.ID, "lib", "error-test")
 
 	if err := s.MarkTagSyncError(ctx, repo.ID, "broken", "something went wrong"); err != nil {
 		t.Fatalf("MarkTagSyncError: %v", err)
@@ -141,9 +195,9 @@ func TestMarkTagSyncError(t *testing.T) {
 func TestHardDeleteTag(t *testing.T) {
 	s, ctx := setupStore(t)
 
-	reg, _ := s.UpsertRegistryByFields(ctx, "test", "https://test.io", "test.io", 1)
-	repo, _ := s.UpsertRepositoryByFields(ctx, reg.ID, "", "todelete")
-	tag, _ := s.UpsertTagWithSync(ctx, repo.ID, "v1", "sha256:def456", "image", "application/vnd.docker.distribution.manifest.v2+json", 1.0)
+	reg := mustRegistry(t, s, ctx, "test", "https://test.io", "test.io")
+	repo := mustRepository(t, s, ctx, reg.ID, "", "todelete")
+	tag := mustTag(t, s, ctx, repo.ID, "v1", "sha256:def456")
 
 	if err := s.DeleteTag(ctx, tag); err != nil {
 		t.Fatalf("DeleteTag: %v", err)
@@ -178,17 +232,18 @@ func TestUpsertManifestWithCreated(t *testing.T) {
 func TestLinkManifestPlatform(t *testing.T) {
 	s, ctx := setupStore(t)
 
-	m1, _ := s.UpsertManifestByFields(ctx, "sha256:index1", "application/vnd.oci.image.index.v1+json",
-		"index", `{}`, "", "", "", "", 0, nil)
-	m2, _ := s.UpsertManifestByFields(ctx, "sha256:platform1", "application/vnd.docker.distribution.manifest.v2+json",
-		"image", `{}`, "sha256:cfg1", "linux", "amd64", "", 5000, nil)
+	m1 := mustManifest(t, s, ctx, "sha256:index1", "application/vnd.oci.image.index.v1+json", "index", `{}`, "", "", "", 0)
+	m2 := mustManifest(t, s, ctx, "sha256:platform1", "application/vnd.docker.distribution.manifest.v2+json", "image", `{}`, "sha256:cfg1", "linux", "amd64", 5000)
 
 	if err := s.LinkManifestPlatform(ctx, m1.Digest, m2.Digest, "linux", "amd64", "", 0, 5000); err != nil {
 		t.Fatalf("LinkManifestPlatform: %v", err)
 	}
 
 	// Verify the relationship is reflected in repository views.
-	tags, _ := s.GetTagsForRepository(ctx, 1, store.TagFilter{}, store.ScrollPagination{Page: 1, PageSize: 10})
+	tags, err := s.GetTagsForRepository(ctx, 1, store.TagFilter{}, store.ScrollPagination{Page: 1, PageSize: 10})
+	if err != nil {
+		t.Fatalf("GetTagsForRepository: %v", err)
+	}
 	_ = tags
 }
 
@@ -217,8 +272,8 @@ func TestConfigBlobDeduplication(t *testing.T) {
 func TestLayerDeduplication(t *testing.T) {
 	s, ctx := setupStore(t)
 
-	l1, _ := s.UpsertLayerByFields(ctx, "sha256:layer1", 1000, "application/vnd.docker.image.rootfs.diff.tar.gzip")
-	l2, _ := s.UpsertLayerByFields(ctx, "sha256:layer1", 2000, "application/vnd.docker.image.rootfs.diff.tar.gzip")
+	l1 := mustLayer(t, s, ctx, "sha256:layer1", 1000)
+	l2 := mustLayer(t, s, ctx, "sha256:layer1", 2000)
 
 	if l1.Digest != l2.Digest {
 		t.Fatal("expected same digest for layer deduplication")
@@ -231,10 +286,10 @@ func TestLayerDeduplication(t *testing.T) {
 func TestRepositoryViewIncludesTagCount(t *testing.T) {
 	s, ctx := setupStore(t)
 
-	reg, _ := s.UpsertRegistryByFields(ctx, "test", "https://test.io", "test.io", 1)
-	repo, _ := s.UpsertRepositoryByFields(ctx, reg.ID, "lib", "busybox")
-	s.UpsertTagWithSync(ctx, repo.ID, "v1", "sha256:aaa", "image", "app/json", 1.0)
-	s.UpsertTagWithSync(ctx, repo.ID, "v2", "sha256:bbb", "image", "app/json", 1.0)
+	reg := mustRegistry(t, s, ctx, "test", "https://test.io", "test.io")
+	repo := mustRepository(t, s, ctx, reg.ID, "lib", "busybox")
+	mustTag(t, s, ctx, repo.ID, "v1", "sha256:aaa")
+	mustTag(t, s, ctx, repo.ID, "v2", "sha256:bbb")
 
 	views, err := s.GetRepositoriesView(ctx)
 	if err != nil {

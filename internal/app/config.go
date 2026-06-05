@@ -2,7 +2,6 @@ package app
 
 import (
 	"fmt"
-	"reflect"
 	"time"
 
 	"github.com/caarlos0/env/v11"
@@ -59,7 +58,9 @@ func LoadConfig(flags *pflag.FlagSet) (*Config, error) {
 		return nil, fmt.Errorf("parse env: %w", err)
 	}
 	if flags != nil {
-		applyFlagOverrides(flags, cfg)
+		if err := applyFlagOverrides(flags, cfg); err != nil {
+			return nil, err
+		}
 	}
 	if err := setLogLevel(cfg); err != nil {
 		return nil, err
@@ -85,56 +86,105 @@ func setLogLevel(cfg *Config) error {
 	return nil
 }
 
-func applyFlagOverrides(flags *pflag.FlagSet, cfg *Config) {
-	v := reflect.ValueOf(cfg).Elem()
-	applyFlagsToStruct(v, flags)
+func applyFlagOverrides(flags *pflag.FlagSet, cfg *Config) error {
+	if err := applyCountFlag(flags, "verbose", &cfg.App.VerboseCount); err != nil {
+		return err
+	}
+	if err := applyBoolFlag(flags, "debug", &cfg.App.Debug); err != nil {
+		return err
+	}
+	if err := applyBoolFlag(flags, "debug", &cfg.Server.Debug); err != nil {
+		return err
+	}
+	if err := applyStringFlag(flags, "host", &cfg.Server.Host); err != nil {
+		return err
+	}
+	if err := applyStringFlag(flags, "port", &cfg.Server.Port); err != nil {
+		return err
+	}
+	if err := applyIntFlag(flags, "workers", &cfg.Scraper.Workers); err != nil {
+		return err
+	}
+	if err := applyIntFlag(flags, "max-per-registry", &cfg.Scraper.MaxPerRegistry); err != nil {
+		return err
+	}
+	if err := applyBoolFlag(flags, "show-progress", &cfg.Scraper.ShowProgress); err != nil {
+		return err
+	}
+	if err := applyDurationFlag(flags, "sync-interval", &cfg.Scraper.SyncInterval); err != nil {
+		return err
+	}
+	if err := applyStringFlag(flags, "database-url", &cfg.Database.URL); err != nil {
+		return err
+	}
+	if err := applyBoolFlag(flags, "show-sql", &cfg.Database.ShowSQL); err != nil {
+		return err
+	}
+
+	return nil
 }
 
-func applyFlagsToStruct(v reflect.Value, flags *pflag.FlagSet) {
-	t := v.Type()
-	for i := range v.NumField() {
-		field := v.Field(i)
-		ft := t.Field(i)
-		if !field.CanSet() {
-			continue
-		}
-		if field.Kind() == reflect.Struct {
-			applyFlagsToStruct(field, flags)
-			continue
-		}
-		flagName := ft.Tag.Get("flag")
-		if flagName == "" || !flags.Changed(flagName) {
-			continue
-		}
-		setFieldFromFlag(field, flags, flagName)
+func applyStringFlag(flags *pflag.FlagSet, name string, target *string) error {
+	if !flags.Changed(name) {
+		return nil
 	}
+
+	value, err := flags.GetString(name)
+	if err != nil {
+		return fmt.Errorf("get string flag %s: %w", name, err)
+	}
+	*target = value
+	return nil
 }
 
-func setFieldFromFlag(field reflect.Value, flags *pflag.FlagSet, name string) {
-	switch field.Kind() {
-	case reflect.String:
-		if v, err := flags.GetString(name); err == nil {
-			field.SetString(v)
-		}
-	case reflect.Bool:
-		if v, err := flags.GetBool(name); err == nil {
-			field.SetBool(v)
-		}
-	case reflect.Int:
-		if v, err := flags.GetCount(name); err == nil {
-			field.SetInt(int64(v))
-		} else if v, err := flags.GetInt(name); err == nil {
-			field.SetInt(int64(v))
-		}
-	case reflect.Int64:
-		if field.Type() == reflect.TypeOf(time.Duration(0)) {
-			if v, err := flags.GetDuration(name); err == nil {
-				field.SetInt(int64(v))
-			}
-		} else {
-			if v, err := flags.GetInt64(name); err == nil {
-				field.SetInt(v)
-			}
-		}
+func applyBoolFlag(flags *pflag.FlagSet, name string, target *bool) error {
+	if !flags.Changed(name) {
+		return nil
 	}
+
+	value, err := flags.GetBool(name)
+	if err != nil {
+		return fmt.Errorf("get bool flag %s: %w", name, err)
+	}
+	*target = value
+	return nil
+}
+
+func applyIntFlag(flags *pflag.FlagSet, name string, target *int) error {
+	if !flags.Changed(name) {
+		return nil
+	}
+
+	value, err := flags.GetInt(name)
+	if err != nil {
+		return fmt.Errorf("get int flag %s: %w", name, err)
+	}
+	*target = value
+	return nil
+}
+
+func applyCountFlag(flags *pflag.FlagSet, name string, target *int) error {
+	if !flags.Changed(name) {
+		return nil
+	}
+
+	value, err := flags.GetCount(name)
+	if err != nil {
+		return fmt.Errorf("get count flag %s: %w", name, err)
+	}
+	*target = value
+	return nil
+}
+
+func applyDurationFlag(flags *pflag.FlagSet, name string, target *time.Duration) error {
+	if !flags.Changed(name) {
+		return nil
+	}
+
+	value, err := flags.GetDuration(name)
+	if err != nil {
+		return fmt.Errorf("get duration flag %s: %w", name, err)
+	}
+	*target = value
+	return nil
 }

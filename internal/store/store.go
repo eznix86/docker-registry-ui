@@ -12,6 +12,11 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 )
 
+const (
+	tagSuccessRecheckInterval = 30 * time.Second
+	tagErrorRecheckInterval   = 5 * time.Minute
+)
+
 type Store struct {
 	db *sql.DB
 	tx *sql.Tx
@@ -30,7 +35,9 @@ func New(ctx context.Context, dsn string) (*Store, error) {
 	db.SetMaxOpenConns(1)
 
 	if err := migrate(ctx, db); err != nil {
-		db.Close()
+		if closeErr := db.Close(); closeErr != nil {
+			return nil, fmt.Errorf("close database after migration failure: %w", closeErr)
+		}
 		return nil, fmt.Errorf("run migration: %w", err)
 	}
 
@@ -39,7 +46,9 @@ func New(ctx context.Context, dsn string) (*Store, error) {
 
 func (s *Store) Close() {
 	if s.db != nil {
-		_ = s.db.Close()
+		if err := s.db.Close(); err != nil {
+			return
+		}
 	}
 }
 
@@ -92,7 +101,7 @@ func (s *Store) GetAllRegistries(ctx context.Context) ([]Registry, error) {
 	if err != nil {
 		return nil, fmt.Errorf("get all registries: %w", err)
 	}
-	defer rows.Close()
+	defer closeRows(rows)
 
 	registries := make([]Registry, 0)
 	for rows.Next() {
@@ -195,7 +204,7 @@ func (s *Store) GetRepositoriesViewFiltered(ctx context.Context, filters Reposit
 	if err != nil {
 		return nil, fmt.Errorf("query repositories view: %w", err)
 	}
-	defer rows.Close()
+	defer closeRows(rows)
 
 	var repos []RepositoryView
 	for rows.Next() {
@@ -218,7 +227,7 @@ func (s *Store) GetRepositoryByPath(ctx context.Context, registryHost, namespace
 	if err != nil {
 		return nil, fmt.Errorf("get repository by path: %w", err)
 	}
-	defer rows.Close()
+	defer closeRows(rows)
 
 	if !rows.Next() {
 		return nil, fmt.Errorf("repository not found: %s/%s/%s", registryHost, namespace, name)
@@ -298,7 +307,7 @@ func (s *Store) GetAllTags(ctx context.Context) ([]Tag, error) {
 	if err != nil {
 		return nil, fmt.Errorf("get all tags: %w", err)
 	}
-	defer rows.Close()
+	defer closeRows(rows)
 	return scanTags(rows)
 }
 
@@ -318,7 +327,7 @@ func (s *Store) GetTagsByRepoAndDigest(ctx context.Context, repositoryID uint, d
 	if err != nil {
 		return nil, fmt.Errorf("get tags by digest: %w", err)
 	}
-	defer rows.Close()
+	defer closeRows(rows)
 	return scanTags(rows)
 }
 
@@ -341,7 +350,7 @@ func (s *Store) GetTagsByRepoAndDigests(ctx context.Context, repositoryID uint, 
 	if err != nil {
 		return nil, fmt.Errorf("get tags by digests: %w", err)
 	}
-	defer rows.Close()
+	defer closeRows(rows)
 	return scanTags(rows)
 }
 
@@ -392,7 +401,7 @@ func (s *Store) DeleteStaleTags(ctx context.Context, repoID uint, keepNames []st
 
 func (s *Store) UpsertTagWithSync(ctx context.Context, repoID uint, tagName, digest, kind, mediaType string, priorityScore float64) (*Tag, error) {
 	now := time.Now()
-	nextCheck := now.Add(30 * time.Second)
+	nextCheck := now.Add(tagSuccessRecheckInterval)
 	_, err := s.exec(ctx,
 		`INSERT INTO tags (repo_id, name, digest, kind, media_type, last_sync_at, next_check_at, priority, sync_status, last_error)
 		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'ok', '')
@@ -410,7 +419,7 @@ func (s *Store) UpsertTagWithSync(ctx context.Context, repoID uint, tagName, dig
 
 func (s *Store) MarkTagSyncError(ctx context.Context, repoID uint, tagName, errorMsg string) error {
 	now := time.Now()
-	nextCheck := now.Add(5 * time.Minute)
+	nextCheck := now.Add(tagErrorRecheckInterval)
 	_, err := s.exec(ctx,
 		`INSERT INTO tags (repo_id, name, digest, kind, media_type, last_sync_at, next_check_at, priority, sync_status, last_error)
 		 VALUES (?, ?, '', '', '', ?, ?, 1.0, 'error', ?)
@@ -538,6 +547,12 @@ func (s *Store) CleanupOrphans(ctx context.Context) error {
 
 // Helpers.
 
+func closeRows(rows *sql.Rows) {
+	if err := rows.Close(); err != nil {
+		return
+	}
+}
+
 func scanTags(rows *sql.Rows) ([]Tag, error) {
 	var tags []Tag
 	for rows.Next() {
@@ -560,13 +575,6 @@ func scanTag(r *sql.Row) (*Tag, error) {
 	return &t, nil
 }
 
-func pickString(nullable sql.NullString) string {
-	if nullable.Valid {
-		return nullable.String
-	}
-	return ""
-}
-
 func parseArchitectures(json string) []string {
 	if json == "" || json == "[]" {
 		return nil
@@ -585,12 +593,4 @@ func parseArchitectures(json string) []string {
 		}
 	}
 	return result
-}
-
-func splitPath(path string) (namespace, name string) {
-	parts := strings.SplitN(path, "/", 2)
-	if len(parts) == 2 {
-		return parts[0], parts[1]
-	}
-	return "", parts[0]
 }
