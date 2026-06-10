@@ -192,8 +192,13 @@ Use a descriptive branch name, for example `fix/tag-pagination` or `feature/mult
 
 ### 3. Set Up the Environment
 
+- [mise](https://mise.jdx.dev/)
+- [bun](https://bun.sh/)
+
 ```sh
 cp .env.example .env
+mise install
+go mod download
 bun install
 bun run dev
 ```
