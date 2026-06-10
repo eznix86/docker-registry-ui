@@ -1,10 +1,21 @@
 import type { PageProps } from "@inertiajs/core"
 
 // Shared global props available on all pages
+export interface AuthUser {
+	sub: string
+	email: string
+	name: string
+	groups?: string[]
+	roles?: string[]
+}
+
 export interface SharedProps extends PageProps {
 	[key: string]: unknown
 	disableTagDeletion: boolean
 	appVersion: string
+	auth?: {
+		user?: AuthUser
+	}
 }
 
 export interface Repository {
