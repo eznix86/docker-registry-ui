@@ -4,8 +4,6 @@ A simple, lightweight **UI for exploring and managing Docker/OCI registries**.
 
 ![Demo](./docs/images/container-hub.gif)
 
----
-
 > [!NOTE]
 > v0.x is available on the [0.x branch](https://github.com/eznix86/docker-registry-ui/tree/0.x).
 
@@ -35,8 +33,6 @@ services:
 Then open the UI at: [http://localhost:8011](http://localhost:8011)
 
 For extensive environment customization, see [`.env.example`](./.env.example).
-
----
 
 ## Deployment
 
@@ -82,9 +78,8 @@ secretEnv:
 
 For all available configuration options, see [`charts/docker-registry-ui/values.yaml`](./charts/docker-registry-ui/values.yaml).
 
----
 
-## Authentication
+## Registry Authentication
 
 For registries with authentication, you must add the auth environment variable as a base64 encoded value of `username:password`
 
@@ -100,7 +95,22 @@ REGISTRY_URL=https://registry.test
 REGISTRY_AUTH=dXNlcm5hbWU6cGFzc3dvcmQ=
 ```
 
----
+## User Authentication
+
+**Docker Registry UI** do not have its own user management, but **Docker Registry UI** supports OIDC Authentication , use the `OIDC_*` and `SESSION_SECRET` env. See more in the [.env.example](./.env.example)
+
+You have many options like
+- Keycloak
+- PocketID
+- Authelia
+- Google
+- Authentik
+- and many more which support OIDC Protocol.
+
+You can further limit access to the hub by using `OIDC_ALLOWED_*`, this is optional.
+
+If you want to login via Github (or any Oauth2-like), it would be recommended that you use proxy it via an OIDC supported IdP Provider.
+
 
 ## Multiple Registry Support
 
@@ -153,7 +163,6 @@ bun run lint:fix    # auto-fix linting issues where possible
 
 Pull requests are welcome. Please ensure code is linted and tested before submission.
 
----
 
 ## Storage Reclamation
 
@@ -161,7 +170,6 @@ When deleting images, Docker Registry **v2/v3** only marks them as deleted. Disk
 
 Use the [Docker Registry Cleaner](https://github.com/eznix86/docker-registry-cleaner) for automated cleanup, or run garbage collection manually, see [here](./docs/manual-registry-cleanup.md)
 
----
 
 ## How to Contribute
 
