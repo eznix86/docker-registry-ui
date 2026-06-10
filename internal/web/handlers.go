@@ -21,7 +21,15 @@ type handler struct {
 	helmReader   *helm.Reader
 	broadcaster  *progress.WebSocketBroadcaster
 	manualCh     sync.ManualSyncChannel
+	authHandler  *AuthHandler
 	showUsageBar bool
+}
+
+func (h *handler) renderPage(w http.ResponseWriter, r *http.Request, page string, props gonertia.Props) error {
+	if user, ok := UserFromContext(r.Context()); ok {
+		props["auth"] = gonertia.Props{"user": user}
+	}
+	return h.inertia.Render(w, r, page, props)
 }
 
 func (h *handler) explore(w http.ResponseWriter, r *http.Request) {
@@ -69,7 +77,7 @@ func (h *handler) explore(w http.ResponseWriter, r *http.Request) {
 		props["charts"] = gonertia.Props{"storageByRegistry": storageByRegistry}
 	}
 
-	if err := h.inertia.Render(w, r, "Explore", props); err != nil {
+	if err := h.renderPage(w, r, "Explore", props); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 }
@@ -123,7 +131,7 @@ func (h *handler) registryPage(w http.ResponseWriter, r *http.Request) {
 		"repositories": repoList,
 	}
 
-	if err := h.inertia.Render(w, r, "Registry", props); err != nil {
+	if err := h.renderPage(w, r, "Registry", props); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 }
@@ -175,13 +183,13 @@ func (h *handler) repositoryPage(w http.ResponseWriter, r *http.Request) {
 		}),
 	}
 
-	if err := h.inertia.Render(w, r, "Repository", props); err != nil {
+	if err := h.renderPage(w, r, "Repository", props); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 }
 
 func (h *handler) notFound(w http.ResponseWriter, r *http.Request) {
-	if err := h.inertia.Render(w, r, "NotFound", gonertia.Props{}); err != nil {
+	if err := h.renderPage(w, r, "NotFound", gonertia.Props{}); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 }

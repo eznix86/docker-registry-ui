@@ -215,6 +215,11 @@ func (r *runtime) initServer(cfg *Config, withSync bool) error {
 		return fmt.Errorf("create inertia: %w", err)
 	}
 
+	authHandler, err := newAuthHandler(cfg)
+	if err != nil {
+		return fmt.Errorf("create auth: %w", err)
+	}
+
 	srv, err := web.New(web.Options{
 		Store:           r.store,
 		RegistryManager: r.regManager,
@@ -222,6 +227,7 @@ func (r *runtime) initServer(cfg *Config, withSync bool) error {
 		Inertia:         inertia,
 		Broadcaster:     ws,
 		ManualSyncChan:  manualCh,
+		AuthHandler:     authHandler,
 		Host:            cfg.Server.Host,
 		Port:            cfg.Server.Port,
 		Debug:           cfg.Server.Debug,
@@ -262,6 +268,25 @@ func newInertia(cfg *Config) (*gonertia.ViteInstance, error) {
 	i.ShareProp("appVersion", version.New().Short())
 	i.ShareProp("showUsageBar", cfg.App.ShowUsageBar)
 	return i, nil
+}
+
+func newAuthHandler(cfg *Config) (*web.AuthHandler, error) {
+	return web.NewAuthHandler(context.Background(), web.AuthConfig{
+		IssuerURL:           cfg.OIDC.IssuerURL,
+		ClientID:            cfg.OIDC.ClientID,
+		ClientSecret:        cfg.OIDC.ClientSecret,
+		RedirectURI:         cfg.OIDC.RedirectURI,
+		SessionSecret:       cfg.SessionSecret,
+		SessionMaxAge:       cfg.SessionMaxAge,
+		AllowedEmails:       cfg.OIDC.AllowedEmails,
+		AllowedEmailDomains: cfg.OIDC.AllowedEmailDomains,
+		AllowedGroups:       cfg.OIDC.AllowedGroups,
+		AllowedRoles:        cfg.OIDC.AllowedRoles,
+		ClaimEmail:          cfg.OIDC.ClaimEmail,
+		ClaimGroups:         cfg.OIDC.ClaimGroups,
+		ClaimRoles:          cfg.OIDC.ClaimRoles,
+		ClaimName:           cfg.OIDC.ClaimName,
+	}, clog.Default())
 }
 
 func runStart(cfg *Config) {

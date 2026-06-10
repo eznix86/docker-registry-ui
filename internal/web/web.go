@@ -36,6 +36,7 @@ type Options struct {
 	Inertia         *gonertia.ViteInstance
 	Broadcaster     *progress.WebSocketBroadcaster
 	ManualSyncChan  sync.ManualSyncChannel
+	AuthHandler     *AuthHandler
 	Host            string
 	Port            string
 	Debug           bool
@@ -63,6 +64,7 @@ func New(opts Options) (*Server, error) {
 		helmReader:   opts.HelmReader,
 		broadcaster:  opts.Broadcaster,
 		manualCh:     opts.ManualSyncChan,
+		authHandler:  opts.AuthHandler,
 		showUsageBar: opts.ShowUsageBar,
 	}
 
@@ -73,22 +75,14 @@ func New(opts Options) (*Server, error) {
 	r.Use(chimw.RequestID)
 	r.Use(chimw.Recoverer)
 
-	// Public routes.
 	r.Get("/healthz", h.health)
-	if opts.Broadcaster != nil {
-		r.HandleFunc("/ws/sync/progress", h.wsProgress)
+
+	if opts.AuthHandler != nil && opts.AuthHandler.Enabled() {
+		r.Get("/oauth/login", opts.AuthHandler.HandleLogin)
+		r.Get("/oauth/callback", opts.AuthHandler.HandleCallback)
+		r.Post("/oauth/logout", opts.AuthHandler.HandleLogout)
 	}
-	r.Post("/api/sync/trigger", h.manualSync)
 
-	// Tag deletion API.
-	r.Delete("/r/{registry}/{repository}/tags", h.deleteTags)
-	r.Delete("/r/{registry}/{namespace}/{repository}/tags", h.deleteTags)
-
-	// Helm chart read-only API.
-	r.Get("/r/{registry}/{namespace}/{repository}/helm/{tag}/values", h.helmValues)
-	r.Get("/r/{registry}/{namespace}/{repository}/helm/{tag}/files", h.helmFiles)
-
-	// Static assets.
 	r.Group(func(group chi.Router) {
 		group.Use(cacheAssets)
 		publicFS, err := fs.Sub(assets.PublicFS, "public")
@@ -102,15 +96,31 @@ func New(opts Options) (*Server, error) {
 		}
 	})
 
-	// Inertia page routes.
 	r.Group(func(group chi.Router) {
-		group.Use(opts.Inertia.CSPMiddleware(gonertia.WithCSPPolicy(cspPolicy())))
-		group.Use(requestLogger(clog.Default()))
-		group.Get("/", h.explore)
-		group.Get("/r/{registry}", h.registryPage)
-		group.Get("/r/{registry}/{repository}", h.repositoryPage)
-		group.Get("/r/{registry}/{namespace}/{repository}", h.repositoryPage)
-		group.NotFound(h.notFound)
+		if opts.AuthHandler != nil && opts.AuthHandler.Enabled() {
+			group.Use(opts.AuthHandler.Middleware)
+		}
+
+		if opts.Broadcaster != nil {
+			group.HandleFunc("/ws/sync/progress", h.wsProgress)
+		}
+		group.Post("/api/sync/trigger", h.manualSync)
+
+		group.Delete("/r/{registry}/{repository}/tags", h.deleteTags)
+		group.Delete("/r/{registry}/{namespace}/{repository}/tags", h.deleteTags)
+
+		group.Get("/r/{registry}/{namespace}/{repository}/helm/{tag}/values", h.helmValues)
+		group.Get("/r/{registry}/{namespace}/{repository}/helm/{tag}/files", h.helmFiles)
+
+		group.Group(func(group chi.Router) {
+			group.Use(opts.Inertia.CSPMiddleware(gonertia.WithCSPPolicy(cspPolicy())))
+			group.Use(requestLogger(clog.Default()))
+			group.Get("/", h.explore)
+			group.Get("/r/{registry}", h.registryPage)
+			group.Get("/r/{registry}/{repository}", h.repositoryPage)
+			group.Get("/r/{registry}/{namespace}/{repository}", h.repositoryPage)
+			group.NotFound(h.notFound)
+		})
 	})
 
 	return &Server{

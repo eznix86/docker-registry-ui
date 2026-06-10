@@ -1,6 +1,7 @@
 package app
 
 import (
+	"errors"
 	"fmt"
 	"time"
 
@@ -12,11 +13,49 @@ import (
 )
 
 type Config struct {
-	App          AppConfig
-	Server       ServerConfig
-	Scraper      ScraperConfig
-	Database     DatabaseConfig
-	RegistryList []registry.Config
+	App           AppConfig
+	Server        ServerConfig
+	Scraper       ScraperConfig
+	Database      DatabaseConfig
+	OIDC          OIDCConfig
+	SessionSecret string        `env:"SESSION_SECRET"`
+	SessionMaxAge time.Duration `env:"SESSION_MAX_AGE" envDefault:"24h"`
+	RegistryList  []registry.Config
+}
+
+type OIDCConfig struct {
+	IssuerURL           string `env:"OIDC_ISSUER_URL"`
+	ClientID            string `env:"OIDC_CLIENT_ID"`
+	ClientSecret        string `env:"OIDC_CLIENT_SECRET"`
+	RedirectURI         string `env:"OIDC_REDIRECT_URI"`
+	AllowedEmails       string `env:"OIDC_ALLOWED_EMAILS"`
+	AllowedEmailDomains string `env:"OIDC_ALLOWED_EMAIL_DOMAINS"`
+	AllowedGroups       string `env:"OIDC_ALLOWED_GROUPS"`
+	AllowedRoles        string `env:"OIDC_ALLOWED_ROLES"`
+	ClaimEmail          string `env:"OIDC_CLAIM_EMAIL" envDefault:"email"`
+	ClaimGroups         string `env:"OIDC_CLAIM_GROUPS" envDefault:"groups"`
+	ClaimRoles          string `env:"OIDC_CLAIM_ROLES" envDefault:"roles"`
+	ClaimName           string `env:"OIDC_CLAIM_NAME" envDefault:"name"`
+}
+
+func (c OIDCConfig) Enabled() bool {
+	return c.IssuerURL != ""
+}
+
+func (c OIDCConfig) Validate() error {
+	if !c.Enabled() {
+		return nil
+	}
+	if c.ClientID == "" {
+		return errors.New("OIDC_CLIENT_ID is required when OIDC_ISSUER_URL is set")
+	}
+	if c.ClientSecret == "" {
+		return errors.New("OIDC_CLIENT_SECRET is required when OIDC_ISSUER_URL is set")
+	}
+	if c.RedirectURI == "" {
+		return errors.New("OIDC_REDIRECT_URI is required when OIDC_ISSUER_URL is set")
+	}
+	return nil
 }
 
 type AppConfig struct {
@@ -64,6 +103,12 @@ func LoadConfig(flags *pflag.FlagSet) (*Config, error) {
 	}
 	if err := setLogLevel(cfg); err != nil {
 		return nil, err
+	}
+	if err := cfg.OIDC.Validate(); err != nil {
+		return nil, err
+	}
+	if cfg.OIDC.Enabled() && cfg.SessionSecret == "" {
+		return nil, errors.New("SESSION_SECRET is required when OIDC is enabled")
 	}
 	cfg.RegistryList = registry.LoadConfigsFallback()
 	return cfg, nil

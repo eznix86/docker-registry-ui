@@ -5,8 +5,10 @@ go 1.26.3
 require (
 	github.com/caarlos0/env/v11 v11.4.1
 	github.com/charmbracelet/log v1.0.0
+	github.com/coreos/go-oidc/v3 v3.18.0
 	github.com/eznix86/registry-client v0.7.0
 	github.com/go-chi/chi/v5 v5.3.0
+	github.com/gorilla/securecookie v1.1.2
 	github.com/gorilla/websocket v1.5.3
 	github.com/hashicorp/go-version v1.9.0
 	github.com/joho/godotenv v1.5.1
@@ -15,6 +17,7 @@ require (
 	github.com/spf13/cobra v1.10.2
 	github.com/spf13/pflag v1.0.10
 	golang.org/x/mod v0.36.0
+	golang.org/x/oauth2 v0.36.0
 	golang.org/x/sync v0.20.0
 )
 
@@ -27,6 +30,7 @@ require (
 	github.com/charmbracelet/x/term v0.2.2 // indirect
 	github.com/clipperhouse/displaywidth v0.11.0 // indirect
 	github.com/clipperhouse/uax29/v2 v2.7.0 // indirect
+	github.com/go-jose/go-jose/v4 v4.1.4 // indirect
 	github.com/go-logfmt/logfmt v0.6.1 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/lucasb-eyer/go-colorful v1.4.0 // indirect

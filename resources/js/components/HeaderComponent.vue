@@ -33,6 +33,7 @@
 			</div>
 		</div>
 
+		<UserMenu class="mr-2" />
 		<RefreshButton class="mr-6" />
 	</header>
 </template>
@@ -42,6 +43,7 @@ import { router, usePage } from "@inertiajs/vue3"
 import { useDebounceFn } from "@vueuse/core"
 import { onMounted, onUnmounted, ref, watch } from "vue"
 import RefreshButton from "~/components/RefreshButton.vue"
+import UserMenu from "~/components/UserMenu.vue"
 import { buildFilterParams } from "~/lib/filterParams"
 
 const page = usePage<{ props: { filters?: { search?: string } } }>()
