@@ -1,4 +1,3 @@
-
 # Manual Registry Cleanup
 
 ```sh

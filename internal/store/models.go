@@ -82,14 +82,15 @@ type ManifestLayer struct {
 // View types for page rendering.
 
 type RepositoryView struct {
-	ID               uint     `json:"id"`
-	Name             string   `json:"name"`
-	Namespace        string   `json:"namespace"`
-	Registry         string   `json:"registry"`
-	RegistryHost     string   `json:"registryHost"`
-	TagsCount        int      `json:"tagsCount"`
-	Architectures    []string `json:"architectures"`
-	TotalSizeInBytes int64    `json:"totalSizeInBytes"`
+	ID                 uint     `json:"id"`
+	Name               string   `json:"name"`
+	Namespace          string   `json:"namespace"`
+	Registry           string   `json:"registry"`
+	RegistryHost       string   `json:"registryHost"`
+	RegistryPublicHost string   `json:"registryPublicHost,omitempty"`
+	TagsCount          int      `json:"tagsCount"`
+	Architectures      []string `json:"architectures"`
+	TotalSizeInBytes   int64    `json:"totalSizeInBytes"`
 }
 
 type TagView struct {

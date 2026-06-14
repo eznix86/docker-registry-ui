@@ -1,4 +1,4 @@
-export interface RepositoryPathInput {
+interface RepositoryPathInput {
 	name: string
 	namespace: string
 	registryHost?: string

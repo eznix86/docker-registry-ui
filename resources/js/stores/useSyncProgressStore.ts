@@ -3,7 +3,7 @@ import { useDebounceFn, useTimeoutFn } from "@vueuse/core"
 import { defineStore } from "pinia"
 import { computed, ref, watch } from "vue"
 
-export interface SyncProgressUpdate {
+interface SyncProgressUpdate {
 	completed: number
 	total: number
 	message: string

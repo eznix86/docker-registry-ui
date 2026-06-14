@@ -1,11 +1,20 @@
 <template>
-	<pre ref="root" class="code-block customYAML"><code v-html="rendered" /></pre>
+	<pre class="code-block customYAML"><code v-html="rendered" /></pre>
 </template>
 
 <script setup lang="ts">
 import hljs from "highlight.js/lib/core"
 import yaml from "highlight.js/lib/languages/yaml"
 import { computed } from "vue"
+
+const props = withDefaults(defineProps<{
+	code: string
+	language?: string
+	showLineNumbers?: boolean
+}>(), {
+	language: "yaml",
+	showLineNumbers: true,
+})
 
 hljs.registerLanguage("yaml", yaml)
 
@@ -89,15 +98,6 @@ const templateFunctions = new Set([
 	"urlJoin",
 ])
 
-const props = withDefaults(defineProps<{
-	code: string
-	language?: string
-	showLineNumbers?: boolean
-}>(), {
-	language: "yaml",
-	showLineNumbers: true,
-})
-
 const highlighted = computed(() => {
 	if (!props.code)
 		return ""
@@ -114,7 +114,7 @@ const rendered = computed(() => {
 })
 
 function wrapHelmTemplateExpressions(line: string) {
-	return line.replace(/({{.*?}})/g, (expression) => {
+	return line.replace(/(\{\{.*?\}\})/g, (expression) => {
 		return `<span class="hljs-template-expression">${highlightHelmTemplateExpression(expression)}</span>`
 	})
 }
@@ -124,7 +124,7 @@ function highlightHelmTemplateExpression(expression: string) {
 
 	return expression
 		.replace(/<\/?span[^>]*>/g, "")
-		.replace(/{{-?|{{|-?}}|}}|&quot;.*?&quot;|'[^']*'|\s+|[^\s]+/g, (token) => {
+		.replace(/\{\{-?|-?\}\}|&quot;.*?&quot;|'[^']*'|\s+|\S+/g, (token) => {
 			if (/^\s+$/.test(token)) {
 				return token
 			}
@@ -136,7 +136,7 @@ function highlightHelmTemplateExpression(expression: string) {
 }
 
 function renderHelmTemplateToken(token: string, previousToken: string): string {
-	if (/^{{-?|{{|-?}}|}}$/.test(token) || token === "|" || token === ")" || token === "(") {
+	if (token === "{{" || token === "{{-" || token === "}}" || token === "-}}" || token === "|" || token === ")" || token === "(") {
 		return wrapToken("hljs-template-delimiter", token)
 	}
 	if (token.startsWith("(") && token.length > 1) {
@@ -169,7 +169,7 @@ function renderHelmTemplateToken(token: string, previousToken: string): string {
 		return wrapToken("hljs-template-function", token)
 	}
 
-	if (builtInObjects.some((builtIn) => token.startsWith(builtIn) && token !== ".Capabilities.APIVersions.Has")) {
+	if (builtInObjects.some(builtIn => token.startsWith(builtIn) && token !== ".Capabilities.APIVersions.Has")) {
 		return wrapToken("hljs-template-built-in", token)
 	}
 

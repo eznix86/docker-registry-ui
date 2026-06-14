@@ -39,7 +39,7 @@
 
 							<div class="min-w-0 md:row-start-2 md:col-start-1 md:self-end">
 								<h1 class="text-2xl sm:text-3xl lg:text-4xl font-bold leading-tight text-foreground break-words">
-									{{ registry?.host }}
+									{{ registry?.publicHost ?? registry?.host }}
 								</h1>
 							</div>
 						</div>
@@ -246,12 +246,13 @@ function formatCount(value: number) {
 	return value.toString()
 }
 
-function formatRegistryOption(item: { host: string, name?: string, status?: number }) {
+function formatRegistryOption(item: { host: string, publicHost?: string, name?: string, status?: number }) {
+	const display = item.publicHost ?? item.host
 	if (item.name?.trim()) {
-		return `${formatRegistryName(item.name)} (${item.host})`
+		return `${formatRegistryName(item.name)} (${display})`
 	}
 
-	return item.host
+	return display
 }
 
 function handleRegistrySelect(value: string | number | undefined) {

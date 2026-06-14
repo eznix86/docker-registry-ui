@@ -137,6 +137,12 @@ env:
   SERVER_PORT: "3000"
 
 # Additional environment variables (map of key-value pairs).
+# Example:
+# extraEnv:
+#   REGISTRY_URL: "http://registry:5000"
+#   REGISTRY_SETTINGS_PUBLIC_HOST: "registry.domain.xyz"
+#   REGISTRY_URL_INTERNAL: "http://registry-internal:5000"
+#   REGISTRY_SETTINGS_INTERNAL_PUBLIC_HOST: "registry-internal.domain.xyz"
 extraEnv: {}
 
 # Load env vars from a Kubernetes Secret (optional).

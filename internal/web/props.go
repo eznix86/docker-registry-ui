@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/eznix86/docker-registry-ui/internal/registry"
 	"github.com/eznix86/docker-registry-ui/internal/store"
 )
 
@@ -16,9 +17,10 @@ type explorePageFilters struct {
 }
 
 type registryOption struct {
-	Name   string `json:"name,omitempty"`
-	Host   string `json:"host"`
-	Status int    `json:"status"`
+	Name       string `json:"name,omitempty"`
+	Host       string `json:"host"`
+	PublicHost string `json:"publicHost,omitempty"`
+	Status     int    `json:"status"`
 }
 
 func parseExploreFilters(r *http.Request) store.RepositoryFilters {
@@ -44,10 +46,14 @@ func exploreProps(f store.RepositoryFilters) explorePageFilters {
 	}
 }
 
-func toRegistryOptions(registries []store.Registry) []registryOption {
+func toRegistryOptions(registries []store.Registry, manager *registry.Manager) []registryOption {
 	result := make([]registryOption, len(registries))
 	for i, r := range registries {
-		result[i] = registryOption{Name: r.Name, Host: r.Host, Status: r.Status}
+		opt := registryOption{Name: r.Name, Host: r.Host, Status: r.Status}
+		if client, err := manager.GetClient(r.Name); err == nil {
+			opt.PublicHost = client.PublicHost()
+		}
+		result[i] = opt
 	}
 	return result
 }

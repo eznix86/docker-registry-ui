@@ -4,7 +4,7 @@ export interface RegistryStatusInfo {
 	description: string
 }
 
-export const REGISTRY_STATUS_MAP: Record<number, RegistryStatusInfo> = {
+const REGISTRY_STATUS_MAP: Record<number, RegistryStatusInfo> = {
 	// Pending/Unknown
 	0: {
 		code: 0,

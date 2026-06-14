@@ -102,7 +102,7 @@ linters:
       - linters:
           - goconst
         path: internal/web/api.go
-        text: 'jsonKeyError'
+        text: jsonKeyError
 
 issues:
   max-issues-per-linter: 0

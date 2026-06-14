@@ -24,6 +24,7 @@ export interface Repository {
 	namespace: string
 	registry: string
 	registryHost: string
+	registryPublicHost?: string
 	tagsCount: number
 	architectures?: string[]
 	totalSizeInBytes?: number
@@ -32,6 +33,7 @@ export interface Repository {
 export interface Registry {
 	name?: string
 	host: string
+	publicHost?: string
 	status: number
 }
 

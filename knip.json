@@ -3,10 +3,8 @@
 	"entry": ["resources/js/app.ts"],
 	"project": ["resources/js/**/*.{ts,vue}", "resources/css/**/*.css"],
 	"ignoreBinaries": ["sleep", "air", "go", "golangci-lint"],
-	"ignoreDependencies": ["@inertiajs/core", "@antfu/eslint-config", "eslint-plugin-vuejs-accessibility"],
+	"ignoreDependencies": ["@inertiajs/core"],
 	"ignore": [
-		"resources/css/app.css",
-		"resources/js/components/RegistryRepositoryBarChart.vue",
-		"resources/js/composables/useRipple.ts"
+		"resources/css/app.css"
 	]
 }

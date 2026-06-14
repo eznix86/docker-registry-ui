@@ -78,7 +78,6 @@ secretEnv:
 
 For all available configuration options, see [`charts/docker-registry-ui/values.yaml`](./charts/docker-registry-ui/values.yaml).
 
-
 ## Registry Authentication
 
 For registries with authentication, you must add the auth environment variable as a base64 encoded value of `username:password`
@@ -111,7 +110,6 @@ You can further limit access to the hub by using `OIDC_ALLOWED_*`, this is optio
 
 If you want to login via Github (or any Oauth2-like), it would be recommended that you use proxy it via an OIDC supported IdP Provider.
 
-
 ## Multiple Registry Support
 
 The UI supports connections to multiple registries. Configure them via environment variables with suffixes:
@@ -131,6 +129,24 @@ REGISTRY_AUTH_BUSINESS=...
 REGISTRY_URL_CUSTOM=https://repository.whatever.com
 REGISTRY_AUTH_CUSTOM=...
 ```
+
+### Public Hostname Override
+
+If your registry is only reachable via an internal URL (e.g. `http://registry:5000` in Docker Compose), you can set a different hostname for display in the UI (docker pull commands, breadcrumbs, sidebar, etc.):
+
+```env
+REGISTRY_URL=http://registry:5000
+REGISTRY_SETTINGS_PUBLIC_HOST=registry.domain.xyz
+```
+
+For named registries:
+
+```env
+REGISTRY_URL_GH=https://ghcr.io
+REGISTRY_SETTINGS_GH_PUBLIC_HOST=ghcr.io
+```
+
+When `REGISTRY_SETTINGS_PUBLIC_HOST` is not set, the hostname extracted from `REGISTRY_URL` is used as before.
 
 Notes:
 
@@ -163,13 +179,11 @@ bun run lint:fix    # auto-fix linting issues where possible
 
 Pull requests are welcome. Please ensure code is linted and tested before submission.
 
-
 ## Storage Reclamation
 
 When deleting images, Docker Registry **v2/v3** only marks them as deleted. Disk space is not automatically reclaimed.
 
 Use the [Docker Registry Cleaner](https://github.com/eznix86/docker-registry-cleaner) for automated cleanup, or run garbage collection manually, see [here](./docs/manual-registry-cleanup.md)
-
 
 ## How to Contribute
 

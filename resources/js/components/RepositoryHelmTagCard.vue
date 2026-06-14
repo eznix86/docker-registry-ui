@@ -97,7 +97,8 @@ const repositoryName = useRepositoryName(() => props.repository)
 const viewerDialog = ref<InstanceType<typeof HelmChartViewerDialog> | null>(null)
 
 const chartVersion = computed(() => props.tag.chartVersion || props.tag.name)
-const chartRef = computed(() => `oci://${props.repository.registryHost}/${repositoryName.value}`)
+const registryHost = computed(() => props.repository.registryPublicHost ?? props.repository.registryHost)
+const chartRef = computed(() => `oci://${registryHost.value}/${repositoryName.value}`)
 
 const installCommand = computed(
 	() => `helm install <release-name> ${chartRef.value} --version ${chartVersion.value}`,

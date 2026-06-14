@@ -14,7 +14,6 @@ export { default as CopyCommand } from "./CopyCommand.vue"
 // Dialog components
 export { default as Dialog } from "./Dialog.vue"
 export { default as DialogTitle } from "./DialogTitle.vue"
-export { default as MobileDialog } from "./MobileDialog.vue"
 export { default as Select } from "./Select.vue"
 export { default as SelectContent } from "./SelectContent.vue"
 
