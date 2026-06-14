@@ -16,7 +16,7 @@
 						:key="registry.host"
 						:model-value="selectedRegistries"
 						:value="registry.host"
-						:label="registry.host"
+						:label="registry.publicHost ?? registry.host"
 						:status-code="registry.status"
 						label-variant="muted"
 						@update:model-value="(val: any) => setRegistrySelection(val as string[])"
@@ -62,7 +62,7 @@ import { isSettingsOpen } from "~/composables/usePreferences"
 import { buildFilterParams } from "~/lib/filterParams"
 
 interface SidebarComponentProps {
-	registries: { host: string, status: number }[]
+	registries: { host: string, publicHost?: string, status: number }[]
 	architectures: string[]
 }
 

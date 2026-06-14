@@ -37,18 +37,21 @@ type Config struct {
 	Insecure    bool
 	IsGitHub    bool
 	IsGitHubOrg bool
+	PublicHost  string
 }
 
 type Client struct {
 	registryclient.RegistryClient
-	name string
-	host string
-	url  string
+	name       string
+	host       string
+	url        string
+	publicHost string
 }
 
-func (c *Client) Name() string { return c.name }
-func (c *Client) Host() string { return c.host }
-func (c *Client) URL() string  { return c.url }
+func (c *Client) Name() string       { return c.name }
+func (c *Client) Host() string       { return c.host }
+func (c *Client) URL() string        { return c.url }
+func (c *Client) PublicHost() string { return c.publicHost }
 
 type Manager struct {
 	clients map[string]*Client
@@ -114,6 +117,10 @@ func (m *Manager) newClient(cfg Config, httpMaxRetries int, disableTagDeletion b
 	var libClient registryclient.RegistryClient
 	maxAttempts := httpMaxRetries + 1
 	host := extractHost(cfg.URL)
+	publicHost := cfg.PublicHost
+	if publicHost == "" {
+		publicHost = host
+	}
 
 	if cfg.IsGitHub {
 		libClient = buildGitHubClient(cfg, hc, maxAttempts, disableTagDeletion)
@@ -121,7 +128,7 @@ func (m *Manager) newClient(cfg Config, httpMaxRetries int, disableTagDeletion b
 		libClient = buildBaseClient(cfg, hc, maxAttempts, disableTagDeletion)
 	}
 
-	return &Client{RegistryClient: libClient, name: cfg.Name, host: host, url: strings.TrimSuffix(cfg.URL, "/")}
+	return &Client{RegistryClient: libClient, name: cfg.Name, host: host, publicHost: publicHost, url: strings.TrimSuffix(cfg.URL, "/")}
 }
 
 func buildBaseClient(cfg Config, hc *http.Client, maxAttempts int, disableDelete bool) *registryclient.BaseClient {
@@ -196,6 +203,7 @@ func loadDefaultConfig() *Config {
 		cfg.Password = auth.pass
 	}
 	cfg.Insecure = strings.ToLower(os.Getenv("REGISTRY_SETTINGS_INSECURE")) == envTrue
+	cfg.PublicHost = os.Getenv("REGISTRY_SETTINGS_PUBLIC_HOST")
 	if isGHCR(url) {
 		cfg.IsGitHub = true
 		cfg.IsGitHubOrg = os.Getenv("REGISTRY_SETTINGS_ORG") == envTrue
@@ -227,6 +235,7 @@ func loadNamedConfigs() []Config {
 			cfg.Password = auth.pass
 		}
 		cfg.Insecure = strings.ToLower(os.Getenv("REGISTRY_SETTINGS_"+suffix+"_INSECURE")) == envTrue
+		cfg.PublicHost = os.Getenv("REGISTRY_SETTINGS_" + suffix + "_PUBLIC_HOST")
 		if isGHCR(v) {
 			cfg.IsGitHub = true
 			cfg.IsGitHubOrg = strings.ToLower(os.Getenv("REGISTRY_SETTINGS_"+suffix+"_ORG")) == envTrue

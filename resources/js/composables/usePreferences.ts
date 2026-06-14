@@ -1,17 +1,17 @@
 import { useLocalStorage } from "@vueuse/core"
 import { computed, ref, watch } from "vue"
 
-export type Theme = "the-hub-light" | "the-hub-dark" | "monokai" | "nord-dark" | "nord-light" | "one-dark" | "tokyo-night" | "cyberpunk" | "github-dark" | "github-light" | "catppuccin-mocha" | "catppuccin-latte"
+type Theme = "the-hub-light" | "the-hub-dark" | "monokai" | "nord-dark" | "nord-light" | "one-dark" | "tokyo-night" | "cyberpunk" | "github-dark" | "github-light" | "catppuccin-mocha" | "catppuccin-latte"
 
-export type FontSans = "roboto" | "inter" | "instrument-sans" | "jetbrains-sans" | "geist" | "nacelle" | "ibm-plex-sans" | "space-grotesk" | "dm-sans" | "onest"
+type FontSans = "roboto" | "inter" | "instrument-sans" | "jetbrains-sans" | "geist" | "nacelle" | "ibm-plex-sans" | "space-grotesk" | "dm-sans" | "onest"
 
-export type FontMono = "roboto-mono" | "jetbrains-mono" | "geist-mono" | "fira-code" | "cascadia-code" | "source-code-pro" | "inconsolata" | "courier-prime"
+type FontMono = "roboto-mono" | "jetbrains-mono" | "geist-mono" | "fira-code" | "cascadia-code" | "source-code-pro" | "inconsolata" | "courier-prime"
 
-export type ContainerRuntime = "docker" | "podman" | "nerdctl" | "buildah" | "skopeo" | "crictl" | "none"
+type ContainerRuntime = "docker" | "podman" | "nerdctl" | "buildah" | "skopeo" | "crictl" | "none"
 
-export interface ThemeOption { value: Theme, label: string }
-export interface FontOption { value: string, label: string, family: string }
-export interface RuntimeOption { value: ContainerRuntime, label: string, command: string }
+interface ThemeOption { value: Theme, label: string }
+interface FontOption { value: string, label: string, family: string }
+interface RuntimeOption { value: ContainerRuntime, label: string, command: string }
 
 export const THEME_OPTIONS: ThemeOption[] = [
 	{ value: "the-hub-dark", label: "The Hub Dark" },

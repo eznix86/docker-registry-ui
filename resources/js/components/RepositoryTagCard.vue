@@ -127,7 +127,7 @@ const emit = defineEmits<{ deleteTag: [tag: Tag] }>()
 
 const { getPullCommand } = usePreferences()
 
-const registryHost = computed(() => props.repository.registryHost)
+const registryHost = computed(() => props.repository.registryPublicHost ?? props.repository.registryHost)
 const repositoryName = useRepositoryName(() => props.repository)
 const pullCommand = computed(() => getPullCommand(registryHost.value, repositoryName.value, props.tag.name))
 const hasImageMetadata = computed(() => props.tag.metadataAvailable && props.tag.images.length > 0)

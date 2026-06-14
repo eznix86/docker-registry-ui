@@ -48,10 +48,10 @@
 </template>
 
 <script setup lang="ts">
+import type { AuthUser, SharedProps } from "~/types"
 import { Menu, MenuButton, MenuItem, MenuItems } from "@headlessui/vue"
 import { usePage } from "@inertiajs/vue3"
 import { computed } from "vue"
-import type { AuthUser, SharedProps } from "~/types"
 
 const page = usePage<SharedProps>()
 const user = computed<AuthUser | undefined>(() => page.props.auth?.user)

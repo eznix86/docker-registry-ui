@@ -19,7 +19,7 @@
 					class="opacity-60 hover:underline decoration-dotted"
 					:prefetch="['hover']"
 				>
-					{{ registryHost }}
+					{{ registryDisplay }}
 				</Link>
 			</li>
 			<li>/</li>
@@ -32,6 +32,7 @@
 import type { Repository } from "~/types"
 import { Link } from "@inertiajs/vue3"
 import { computed } from "vue"
+import { displayHost } from "~/composables/useRegistryDisplay"
 import { useRepositoryName } from "~/composables/useRepositoryName"
 import { registryPath } from "~/lib/routes"
 
@@ -42,6 +43,7 @@ interface RepositoryBreadcrumbProps {
 const props = defineProps<RepositoryBreadcrumbProps>()
 
 const registryHost = computed(() => props.repository?.registryHost || "")
+const registryDisplay = computed(() => props.repository?.registryPublicHost || displayHost(registryHost.value))
 const repositoryName = useRepositoryName(() => props.repository)
 const registryHref = computed(() => registryPath(registryHost.value))
 </script>

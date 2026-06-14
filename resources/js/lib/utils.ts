@@ -2,9 +2,6 @@ import type { Repository } from "~/types"
 
 import { tv } from "tailwind-variants"
 
-// Export cn from tailwind-variants for simple class merging
-export { cn } from "tailwind-variants"
-
 // Export tv for creating variant-based components
 export { tv }
 

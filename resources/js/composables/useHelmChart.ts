@@ -1,21 +1,22 @@
-import { computed, ref, toValue, type MaybeRefOrGetter, type Ref } from "vue"
+import type { MaybeRefOrGetter, Ref } from "vue"
 import type { Repository } from "~/types"
+import { computed, ref, toValue } from "vue"
 
 export interface HelmFile {
 	path: string
 	content: string
 }
 
-export interface HelmFilesResponse {
+interface HelmFilesResponse {
 	files: HelmFile[]
 	chartYaml: string
 }
 
-export interface HelmValuesResponse {
+interface HelmValuesResponse {
 	content: string
 }
 
-export interface UseHelmChartOptions {
+interface UseHelmChartOptions {
 	registryHost: MaybeRefOrGetter<string>
 	namespace: MaybeRefOrGetter<string>
 	repository: MaybeRefOrGetter<Repository>

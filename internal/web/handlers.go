@@ -61,7 +61,7 @@ func (h *handler) explore(w http.ResponseWriter, r *http.Request) {
 
 	props := gonertia.Props{
 		"repositories":      repos,
-		"registries":        toRegistryOptions(registries),
+		"registries":        toRegistryOptions(registries, h.regManager),
 		"totalRepositories": total,
 		"architectures":     archs,
 		"filters":           exploreProps(filters),
@@ -119,13 +119,19 @@ func (h *handler) registryPage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	registryPublicHost := ""
+	if client, err := h.regManager.GetClient(reg.Name); err == nil {
+		registryPublicHost = client.PublicHost()
+	}
+
 	props := gonertia.Props{
 		"registry": gonertia.Props{
 			"name":        reg.Name,
 			"host":        reg.Host,
+			"publicHost":  registryPublicHost,
 			jsonKeyStatus: reg.Status,
 		},
-		"registries":   toRegistryOptions(registries),
+		"registries":   toRegistryOptions(registries, h.regManager),
 		"stats":        stats,
 		"charts":       gonertia.Props{"storageByNamespace": storageByNS, "architectureCoverage": archCoverage},
 		"repositories": repoList,
@@ -148,6 +154,10 @@ func (h *handler) repositoryPage(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		http.Error(w, "repository not found", http.StatusNotFound)
 		return
+	}
+
+	if client, err := h.regManager.GetClient(repo.Registry); err == nil {
+		repo.RegistryPublicHost = client.PublicHost()
 	}
 
 	tagFilter := parseTagFilter(r)

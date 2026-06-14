@@ -27,7 +27,7 @@
 			</CardBody>
 			<CardFooter>
 				<span class="text-muted-foreground font-medium">Size <span class="text-xs font-normal">{{ formatBytes(repository.totalSizeInBytes || 0) }}</span></span>
-				<span class="text-muted-foreground italic text-xs">{{ repository.registryHost }}</span>
+				<span class="text-muted-foreground italic text-xs">{{ registryDisplayHost }}</span>
 			</CardFooter>
 		</Card>
 	</component>
@@ -38,6 +38,7 @@ import type { Repository } from "~/types"
 import { Link } from "@inertiajs/vue3"
 import { computed } from "vue"
 import { Card, CardBody, CardFooter, CardHeader, Chip } from "~/components/ui"
+import { displayHost } from "~/composables/useRegistryDisplay"
 import { normalizeArray } from "~/lib/normalize"
 import { repositoryPath } from "~/lib/routes"
 import { formatBytes, repositoryName } from "~/lib/utils"
@@ -48,6 +49,7 @@ const emit = defineEmits<{ showUntagged: [repo: Repository] }>()
 const isUntagged = computed(() => props.repository.tagsCount === 0)
 const architectures = computed(() => normalizeArray(props.repository.architectures))
 const isHelmRepo = computed(() => props.repository.tagsCount > 0 && architectures.value.length === 0)
+const registryDisplayHost = computed(() => props.repository.registryPublicHost || displayHost(props.repository.registryHost))
 
 function getRepositoryUrl(): string {
 	const { registryHost, name } = props.repository
