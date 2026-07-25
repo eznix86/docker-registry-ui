@@ -69,14 +69,15 @@
 				<tbody>
 					<tr
 						v-if="!hasImageMetadata"
-						class="transition-colors hover:bg-muted"
+						class="group transition-colors hover:bg-muted"
 					>
 						<td class="border-b border-outline px-4 py-3 text-sm text-primary">
 							<span class="inline-flex items-center gap-2">
-								<span class="whitespace-nowrap font-mono">{{ tag.digest }}</span>
+								<span :title="tag.digest">{{ shortenDigest(tag.digest) }}</span>
 								<CopyButton
 									:value="tag.digest"
 									:aria-label="`Copy digest for ${tag.name}`"
+									class="transition-opacity sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100"
 								/>
 							</span>
 						</td>
@@ -90,14 +91,15 @@
 					<tr
 						v-for="(image, idx) in tag.images"
 						:key="idx"
-						class="transition-colors hover:bg-muted"
+						class="group transition-colors hover:bg-muted"
 					>
 						<td class="border-b border-outline px-4 py-1.5 text-sm text-primary">
 							<span class="inline-flex items-center gap-2">
-								<span class="whitespace-nowrap font-mono">{{ image.digest }}</span>
+								<span :title="image.digest">{{ shortenDigest(image.digest) }}</span>
 								<CopyButton
 									:value="image.digest"
 									:aria-label="`Copy digest ${image.digest}`"
+									class="transition-opacity sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100"
 								/>
 							</span>
 						</td>
@@ -127,7 +129,7 @@ import CopyButton from "~/components/ui/CopyButton.vue"
 import CopyCommand from "~/components/ui/CopyCommand.vue"
 import { usePreferences } from "~/composables/usePreferences"
 import { useRepositoryName } from "~/composables/useRepositoryName"
-import { formatBytes } from "~/lib/utils"
+import { formatBytes, shortenDigest } from "~/lib/utils"
 
 interface RepositoryTagCardProps {
 	tag: Tag

@@ -17,6 +17,10 @@ export function formatBytes(bytes: number): string {
 	return `${Number.parseFloat((bytes / k ** i).toFixed(2))} ${sizes[i]}`
 }
 
+export function shortenDigest(digest: string): string {
+	return digest.substring(0, 19)
+}
+
 export function repositoryName(repository: Repository): string {
 	if (repository.namespace) {
 		return `${repository.namespace}/${repository.name}`
