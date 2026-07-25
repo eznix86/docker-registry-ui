@@ -79,7 +79,7 @@ export function usePreferences() {
 	watch(containerRuntime, newRuntime => applyRuntime(newRuntime))
 
 	const runtimeCommand = computed(() => {
-		return RUNTIME_OPTIONS.find(r => r.value === containerRuntime.value)?.command || "docker pull"
+		return RUNTIME_OPTIONS.find(r => r.value === containerRuntime.value)?.command ?? "docker pull"
 	})
 
 	function getPullCommand(registry: string, repository: string, tag: string): string {
