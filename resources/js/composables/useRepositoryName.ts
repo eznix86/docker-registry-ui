@@ -7,7 +7,7 @@ export function useRepositoryName(repository: MaybeRefOrGetter<Repository | null
 		const repo = toValue(repository)
 		if (!repo)
 			return ""
-		if (repo.namespace && repo.namespace !== repo.name) {
+		if (repo.namespace) {
 			return `${repo.namespace}/${repo.name}`
 		}
 		return repo.name
