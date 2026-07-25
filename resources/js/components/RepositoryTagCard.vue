@@ -72,7 +72,13 @@
 						class="transition-colors hover:bg-muted"
 					>
 						<td class="border-b border-outline px-4 py-3 text-sm text-primary">
-							{{ shortDigest }}
+							<span class="inline-flex items-center gap-2">
+								<span class="whitespace-nowrap font-mono">{{ tag.digest }}</span>
+								<CopyButton
+									:value="tag.digest"
+									:aria-label="`Copy digest for ${tag.name}`"
+								/>
+							</span>
 						</td>
 						<td class="border-b border-outline px-4 py-3 text-sm text-muted-foreground">
 							Manifest metadata unavailable
@@ -87,7 +93,13 @@
 						class="transition-colors hover:bg-muted"
 					>
 						<td class="border-b border-outline px-4 py-1.5 text-sm text-primary">
-							{{ image.digest.substring(0, 19) }}
+							<span class="inline-flex items-center gap-2">
+								<span class="whitespace-nowrap font-mono">{{ image.digest }}</span>
+								<CopyButton
+									:value="image.digest"
+									:aria-label="`Copy digest ${image.digest}`"
+								/>
+							</span>
 						</td>
 						<td class="border-b border-outline px-4 py-1.5 text-sm text-muted-foreground">
 							{{ image.os }}/{{ image.architecture }}{{ image.variant ? `/${image.variant}` : "" }}
@@ -111,6 +123,7 @@ import type { Repository, Tag } from "~/types"
 import { useTimeAgo } from "@vueuse/core"
 import { computed } from "vue"
 import Chip from "~/components/ui/Chip.vue"
+import CopyButton from "~/components/ui/CopyButton.vue"
 import CopyCommand from "~/components/ui/CopyCommand.vue"
 import { usePreferences } from "~/composables/usePreferences"
 import { useRepositoryName } from "~/composables/useRepositoryName"
@@ -131,7 +144,6 @@ const registryHost = computed(() => props.repository.registryPublicHost ?? props
 const repositoryName = useRepositoryName(() => props.repository)
 const pullCommand = computed(() => getPullCommand(registryHost.value, repositoryName.value, props.tag.name))
 const hasImageMetadata = computed(() => props.tag.metadataAvailable && props.tag.images.length > 0)
-const shortDigest = computed(() => props.tag.digest.substring(0, 19))
 
 const lastUpdated = computed(() => {
 	if (!props.tag.createdAt || props.tag.createdAt.startsWith("0001-01-01")) {
