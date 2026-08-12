@@ -59,7 +59,7 @@ func rootCmd() *cobra.Command {
 		},
 	}
 	cmd.PersistentFlags().CountP("verbose", "v", "increase verbosity")
-	cmd.PersistentFlags().BoolP("debug", "d", false, "enable debug mode")
+	cmd.PersistentFlags().BoolP(flagDebug, "d", false, "enable debug mode")
 
 	cmd.AddCommand(startCmd())
 	cmd.AddCommand(serveCmd())

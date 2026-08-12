@@ -58,3 +58,32 @@ func TestApplyFlagOverrides(t *testing.T) {
 		t.Fatalf("expected sync interval override, got %s", cfg.Scraper.SyncInterval)
 	}
 }
+
+func TestSetLogLevel(t *testing.T) {
+	cases := []struct {
+		name  string
+		env   string
+		count int
+		want  string
+	}{
+		{"env only", logLevelDebug, 0, logLevelDebug},
+		{"flag raises above env", logLevelWarn, 2, logLevelDebug},
+		{"flag never lowers env", logLevelDebug, 1, logLevelDebug},
+		{"flag count clamped", logLevelWarn, 9, logLevelDebug},
+		{"default", logLevelWarn, 0, logLevelWarn},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			cfg := &Config{}
+			cfg.App.VerboseLevel = tc.env
+			cfg.App.VerboseCount = tc.count
+			if err := setLogLevel(cfg); err != nil {
+				t.Fatalf("setLogLevel: %v", err)
+			}
+			if cfg.App.VerboseLevel != tc.want {
+				t.Fatalf("expected level %q, got %q", tc.want, cfg.App.VerboseLevel)
+			}
+		})
+	}
+}
