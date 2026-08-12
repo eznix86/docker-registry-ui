@@ -2,6 +2,31 @@ apiVersion: v1
 entries:
   docker-registry-ui:
   - apiVersion: v2
+    appVersion: 1.6.0
+    created: "2026-08-12T15:11:07.326574667Z"
+    description: Container Hub — A UI for exploring and managing Docker/OCI container
+      registries
+    digest: cd5d5253889baf011bd3f7b8293f647ef0ebef9716277f8b9dbe3181616a82d5
+    home: https://github.com/eznix86/docker-registry-ui
+    icon: https://raw.githubusercontent.com/eznix86/docker-registry-ui/main/public/container-hub.svg
+    keywords:
+    - docker
+    - registry
+    - ui
+    - container
+    - oci
+    kubeVersion: '>=1.23.0-0'
+    maintainers:
+    - name: eznix86
+      url: https://github.com/eznix86
+    name: docker-registry-ui
+    sources:
+    - https://github.com/eznix86/docker-registry-ui
+    type: application
+    urls:
+    - https://github.com/eznix86/docker-registry-ui/releases/download/docker-registry-ui-1.6.0/docker-registry-ui-1.6.0.tgz
+    version: 1.6.0
+  - apiVersion: v2
     appVersion: 1.5.0
     created: "2026-07-25T21:37:05.710142053Z"
     description: Container Hub — A UI for exploring and managing Docker/OCI container
@@ -306,4 +331,4 @@ entries:
     urls:
     - https://github.com/eznix86/docker-registry-ui/releases/download/docker-registry-ui-0.1.0/docker-registry-ui-0.1.0.tgz
     version: 0.1.0
-generated: "2026-07-25T21:37:05.710253582Z"
+generated: "2026-08-12T15:11:07.326672011Z"
