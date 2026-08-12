@@ -5,9 +5,40 @@
 		>
 			<div class="flex items-center justify-between gap-3 sm:justify-start sm:gap-4">
 				<div class="flex min-w-0 flex-col gap-1 sm:flex-row sm:items-center sm:gap-4">
-					<h2 class="text-lg font-semibold leading-7 text-primary">
-						{{ tag.name }}
-					</h2>
+					<div ref="tagRefsRoot" class="relative flex min-w-0">
+						<h2 class="min-w-0 text-lg font-semibold leading-7 text-primary">
+							<button
+								ref="tagRefsTrigger"
+								type="button"
+								class="max-w-full cursor-pointer truncate rounded text-left underline-offset-4 hover:underline"
+								aria-haspopup="true"
+								:aria-expanded="tagRefsOpen"
+								:aria-label="`Copyable references for ${tag.name}`"
+								@click="tagRefsOpen = !tagRefsOpen"
+							>
+								{{ tag.name }}
+							</button>
+						</h2>
+						<div
+							v-if="tagRefsOpen"
+							class="absolute -left-2 -top-2 z-20 grid w-max max-w-xs grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1 rounded-lg bg-background p-2 shadow-lg outline outline-1 outline-outline"
+						>
+							<span class="truncate text-lg font-semibold leading-7 text-primary">{{ tag.name }}</span>
+							<CopyButton
+								:value="tag.name"
+								:aria-label="`Copy tag ${tag.name}`"
+							/>
+							<template v-if="tag.digest">
+								<span class="truncate text-sm text-muted-foreground" :title="tag.digest">
+									{{ shortenDigest(tag.digest) }}
+								</span>
+								<CopyButton
+									:value="tag.digest"
+									:aria-label="`Copy manifest digest for ${tag.name}`"
+								/>
+							</template>
+						</div>
+					</div>
 					<span class="text-sm text-muted-foreground">Last updated {{ lastUpdated }}</span>
 				</div>
 				<button
@@ -122,8 +153,8 @@
 
 <script setup lang="ts">
 import type { Repository, Tag } from "~/types"
-import { useTimeAgo } from "@vueuse/core"
-import { computed } from "vue"
+import { onClickOutside, onKeyStroke, useTimeAgo } from "@vueuse/core"
+import { computed, ref } from "vue"
 import Chip from "~/components/ui/Chip.vue"
 import CopyButton from "~/components/ui/CopyButton.vue"
 import CopyCommand from "~/components/ui/CopyCommand.vue"
@@ -146,6 +177,22 @@ const registryHost = computed(() => props.repository.registryPublicHost ?? props
 const repositoryName = useRepositoryName(() => props.repository)
 const pullCommand = computed(() => getPullCommand(registryHost.value, repositoryName.value, props.tag.name))
 const hasImageMetadata = computed(() => props.tag.metadataAvailable && props.tag.images.length > 0)
+
+const tagRefsOpen = ref(false)
+const tagRefsRoot = ref<HTMLElement | null>(null)
+const tagRefsTrigger = ref<HTMLButtonElement | null>(null)
+
+onClickOutside(tagRefsRoot, () => {
+	tagRefsOpen.value = false
+})
+
+onKeyStroke("Escape", () => {
+	if (!tagRefsOpen.value) {
+		return
+	}
+	tagRefsOpen.value = false
+	tagRefsTrigger.value?.focus()
+})
 
 const lastUpdated = computed(() => {
 	if (!props.tag.createdAt || props.tag.createdAt.startsWith("0001-01-01")) {
