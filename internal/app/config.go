@@ -12,6 +12,14 @@ import (
 	"github.com/spf13/pflag"
 )
 
+const (
+	logLevelWarn  = "warn"
+	logLevelInfo  = "info"
+	logLevelDebug = "debug"
+
+	flagDebug = "debug"
+)
+
 type Config struct {
 	App           AppConfig
 	Server        ServerConfig
@@ -115,17 +123,21 @@ func LoadConfig(flags *pflag.FlagSet) (*Config, error) {
 }
 
 func setLogLevel(cfg *Config) error {
-	if cfg.App.VerboseCount > 0 {
-		levels := []string{"warn", "info", "debug"}
-		idx := cfg.App.VerboseCount
-		if idx >= len(levels) {
-			idx = len(levels) - 1
-		}
-		cfg.App.VerboseLevel = levels[idx]
-	}
 	level, err := clog.ParseLevel(cfg.App.VerboseLevel)
 	if err != nil {
 		return fmt.Errorf("invalid verbose level %q: %w", cfg.App.VerboseLevel, err)
+	}
+	if cfg.App.VerboseCount > 0 {
+		levels := []string{logLevelWarn, logLevelInfo, logLevelDebug}
+		idx := min(cfg.App.VerboseCount, len(levels)-1)
+		flagLevel, err := clog.ParseLevel(levels[idx])
+		if err != nil {
+			return fmt.Errorf("invalid verbose level %q: %w", levels[idx], err)
+		}
+		if flagLevel < level {
+			cfg.App.VerboseLevel = levels[idx]
+			level = flagLevel
+		}
 	}
 	clog.SetLevel(level)
 	return nil
@@ -135,10 +147,10 @@ func applyFlagOverrides(flags *pflag.FlagSet, cfg *Config) error {
 	if err := applyCountFlag(flags, "verbose", &cfg.App.VerboseCount); err != nil {
 		return err
 	}
-	if err := applyBoolFlag(flags, "debug", &cfg.App.Debug); err != nil {
+	if err := applyBoolFlag(flags, flagDebug, &cfg.App.Debug); err != nil {
 		return err
 	}
-	if err := applyBoolFlag(flags, "debug", &cfg.Server.Debug); err != nil {
+	if err := applyBoolFlag(flags, flagDebug, &cfg.Server.Debug); err != nil {
 		return err
 	}
 	if err := applyStringFlag(flags, "host", &cfg.Server.Host); err != nil {
