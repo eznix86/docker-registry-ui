@@ -7,32 +7,24 @@
 </template>
 
 <script setup lang="ts">
-import type { PieSeriesOption } from "echarts/charts"
-import type { LegendComponentOption, TooltipComponentOption } from "echarts/components"
-import type { ComposeOption } from "echarts/core"
 import { useWindowSize } from "@vueuse/core"
+import type { PieSeriesOption } from "echarts/charts"
 import { PieChart } from "echarts/charts"
+import type { LegendComponentOption, TooltipComponentOption } from "echarts/components"
 import { LegendComponent, TooltipComponent } from "echarts/components"
+import type { ComposeOption } from "echarts/core"
 import { use } from "echarts/core"
 import { CanvasRenderer } from "echarts/renderers"
 import { computed } from "vue"
 import VChart from "vue-echarts"
+
 import { useChartTheme } from "~/composables/useChartTheme"
 
 const props = defineProps<RegistryPieChartProps>()
 
-use([
-	PieChart,
-	LegendComponent,
-	TooltipComponent,
-	CanvasRenderer,
-])
+use([PieChart, LegendComponent, TooltipComponent, CanvasRenderer])
 
-type EChartsOption = ComposeOption<
-	PieSeriesOption
-	| LegendComponentOption
-	| TooltipComponentOption
->
+type EChartsOption = ComposeOption<PieSeriesOption | LegendComponentOption | TooltipComponentOption>
 
 interface ChartItem {
 	label: string
@@ -63,7 +55,7 @@ const option = computed<EChartsOption>(() => {
 			backgroundColor: "rgba(15, 23, 42, 0.92)",
 			borderWidth: 0,
 			textStyle: { color: "#f8fafc" },
-			formatter: (params) => {
+			formatter: params => {
 				if (Array.isArray(params)) {
 					return ""
 				}
@@ -86,12 +78,8 @@ const option = computed<EChartsOption>(() => {
 		series: [
 			{
 				type: "pie",
-				radius: isMobile.value
-					? ["36%", "54%"]
-					: ["40%", "58%"],
-				center: isMobile.value
-					? ["50%", "46%"]
-					: ["50%", "48%"],
+				radius: isMobile.value ? ["36%", "54%"] : ["40%", "58%"],
+				center: isMobile.value ? ["50%", "46%"] : ["50%", "48%"],
 				avoidLabelOverlap: true,
 				minAngle: 4,
 				itemStyle: {
@@ -104,7 +92,7 @@ const option = computed<EChartsOption>(() => {
 					alignTo: "edge",
 					edgeDistance: isMobile.value ? 10 : 18,
 					bleedMargin: 6,
-					formatter: (params) => {
+					formatter: params => {
 						if (Array.isArray(params)) {
 							return ""
 						}
@@ -154,9 +142,6 @@ function normalizeItems(items: ChartItem[], maxItems = items.length, aggregateLa
 	const remainder = sorted.slice(maxItems - 1)
 	const remainderValue = remainder.reduce((sum, item) => sum + item.value, 0)
 
-	return [
-		...visible,
-		{ label: aggregateLabel, value: remainderValue },
-	]
+	return [...visible, { label: aggregateLabel, value: remainderValue }]
 }
 </script>

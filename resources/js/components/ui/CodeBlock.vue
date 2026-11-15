@@ -7,24 +7,21 @@ import hljs from "highlight.js/lib/core"
 import yaml from "highlight.js/lib/languages/yaml"
 import { computed } from "vue"
 
-const props = withDefaults(defineProps<{
-	code: string
-	language?: string
-	showLineNumbers?: boolean
-}>(), {
-	language: "yaml",
-	showLineNumbers: true,
-})
+const props = withDefaults(
+	defineProps<{
+		code: string
+		language?: string
+		showLineNumbers?: boolean
+	}>(),
+	{
+		language: "yaml",
+		showLineNumbers: true,
+	},
+)
 
 hljs.registerLanguage("yaml", yaml)
 
-const builtInObjects = [
-	".Release",
-	".Chart",
-	".Files",
-	".Capabilities",
-	".Template",
-]
+const builtInObjects = [".Release", ".Chart", ".Files", ".Capabilities", ".Template"]
 const flowControls = new Set([
 	"if",
 	"else",
@@ -105,22 +102,23 @@ const templateFunctions = new Set([
 ])
 
 const highlighted = computed(() => {
-	if (!props.code)
-		return ""
+	if (!props.code) return ""
 	return hljs.highlight(props.code, { language: props.language, ignoreIllegals: true }).value
 })
 
 const rendered = computed(() => {
-	if (!props.showLineNumbers)
-		return wrapHelmTemplateExpressions(highlighted.value)
+	if (!props.showLineNumbers) return wrapHelmTemplateExpressions(highlighted.value)
 	return highlighted.value
 		.split("\n")
-		.map((line, i) => `<span class="line" data-line-number="${i + 1}">${wrapHelmTemplateExpressions(line) || "&nbsp;"}</span>`)
+		.map(
+			(line, i) =>
+				`<span class="line" data-line-number="${i + 1}">${wrapHelmTemplateExpressions(line) || "&nbsp;"}</span>`,
+		)
 		.join("")
 })
 
 function wrapHelmTemplateExpressions(line: string) {
-	return line.replace(/(\{\{.*?\}\})/g, (expression) => {
+	return line.replace(/(\{\{.*?\}\})/g, expression => {
 		return `<span class="hljs-template-expression">${highlightHelmTemplateExpression(expression)}</span>`
 	})
 }
@@ -128,21 +126,27 @@ function wrapHelmTemplateExpressions(line: string) {
 function highlightHelmTemplateExpression(expression: string) {
 	let previousToken = ""
 
-	return expression
-		.replace(/<\/?span[^>]*>/g, "")
-		.replace(/\{\{-?|-?\}\}|&quot;.*?&quot;|'[^']*'|\s+|\S+/g, (token) => {
-			if (/^\s+$/.test(token)) {
-				return token
-			}
+	return expression.replace(/<\/?span[^>]*>/g, "").replace(/\{\{-?|-?\}\}|&quot;.*?&quot;|'[^']*'|\s+|\S+/g, token => {
+		if (/^\s+$/.test(token)) {
+			return token
+		}
 
-			const rendered = renderHelmTemplateToken(token, previousToken)
-			previousToken = token
-			return rendered
-		})
+		const rendered = renderHelmTemplateToken(token, previousToken)
+		previousToken = token
+		return rendered
+	})
 }
 
 function renderHelmTemplateToken(token: string, previousToken: string): string {
-	if (token === "{{" || token === "{{-" || token === "}}" || token === "-}}" || token === "|" || token === ")" || token === "(") {
+	if (
+		token === "{{" ||
+		token === "{{-" ||
+		token === "}}" ||
+		token === "-}}" ||
+		token === "|" ||
+		token === ")" ||
+		token === "("
+	) {
 		return wrapToken("hljs-template-delimiter", token)
 	}
 	if (token.startsWith("(") && token.length > 1) {

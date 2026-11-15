@@ -23,13 +23,7 @@ const fallbackTheme: ChartTheme = {
 	mutedForeground: "#57606a",
 	foreground: "#24292f",
 	background: "#ffffff",
-	palette: [
-		"#1d63ed",
-		"#0047c2",
-		"#1d63ed",
-		"#2e7d32",
-		"#f57c00",
-	],
+	palette: ["#1d63ed", "#0047c2", "#1d63ed", "#2e7d32", "#f57c00"],
 }
 
 export function useChartTheme() {
@@ -73,13 +67,7 @@ export function useChartTheme() {
 			mutedForeground,
 			foreground,
 			background,
-			palette: [
-				primary,
-				accent,
-				info,
-				success,
-				warning,
-			],
+			palette: [primary, accent, info, success, warning],
 		}
 	}
 

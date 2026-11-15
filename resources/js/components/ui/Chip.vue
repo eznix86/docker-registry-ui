@@ -1,9 +1,5 @@
 <template>
-	<component
-		:is="as"
-		:class="chip({ size, variant, class: props.class })"
-		v-bind="$attrs"
-	>
+	<component :is="as" :class="chip({ size, variant, class: props.class })" v-bind="$attrs">
 		<slot />
 	</component>
 </template>

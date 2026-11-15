@@ -6,7 +6,11 @@
 			<main class="flex-1 lg:p-8 p-4 sm:p-6 overflow-y-auto">
 				<RepositoryBreadcrumb :repository="repository" />
 
-				<RepositoryHeader :repository="repository" :disable-tag-deletion="page.props.disableTagDeletion" @bulk-delete="openBulkDelete" />
+				<RepositoryHeader
+					:repository="repository"
+					:disable-tag-deletion="page.props.disableTagDeletion"
+					@bulk-delete="openBulkDelete"
+				/>
 
 				<RepositoryMetadata
 					:repository="repository"
@@ -42,25 +46,17 @@
 				</InfiniteScroll>
 			</main>
 
-			<BulkDeleteTagsDialog
-				ref="bulkDeleteRef"
-				:tags="bulkDeleteTags"
-				:total-tags-count="repository.tagsCount"
-			/>
+			<BulkDeleteTagsDialog ref="bulkDeleteRef" :tags="bulkDeleteTags" :total-tags-count="repository.tagsCount" />
 
-			<DeleteTagDialog
-				v-if="tagToDelete"
-				:tag="tagToDelete"
-				@close="tagToDelete = null"
-			/>
+			<DeleteTagDialog v-if="tagToDelete" :tag="tagToDelete" @close="tagToDelete = null" />
 		</div>
 	</AppLayout>
 </template>
 
 <script setup lang="ts">
-import type { RepositoryFilters, RepositoryProps, Tag } from "~/types"
 import { InfiniteScroll, router, usePage } from "@inertiajs/vue3"
 import { computed, ref } from "vue"
+
 import BulkDeleteTagsDialog from "~/components/BulkDeleteTagsDialog.vue"
 import DeleteTagDialog from "~/components/DeleteTagDialog.vue"
 import HeaderComponent from "~/components/HeaderComponent.vue"
@@ -75,6 +71,7 @@ import AppLayout from "~/layouts/AppLayout.vue"
 import { buildFilterParams } from "~/lib/filterParams"
 import { normalizeArray } from "~/lib/normalize"
 import { currentPath } from "~/lib/routes"
+import type { RepositoryFilters, RepositoryProps, Tag } from "~/types"
 
 const page = usePage<RepositoryProps>()
 const repository = computed(() => page.props.repository)

@@ -11,22 +11,21 @@
 		</p>
 
 		<div class="flex justify-end gap-3">
-			<Button variant="ghost" :disabled="deleting" @click="close">
-				CANCEL
-			</Button>
+			<Button variant="ghost" :disabled="deleting" @click="close"> CANCEL </Button>
 			<Button variant="destructive" :disabled="deleting" @click="confirm">
-				{{ deleting ? 'DELETING...' : 'DELETE TAG' }}
+				{{ deleting ? "DELETING..." : "DELETE TAG" }}
 			</Button>
 		</div>
 	</Dialog>
 </template>
 
 <script setup lang="ts">
-import type { Tag } from "~/types"
 import { router } from "@inertiajs/vue3"
 import { ref } from "vue"
+
 import { Button, Dialog, DialogTitle } from "~/components/ui"
 import { currentTagsPath } from "~/lib/routes"
+import type { Tag } from "~/types"
 
 const props = defineProps<{ tag: Tag }>()
 const emit = defineEmits<{ close: [] }>()
@@ -49,18 +48,14 @@ async function confirm() {
 				tags: [props.tag.name],
 			}),
 		})
-		if (!resp.ok)
-			throw new Error((await resp.json()).error || "Deletion failed")
+		if (!resp.ok) throw new Error((await resp.json()).error || "Deletion failed")
 		const result = await resp.json()
-		if (result.failed > 0)
-			throw new Error(result.errors?.[props.tag.name] || "Deletion failed")
+		if (result.failed > 0) throw new Error(result.errors?.[props.tag.name] || "Deletion failed")
 		close()
 		router.reload({ only: [] })
-	}
-	catch (e: any) {
+	} catch (e: any) {
 		error.value = e.message
-	}
-	finally {
+	} finally {
 		deleting.value = false
 	}
 }

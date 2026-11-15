@@ -1,6 +1,8 @@
 <template>
 	<div class="flex items-start justify-between gap-4 mb-4">
-		<h1 class="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold leading-tight lg:leading-[56.7px] text-foreground break-words min-w-0">
+		<h1
+			class="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold leading-tight lg:leading-[56.7px] text-foreground break-words min-w-0"
+		>
 			{{ repositoryName }}
 		</h1>
 		<button
@@ -19,10 +21,10 @@
 </template>
 
 <script setup lang="ts">
-import type { Repository } from "~/types"
 import { useRepositoryName } from "~/composables/useRepositoryName"
+import type { Repository } from "~/types"
 
-const props = withDefaults(defineProps<{ repository?: Repository, disableTagDeletion?: boolean }>(), {
+const props = withDefaults(defineProps<{ repository?: Repository; disableTagDeletion?: boolean }>(), {
 	repository: undefined,
 	disableTagDeletion: false,
 })

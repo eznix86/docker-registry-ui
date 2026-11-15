@@ -1,5 +1,6 @@
-import type { Registry, SharedProps } from "~/types"
 import { usePage } from "@inertiajs/vue3"
+
+import type { Registry, SharedProps } from "~/types"
 
 function useRegistriesList(): Registry[] {
 	const page = usePage<SharedProps>()

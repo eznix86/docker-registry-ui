@@ -1,12 +1,12 @@
 import type { MaybeRefOrGetter } from "vue"
-import type { Repository } from "~/types"
 import { computed, toValue } from "vue"
+
+import type { Repository } from "~/types"
 
 export function useRepositoryName(repository: MaybeRefOrGetter<Repository | null | undefined>) {
 	return computed(() => {
 		const repo = toValue(repository)
-		if (!repo)
-			return ""
+		if (!repo) return ""
 		if (repo.namespace) {
 			return `${repo.namespace}/${repo.name}`
 		}

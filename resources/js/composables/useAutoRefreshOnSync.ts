@@ -1,6 +1,7 @@
 import { router } from "@inertiajs/vue3"
 import { useDebounceFn } from "@vueuse/core"
 import { watch } from "vue"
+
 import { useSyncProgressStore } from "~/stores/useSyncProgressStore"
 
 /**
@@ -14,9 +15,12 @@ export function useAutoRefreshOnSync() {
 		router.reload({ only: [] })
 	}, 500)
 
-	watch(() => store.done, (newValue, oldValue) => {
-		if (newValue && !oldValue && !store.isRefreshing) {
-			reloadPage()
-		}
-	})
+	watch(
+		() => store.done,
+		(newValue, oldValue) => {
+			if (newValue && !oldValue && !store.isRefreshing) {
+				void reloadPage()
+			}
+		},
+	)
 }
