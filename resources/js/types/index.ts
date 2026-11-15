@@ -113,6 +113,16 @@ export interface Tag {
 	chartDesc?: string
 	chartApiVersion?: string
 	chartType?: string
+	chartAppVersion?: string
+	chartKubeVersion?: string
+	chartDeprecated?: boolean
+	chartDependencies?: ChartDependency[]
+}
+
+interface ChartDependency {
+	name: string
+	version: string
+	repository: string
 }
 
 export interface RepositoryFilters {

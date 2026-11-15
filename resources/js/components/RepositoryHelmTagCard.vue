@@ -22,29 +22,33 @@
 				</div>
 			</div>
 
-			<div class="grid w-full grid-cols-2 items-center gap-2 sm:flex sm:w-auto sm:shrink-0 sm:flex-wrap">
+			<div class="flex w-full items-center sm:w-auto sm:shrink-0">
 				<Button
 					size="sm"
 					variant="default"
 					class="flex-1 sm:flex-none"
-					:aria-label="`View default values for ${tag.name}`"
-					@click="viewerDialog?.open(repository, tag.name, 'values')"
+					:aria-label="`View chart files for ${tag.name}`"
+					@click="viewerDialog?.open(repository, tag.name, tag.digest)"
 				>
-					Default Values
-				</Button>
-				<Button
-					size="sm"
-					variant="default"
-					class="flex-1 sm:flex-none"
-					:aria-label="`View templates for ${tag.name}`"
-					@click="viewerDialog?.open(repository, tag.name, 'files')"
-				>
-					View Templates
+					View Chart
 				</Button>
 			</div>
 		</div>
 
-		<div class="mt-5 grid min-w-0 gap-4 lg:grid-cols-2">
+		<p v-if="tag.chartDesc" class="mt-3 text-sm text-muted-foreground">
+			{{ tag.chartDesc }}
+		</p>
+
+		<div v-if="hasMetadata" class="mt-3 flex flex-wrap items-center gap-2">
+			<Chip v-if="tag.chartDeprecated" variant="warning" size="normal">Deprecated</Chip>
+			<Chip v-if="tag.chartAppVersion" size="normal">App {{ tag.chartAppVersion }}</Chip>
+			<Chip v-if="tag.chartKubeVersion" size="normal">Kubernetes {{ tag.chartKubeVersion }}</Chip>
+			<Chip v-for="dep in dependencies" :key="dep.name" size="normal" :title="dep.repository || undefined">
+				{{ dep.name }} {{ dep.version }}
+			</Chip>
+		</div>
+
+		<div class="mt-5 grid min-w-0 gap-4 lg:grid-cols-2 2xl:grid-cols-3">
 			<div
 				class="min-w-0 overflow-hidden rounded-md bg-background/40 p-2 shadow-[inset_0_0_0_1px_var(--color-outline)]"
 			>
@@ -57,6 +61,18 @@
 				<div class="mb-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Pull chart</div>
 				<CopyCommand full-width :command="pullCommand" :aria-label="`Copy pull command for ${tag.name}`" />
 			</div>
+			<div
+				class="min-w-0 overflow-hidden rounded-md bg-background/40 p-2 shadow-[inset_0_0_0_1px_var(--color-outline)]"
+			>
+				<div class="mb-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+					Save default values
+				</div>
+				<CopyCommand
+					full-width
+					:command="showValuesCommand"
+					:aria-label="`Copy command to save default values of ${tag.name}`"
+				/>
+			</div>
 		</div>
 
 		<HelmChartViewerDialog ref="viewerDialog" />
@@ -68,7 +84,7 @@ import { useTimeAgo } from "@vueuse/core"
 import { computed, ref } from "vue"
 
 import HelmChartViewerDialog from "~/components/HelmChartViewerDialog.vue"
-import { Button, CopyCommand } from "~/components/ui"
+import { Button, Chip, CopyCommand } from "~/components/ui"
 import { useRepositoryName } from "~/composables/useRepositoryName"
 import type { Repository, Tag } from "~/types"
 
@@ -90,6 +106,18 @@ const chartRef = computed(() => `oci://${registryHost.value}/${repositoryName.va
 
 const installCommand = computed(() => `helm install <release-name> ${chartRef.value} --version ${chartVersion.value}`)
 const pullCommand = computed(() => `helm pull ${chartRef.value} --version ${chartVersion.value}`)
+const showValuesCommand = computed(
+	() => `helm show values ${chartRef.value} --version ${chartVersion.value} > values.yaml`,
+)
+
+const dependencies = computed(() => props.tag.chartDependencies ?? [])
+const hasMetadata = computed(
+	() =>
+		props.tag.chartDeprecated ||
+		!!props.tag.chartAppVersion ||
+		!!props.tag.chartKubeVersion ||
+		dependencies.value.length > 0,
+)
 
 const lastUpdated = computed(() => {
 	if (!props.tag.createdAt || props.tag.createdAt.startsWith("0001-01-01")) {

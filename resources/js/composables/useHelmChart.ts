@@ -3,23 +3,22 @@ import { computed, ref, toValue } from "vue"
 
 import type { Repository } from "~/types"
 
-export interface HelmFile {
+export interface HelmFileInfo {
 	path: string
-	content: string
+	size: number
 }
 
 interface HelmFilesResponse {
-	files: HelmFile[]
-	chartYaml: string
+	files: HelmFileInfo[]
 }
 
-interface HelmValuesResponse {
+interface HelmFileResponse {
+	path: string
 	content: string
 }
 
 interface UseHelmChartOptions {
 	registryHost: MaybeRefOrGetter<string>
-	namespace: MaybeRefOrGetter<string>
 	repository: MaybeRefOrGetter<Repository>
 	tagName: MaybeRefOrGetter<string>
 }
@@ -28,22 +27,19 @@ export function useHelmChart(opts: UseHelmChartOptions) {
 	const loading = ref(false)
 	const error = ref<string | null>(null)
 
-	const url = computed(() => {
+	const baseUrl = computed(() => {
 		const repo = toValue(opts.repository)
 		const repoPath = repo.namespace ? `${repo.namespace}/${repo.name}` : repo.name
 		const reg = toValue(opts.registryHost).replaceAll(":", "~")
 		const tag = encodeURIComponent(toValue(opts.tagName))
-		return {
-			values: `/r/${reg}/${repoPath}/helm/${tag}/values`,
-			files: `/r/${reg}/${repoPath}/helm/${tag}/files`,
-		}
+		return `/r/${reg}/${repoPath}/helm/${tag}`
 	})
 
-	async function fetchJson<T>(suffix: "values" | "files"): Promise<T | null> {
+	async function fetchJson<T>(url: string): Promise<T | null> {
 		loading.value = true
 		error.value = null
 		try {
-			const resp = await fetch(url.value[suffix], {
+			const resp = await fetch(url, {
 				headers: { Accept: "application/json" },
 			})
 			if (!resp.ok) {
@@ -59,18 +55,19 @@ export function useHelmChart(opts: UseHelmChartOptions) {
 		}
 	}
 
-	function fetchValues(): Promise<string | null> {
-		return fetchJson<HelmValuesResponse>("values").then(d => d?.content ?? null)
+	function fetchFiles(): Promise<HelmFileInfo[] | null> {
+		return fetchJson<HelmFilesResponse>(`${baseUrl.value}/files`).then(d => d?.files ?? null)
 	}
 
-	function fetchFiles(): Promise<HelmFilesResponse | null> {
-		return fetchJson<HelmFilesResponse>("files")
+	function fetchFile(path: string): Promise<string | null> {
+		const url = `${baseUrl.value}/file?path=${encodeURIComponent(path)}`
+		return fetchJson<HelmFileResponse>(url).then(d => d?.content ?? null)
 	}
 
 	return {
 		loading,
 		error: error as Ref<string | null>,
-		fetchValues,
 		fetchFiles,
+		fetchFile,
 	}
 }

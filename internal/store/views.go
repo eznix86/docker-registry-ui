@@ -3,6 +3,7 @@ package store
 import (
 	"context"
 	"database/sql"
+	"encoding/json/v2"
 	"fmt"
 	"sort"
 	"strings"
@@ -102,6 +103,10 @@ type tagDataRow struct {
 	chartDesc     sql.NullString
 	chartAPIVer   sql.NullString
 	chartType     sql.NullString
+	chartAppVer   sql.NullString
+	chartKubeVer  sql.NullString
+	chartDepr     sql.NullBool
+	chartDeps     sql.NullString
 }
 
 func (s *Store) queryTagData(ctx context.Context, repositoryID uint, nameFilter, order string, limit, offset int) ([]tagDataRow, error) {
@@ -124,7 +129,8 @@ func (s *Store) queryTagData(ctx context.Context, repositoryID uint, nameFilter,
 		WITH filtered_tags AS (
 			SELECT
 				id, name, digest, kind, created_at, chart_name, chart_version, chart_desc,
-				chart_api_version, chart_type,
+				chart_api_version, chart_type, chart_app_version, chart_kube_version,
+				chart_deprecated, chart_dependencies,
 				ROW_NUMBER() OVER (ORDER BY %s) AS sort_order
 			FROM tags_view
 			WHERE repository_id = ? %s
@@ -136,7 +142,8 @@ func (s *Store) queryTagData(ctx context.Context, repositoryID uint, nameFilter,
 			m.digest, m.os, m.architecture, m.variant,
 			m.size_bytes, m.created,
 			ft.chart_name, ft.chart_version, ft.chart_desc,
-			ft.chart_api_version, ft.chart_type
+			ft.chart_api_version, ft.chart_type, ft.chart_app_version, ft.chart_kube_version,
+			ft.chart_deprecated, ft.chart_dependencies
 		FROM filtered_tags ft
 		LEFT JOIN manifests m ON m.digest = ft.digest AND ft.kind IN ('image', 'helm')
 		ORDER BY ft.sort_order, m.digest`, order, nameCond, order, limitClause)
@@ -153,7 +160,8 @@ func (s *Store) queryTagData(ctx context.Context, repositoryID uint, nameFilter,
 		if err := rows.Scan(&r.tagID, &r.tagName, &r.tagDigest, &r.tagKind, &r.tagCreatedAt,
 			&r.mDigest, &r.mOS, &r.mArch, &r.mVariant,
 			&r.configSize, &r.configCreated, &r.chartName, &r.chartVersion, &r.chartDesc,
-			&r.chartAPIVer, &r.chartType); err != nil {
+			&r.chartAPIVer, &r.chartType, &r.chartAppVer, &r.chartKubeVer,
+			&r.chartDepr, &r.chartDeps); err != nil {
 			return nil, fmt.Errorf("scan tag row: %w", err)
 		}
 		out = append(out, r)
@@ -298,6 +306,17 @@ type tagMeta struct {
 	digest string
 }
 
+func parseChartDependencies(raw string) []ChartDependency {
+	deps := []ChartDependency{}
+	if raw == "" {
+		return deps
+	}
+	if err := json.Unmarshal([]byte(raw), &deps); err != nil {
+		return []ChartDependency{}
+	}
+	return deps
+}
+
 func (s *Store) buildTagViews(rows []tagDataRow) []TagView {
 	tagMap := make(map[uint]*TagView)
 	var tagOrder []uint
@@ -306,15 +325,19 @@ func (s *Store) buildTagViews(rows []tagDataRow) []TagView {
 		tv, exists := tagMap[row.tagID]
 		if !exists {
 			tv = &TagView{
-				ID:              row.tagID,
-				Name:            row.tagName,
-				Digest:          row.tagDigest,
-				Kind:            row.tagKind,
-				ChartName:       row.chartName.String,
-				ChartVersion:    row.chartVersion.String,
-				ChartDesc:       row.chartDesc.String,
-				ChartAPIVersion: row.chartAPIVer.String,
-				ChartType:       row.chartType.String,
+				ID:                row.tagID,
+				Name:              row.tagName,
+				Digest:            row.tagDigest,
+				Kind:              row.tagKind,
+				ChartName:         row.chartName.String,
+				ChartVersion:      row.chartVersion.String,
+				ChartDesc:         row.chartDesc.String,
+				ChartAPIVersion:   row.chartAPIVer.String,
+				ChartType:         row.chartType.String,
+				ChartAppVersion:   row.chartAppVer.String,
+				ChartKubeVersion:  row.chartKubeVer.String,
+				ChartDeprecated:   row.chartDepr.Bool,
+				ChartDependencies: parseChartDependencies(row.chartDeps.String),
 			}
 			if row.tagCreatedAt.Valid {
 				if t, err := parseTime(row.tagCreatedAt.String); err == nil {

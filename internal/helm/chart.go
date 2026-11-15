@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"io"
 	"path"
+	"slices"
 	"strings"
 	"sync"
 
@@ -20,6 +21,7 @@ import (
 const (
 	chartMetadataFile = "Chart.yaml"
 	chartValuesFile   = "values.yaml"
+	chartReadmeFile   = "README.md"
 
 	// MediaTypeHelmChartContent is the OCI media type of the Helm chart tarball layer.
 	MediaTypeHelmChartContent = "application/vnd.cncf.helm.chart.content.v1.tar+gzip"
@@ -38,11 +40,54 @@ type File struct {
 	Content string `json:"content"`
 }
 
+// FileInfo names a file of a chart without its content.
+type FileInfo struct {
+	Path string `json:"path"`
+	Size int    `json:"size"`
+}
+
 // Chart is the extracted contents of a Helm chart.
 type Chart struct {
+	Readme    string `json:"readme"`
 	Values    string `json:"values"`
 	ChartYAML string `json:"chartYaml"`
 	Files     []File `json:"files"`
+}
+
+// Listing returns the chart's README, values, Chart.yaml and templates, in that order, without content.
+func (c *Chart) Listing() []FileInfo {
+	files := c.allFiles()
+	out := make([]FileInfo, 0, len(files))
+	for _, f := range files {
+		out = append(out, FileInfo{Path: f.Path, Size: len(f.Content)})
+	}
+	return out
+}
+
+// File returns the content of a file that Listing names.
+func (c *Chart) File(name string) (string, bool) {
+	for _, f := range c.allFiles() {
+		if f.Path == name {
+			return f.Content, true
+		}
+	}
+	return "", false
+}
+
+func (c *Chart) allFiles() []File {
+	var out []File
+	if c.Readme != "" {
+		out = append(out, File{Path: chartReadmeFile, Content: c.Readme})
+	}
+	if c.Values != "" {
+		out = append(out, File{Path: chartValuesFile, Content: c.Values})
+	}
+	if c.ChartYAML != "" {
+		out = append(out, File{Path: chartMetadataFile, Content: c.ChartYAML})
+	}
+	templates := slices.Clone(c.Files)
+	slices.SortFunc(templates, func(a, b File) int { return strings.Compare(a.Path, b.Path) })
+	return append(out, templates...)
 }
 
 // tarEntry is an internal helper for the extraction pipeline.
@@ -274,6 +319,10 @@ func assignChartEntry(chart *Chart, name string, body []byte) {
 	case chartMetadataFile:
 		chart.ChartYAML = string(body)
 	default:
+		if strings.EqualFold(name, chartReadmeFile) {
+			chart.Readme = string(body)
+			return
+		}
 		if strings.HasPrefix(name, "templates/") {
 			chart.Files = append(chart.Files, File{Path: name, Content: string(body)})
 		}
