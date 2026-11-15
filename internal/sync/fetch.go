@@ -208,6 +208,7 @@ func (g *ManifestGraph) populateSingleConfig(
 	g.applyImageConfigFields(blob, entry)
 	entry.OS = entry.ConfigOS
 	entry.Architecture = entry.ConfigArch
+	entry.Variant = blob.blob.Variant
 }
 
 func (g *ManifestGraph) applyHelmConfigFields(parsed *singleManifest, blob *cachedBlob, entry *PlatformEntry) {

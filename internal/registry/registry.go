@@ -292,6 +292,7 @@ type ConfigBlob struct {
 	Created      string `json:"created"`
 	OS           string `json:"os"`
 	Architecture string `json:"architecture"`
+	Variant      string `json:"variant"`
 	Config       struct {
 		Labels map[string]string `json:"Labels"`
 	} `json:"config"`
