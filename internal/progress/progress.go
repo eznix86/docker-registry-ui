@@ -1,7 +1,7 @@
 package progress
 
 import (
-	"encoding/json"
+	"encoding/json/v2"
 	"fmt"
 	"sync"
 	"time"

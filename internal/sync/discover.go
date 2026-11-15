@@ -180,12 +180,10 @@ func processDiscovered(r discoveryResult) ([]planning.Job, []DiscoveredRepositor
 		})
 		for _, tag := range repo.Tags {
 			jobs = append(jobs, planning.Job{
-				JobInput: planning.JobInput{
-					RegistryName: r.regName,
-					Namespace:    repo.Namespace,
-					RepoName:     repo.Name,
-					TagName:      tag,
-				},
+				RegistryName:  r.regName,
+				Namespace:     repo.Namespace,
+				RepoName:      repo.Name,
+				TagName:       tag,
 				RegistryHost:  r.regHost,
 				PriorityScore: planning.CalculatePriorityScore(tag),
 			})

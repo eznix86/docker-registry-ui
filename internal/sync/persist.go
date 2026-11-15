@@ -38,36 +38,8 @@ func (p *persister) save(
 		}
 
 		if graph.Kind == KindIndex {
-			var indexSize int64
-			var indexCreated *time.Time
-			for _, pe := range graph.Platforms {
-				if len(pe.Raw) > 0 {
-					if err := p.savePlatform(ctx, tx, &pe); err != nil {
-						return err
-					}
-				} else {
-					if err := p.savePlatformStub(ctx, tx, &pe); err != nil {
-						return err
-					}
-				}
-				indexSize += pe.Size
-				if pe.ConfigCreated != nil {
-					if indexCreated == nil || pe.ConfigCreated.After(*indexCreated) {
-						indexCreated = pe.ConfigCreated
-					}
-				}
-			}
-
-			if _, err := tx.UpsertManifestByFields(ctx, digest, graph.MediaType, string(KindIndex),
-				string(graph.Raw), "", "", "", "", indexSize, indexCreated); err != nil {
-				return fmt.Errorf("upsert index manifest %s: %w", digest, err)
-			}
-
-			for _, pe := range graph.Platforms {
-				if err := tx.LinkManifestPlatform(ctx, digest, pe.Digest, pe.OS, pe.Architecture, pe.Variant,
-					pe.Position, pe.Size); err != nil {
-					return fmt.Errorf("link platform %s: %w", pe.Digest, err)
-				}
+			if err := p.saveIndex(ctx, tx, digest, graph); err != nil {
+				return err
 			}
 		} else {
 			for _, pe := range graph.Platforms {
@@ -82,6 +54,41 @@ func (p *persister) save(
 		}
 		return nil
 	})
+}
+
+func (p *persister) saveIndex(ctx context.Context, tx *store.Store, digest string, graph *ManifestGraph) error {
+	var indexSize int64
+	var indexCreated *time.Time
+	for _, pe := range graph.Platforms {
+		if len(pe.Raw) > 0 {
+			if err := p.savePlatform(ctx, tx, &pe); err != nil {
+				return err
+			}
+		} else {
+			if err := p.savePlatformStub(ctx, tx, &pe); err != nil {
+				return err
+			}
+		}
+		indexSize += pe.Size
+		if pe.ConfigCreated != nil {
+			if indexCreated == nil || pe.ConfigCreated.After(*indexCreated) {
+				indexCreated = pe.ConfigCreated
+			}
+		}
+	}
+
+	if _, err := tx.UpsertManifestByFields(ctx, digest, graph.MediaType, string(KindIndex),
+		string(graph.Raw), "", "", "", "", indexSize, indexCreated); err != nil {
+		return fmt.Errorf("upsert index manifest %s: %w", digest, err)
+	}
+
+	for _, pe := range graph.Platforms {
+		if err := tx.LinkManifestPlatform(ctx, digest, pe.Digest, pe.OS, pe.Architecture, pe.Variant,
+			pe.Position, pe.Size); err != nil {
+			return fmt.Errorf("link platform %s: %w", pe.Digest, err)
+		}
+	}
+	return nil
 }
 
 func (p *persister) savePlatformStub(
