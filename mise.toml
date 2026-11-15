@@ -1,10 +1,10 @@
 [tools]
 bun = "1.4.4"
-go = "1.26"
+go = "1.27"
 "go:github.com/air-verse/air" = "1.65.3"
-"go:golang.org/x/tools/gopls" = "0.22.0"
+"go:golang.org/x/tools/gopls" = "0.24.0"
 gofumpt = "0.10.0"
-golangci-lint = "2.12.2"
+golangci-lint = "2.15.0"
 
 [env]
 GOTOOLCHAIN = "auto"

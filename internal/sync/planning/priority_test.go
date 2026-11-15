@@ -35,12 +35,12 @@ func TestCalculatePriorityScoreOrder(t *testing.T) {
 func TestJobRepoPath(t *testing.T) {
 	t.Helper()
 
-	job := Job{JobInput: JobInput{Namespace: "library", RepoName: "nginx"}}
+	job := Job{Namespace: "library", RepoName: "nginx"}
 	if got := job.RepoPath(); got != "library/nginx" {
 		t.Fatalf("expected repo path library/nginx, got %q", got)
 	}
 
-	job = Job{JobInput: JobInput{RepoName: "busybox"}}
+	job = Job{RepoName: "busybox"}
 	if got := job.RepoPath(); got != "busybox" {
 		t.Fatalf("expected repo path busybox, got %q", got)
 	}
@@ -50,9 +50,9 @@ func TestSortByPriority(t *testing.T) {
 	t.Helper()
 
 	jobs := []Job{
-		{JobInput: JobInput{TagName: "v1"}, RepositoryID: 1, PriorityScore: 1},
-		{JobInput: JobInput{TagName: "v2"}, RepositoryID: 1, PriorityScore: 2},
-		{JobInput: JobInput{TagName: "a"}, RepositoryID: 2, PriorityScore: 3},
+		{TagName: "v1", RepositoryID: 1, PriorityScore: 1},
+		{TagName: "v2", RepositoryID: 1, PriorityScore: 2},
+		{TagName: "a", RepositoryID: 2, PriorityScore: 3},
 	}
 
 	sorted := SortByPriority(jobs)
@@ -79,9 +79,9 @@ func TestFilterBySchedule(t *testing.T) {
 	past := now.Add(-time.Hour)
 
 	jobs := []Job{
-		{RepositoryID: 1, JobInput: JobInput{TagName: "new"}},
-		{RepositoryID: 1, JobInput: JobInput{TagName: dueTagName}},
-		{RepositoryID: 1, JobInput: JobInput{TagName: "later"}},
+		{RepositoryID: 1, TagName: "new"},
+		{RepositoryID: 1, TagName: dueTagName},
+		{RepositoryID: 1, TagName: "later"},
 	}
 
 	tagMap := map[tagKey]*store.Tag{

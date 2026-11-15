@@ -5,7 +5,7 @@ import (
 	"compress/gzip"
 	"container/list"
 	"context"
-	"encoding/json"
+	"encoding/json/v2"
 	"errors"
 	"fmt"
 	"io"

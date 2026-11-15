@@ -2,7 +2,7 @@ package web
 
 import (
 	"context"
-	"encoding/json"
+	"encoding/json/v2"
 	"errors"
 	"fmt"
 	"net/http"
@@ -77,7 +77,7 @@ func (h *handler) deleteTags(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		Tags []string `json:"tags"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || len(req.Tags) == 0 {
+	if err := json.UnmarshalRead(r.Body, &req); err != nil || len(req.Tags) == 0 {
 		writeJSON(w, http.StatusBadRequest, map[string]string{jsonKeyError: "No tags specified"})
 		return
 	}
@@ -247,7 +247,7 @@ func (h *handler) deleteStoredTags(
 func writeJSON(w http.ResponseWriter, status int, v any) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
-	if err := json.NewEncoder(w).Encode(v); err != nil {
+	if err := json.MarshalWrite(w, v, json.Deterministic(true)); err != nil {
 		clog.Error("Failed to encode JSON response", "error", err)
 	}
 }
