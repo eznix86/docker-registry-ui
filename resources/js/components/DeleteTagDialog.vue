@@ -45,7 +45,9 @@ async function confirm() {
 		const resp = await fetch(currentTagsPath(), {
 			method: "DELETE",
 			headers: { "Content-Type": "application/json" },
-			body: JSON.stringify({ tags: [props.tag.name] }),
+			body: JSON.stringify({
+				tags: [props.tag.name],
+			}),
 		})
 		if (!resp.ok)
 			throw new Error((await resp.json()).error || "Deletion failed")

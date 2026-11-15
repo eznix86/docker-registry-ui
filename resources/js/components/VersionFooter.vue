@@ -122,7 +122,9 @@ function normalizeSemver(version: string | undefined): string | null {
 		return null
 	}
 
-	const normalizedVersion = version.startsWith("v") ? version.slice(1) : version
+	const normalizedVersion = version.startsWith("v")
+		? version.slice(1)
+		: version
 	return valid(normalizedVersion)
 }
 
@@ -135,6 +137,8 @@ function formatVersion(version: string | undefined): string {
 		return version
 	}
 
-	return version.startsWith("v") ? version : `v${version}`
+	return version.startsWith("v")
+		? version
+		: `v${version}`
 }
 </script>

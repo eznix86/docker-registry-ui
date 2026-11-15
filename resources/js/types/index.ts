@@ -37,20 +37,20 @@ export interface Registry {
 	status: number
 }
 
-export interface RegistryStats {
+interface RegistryStats {
 	repositoryCount: number
 	tagCount: number
 	estimatedStorageBytes: number
 	architectureCount: number
 }
 
-export interface NamespaceStorage {
+interface NamespaceStorage {
 	namespace: string
 	displayName: string
 	totalSizeBytes: number
 }
 
-export interface ArchitectureCoverage {
+interface ArchitectureCoverage {
 	architecture: string
 	repositoryCount: number
 }
@@ -64,13 +64,13 @@ export interface RegistryRepositoryRow {
 	totalSizeInBytes: number
 }
 
-export interface RegistryStorageUsage {
+interface RegistryStorageUsage {
 	registryHost: string
 	displayName: string
 	totalSizeBytes: number
 }
 
-export interface ExploreFilters {
+interface ExploreFilters {
 	registries: string[]
 	architectures: string[]
 	showUntagged: boolean
@@ -89,7 +89,7 @@ export type ExploreProps = PageProps & SharedProps & {
 	}
 }
 
-export interface Image {
+interface Image {
 	digest: string
 	createdAt: Date
 	os: string
@@ -119,7 +119,7 @@ export interface RepositoryFilters {
 	filter: string
 }
 
-export interface TagScroll {
+interface TagScroll {
 	data: Tag[]
 }
 

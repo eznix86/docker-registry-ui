@@ -76,7 +76,9 @@ const showUntagged = computed(() => Boolean((filters.value as any).showUntagged)
 
 const selectedArchitecture = computed(() => {
 	const archs = (filters.value as any).architectures || []
-	return archs.length > 0 ? archs[0] : "all"
+	return archs.length > 0
+		? archs[0]
+		: "all"
 })
 
 function navigate(f: Record<string, any>) {
@@ -91,7 +93,9 @@ function navigate(f: Record<string, any>) {
 
 function setRegistrySelection(regs: string[]) {
 	navigate({
-		registries: regs.length > 0 ? regs : undefined,
+		registries: regs.length > 0
+			? regs
+			: undefined,
 		architectures: (filters.value as any).architectures,
 		untagged: (filters.value as any).showUntagged || undefined,
 	})
@@ -103,7 +107,9 @@ function handleArchitectureChange(value: string | number | undefined) {
 
 	navigate({
 		registries: (filters.value as any).registries,
-		architectures: value === "all" ? undefined : [value],
+		architectures: value === "all"
+			? undefined
+			: [value],
 		untagged: (filters.value as any).showUntagged || undefined,
 	})
 }

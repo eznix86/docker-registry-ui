@@ -23,7 +23,11 @@ export default defineConfig({
 		vue(),
 		tailwindcss(),
 		sri(),
-		...(process.env.FRONTEND_DEBUG === "1" ? [visualizer({ open: true })] : []),
+		...(process.env.FRONTEND_DEBUG === "1"
+			? [
+					visualizer({ open: true }),
+				]
+			: []),
 	],
 	publicDir: false,
 	server: {

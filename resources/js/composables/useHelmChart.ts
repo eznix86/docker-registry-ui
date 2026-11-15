@@ -44,7 +44,9 @@ export function useHelmChart(opts: UseHelmChartOptions) {
 		loading.value = true
 		error.value = null
 		try {
-			const resp = await fetch(url.value[suffix], { headers: { Accept: "application/json" } })
+			const resp = await fetch(url.value[suffix], {
+				headers: { Accept: "application/json" },
+			})
 			if (!resp.ok) {
 				const body = await resp.json().catch(() => ({}))
 				throw new Error(body.error || `Request failed (${resp.status})`)
@@ -52,7 +54,9 @@ export function useHelmChart(opts: UseHelmChartOptions) {
 			return (await resp.json()) as T
 		}
 		catch (e) {
-			error.value = e instanceof Error ? e.message : String(e)
+			error.value = e instanceof Error
+				? e.message
+				: String(e)
 			return null
 		}
 		finally {
@@ -68,5 +72,10 @@ export function useHelmChart(opts: UseHelmChartOptions) {
 		return fetchJson<HelmFilesResponse>("files")
 	}
 
-	return { loading, error: error as Ref<string | null>, fetchValues, fetchFiles }
+	return {
+		loading,
+		error: error as Ref<string | null>,
+		fetchValues,
+		fetchFiles,
+	}
 }

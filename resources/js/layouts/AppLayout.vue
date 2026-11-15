@@ -13,7 +13,9 @@ import VersionFooter from "~/components/VersionFooter.vue"
 
 const page = usePage<{ props: SharedProps }>()
 const sharedProps = computed<SharedProps>(() => ({
-	appVersion: typeof page.props.appVersion === "string" ? page.props.appVersion : "dev",
+	appVersion: typeof page.props.appVersion === "string"
+		? page.props.appVersion
+		: "dev",
 	disableTagDeletion: Boolean(page.props.disableTagDeletion),
 }))
 </script>

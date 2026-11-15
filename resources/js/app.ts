@@ -27,7 +27,9 @@ createInertiaApp({
 			import.meta.glob<DefineComponent>("./Pages/**/*.vue"),
 		),
 	setup({ el, App, props, plugin }) {
-		const app = createApp({ render: () => h(App, props) })
+		const app = createApp({
+			render: () => h(App, props),
+		})
 		const pinia = createPinia()
 
 		app.use(plugin)

@@ -71,7 +71,9 @@ function open() {
 	isOpen.value = true
 	selectedTags.value = []
 	deleteError.value = null
-	router.reload({ only: ["bulkDeleteTags"] })
+	router.reload({
+		only: ["bulkDeleteTags"],
+	})
 }
 
 function setSelected(v: string[]) {
@@ -79,7 +81,9 @@ function setSelected(v: string[]) {
 }
 
 function toggleAll(v: any) {
-	selectedTags.value = v ? props.tags.map(t => t.name) : []
+	selectedTags.value = v
+		? props.tags.map(t => t.name)
+		: []
 }
 
 const selectAll = computed(() => props.tags.length > 0 && props.tags.every(t => selectedTags.value.includes(t.name)))

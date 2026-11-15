@@ -22,7 +22,9 @@ export function repositoryPath(
 		return "#"
 	}
 
-	const segments = [registryPath(host)]
+	const segments = [
+		registryPath(host),
+	]
 
 	if (repository.namespace.trim()) {
 		segments.push(repository.namespace)

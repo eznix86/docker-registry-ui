@@ -40,7 +40,9 @@ export const useSyncProgressStore = defineStore("syncProgress", () => {
 			return
 		}
 
-		const protocol = window.location.protocol === "https:" ? "wss:" : "ws:"
+		const protocol = window.location.protocol === "https:"
+			? "wss:"
+			: "ws:"
 		const wsUrl = `${protocol}//${window.location.host}/ws/sync/progress`
 
 		ws = new WebSocket(wsUrl)

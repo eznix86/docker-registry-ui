@@ -94,10 +94,22 @@ import { FONT_MONO_OPTIONS, FONT_SANS_OPTIONS, isSettingsOpen, RUNTIME_OPTIONS, 
 const isOpen = isSettingsOpen
 const { theme, fontSans, fontMono, containerRuntime } = usePreferences()
 
-const selectedTheme = computed({ get: () => theme.value, set: v => theme.value = v })
-const selectedFontSans = computed({ get: () => fontSans.value, set: v => fontSans.value = v })
-const selectedFontMono = computed({ get: () => fontMono.value, set: v => fontMono.value = v })
-const selectedRuntime = computed({ get: () => containerRuntime.value, set: v => containerRuntime.value = v })
+const selectedTheme = computed({
+	get: () => theme.value,
+	set: v => theme.value = v,
+})
+const selectedFontSans = computed({
+	get: () => fontSans.value,
+	set: v => fontSans.value = v,
+})
+const selectedFontMono = computed({
+	get: () => fontMono.value,
+	set: v => fontMono.value = v,
+})
+const selectedRuntime = computed({
+	get: () => containerRuntime.value,
+	set: v => containerRuntime.value = v,
+})
 
 const themeLabel = computed(() => THEME_OPTIONS.find(t => t.value === theme.value)?.label || theme.value)
 const fontSansLabel = computed(() => FONT_SANS_OPTIONS.find(f => f.value === fontSans.value)?.label || fontSans.value)

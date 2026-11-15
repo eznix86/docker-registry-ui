@@ -10,7 +10,13 @@ export default antfu(
 			indent: "tab",
 			quotes: "double",
 		},
-		ignores: ["build", "node_modules", "charts", ".github", "public"],
+		ignores: [
+			"build",
+			"node_modules",
+			"charts",
+			".github",
+			"public",
+		],
 		rules: {
 			"vue/block-order": [
 				"error",

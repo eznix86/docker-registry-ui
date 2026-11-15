@@ -85,7 +85,9 @@ export function usePreferences() {
 	function getPullCommand(registry: string, repository: string, tag: string): string {
 		const cmd = runtimeCommand.value
 		const ref = `${registry}/${repository}:${tag}`
-		return cmd ? `${cmd} ${ref}` : ref
+		return cmd
+			? `${cmd} ${ref}`
+			: ref
 	}
 
 	return {
