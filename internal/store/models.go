@@ -94,19 +94,29 @@ type RepositoryView struct {
 }
 
 type TagView struct {
-	ID                uint        `json:"id"`
-	Name              string      `json:"name"`
-	Digest            string      `json:"digest"`
-	Kind              string      `json:"kind"`
-	CreatedAt         time.Time   `json:"createdAt"`
-	Images            []ImageView `json:"images"`
-	Alias             []string    `json:"alias"`
-	MetadataAvailable bool        `json:"metadataAvailable"`
-	ChartName         string      `json:"chartName"`
-	ChartVersion      string      `json:"chartVersion"`
-	ChartDesc         string      `json:"chartDesc"`
-	ChartAPIVersion   string      `json:"chartApiVersion"`
-	ChartType         string      `json:"chartType"`
+	ID                uint              `json:"id"`
+	Name              string            `json:"name"`
+	Digest            string            `json:"digest"`
+	Kind              string            `json:"kind"`
+	CreatedAt         time.Time         `json:"createdAt"`
+	Images            []ImageView       `json:"images"`
+	Alias             []string          `json:"alias"`
+	MetadataAvailable bool              `json:"metadataAvailable"`
+	ChartName         string            `json:"chartName"`
+	ChartVersion      string            `json:"chartVersion"`
+	ChartDesc         string            `json:"chartDesc"`
+	ChartAPIVersion   string            `json:"chartApiVersion"`
+	ChartType         string            `json:"chartType"`
+	ChartAppVersion   string            `json:"chartAppVersion"`
+	ChartKubeVersion  string            `json:"chartKubeVersion"`
+	ChartDeprecated   bool              `json:"chartDeprecated"`
+	ChartDependencies []ChartDependency `json:"chartDependencies"`
+}
+
+type ChartDependency struct {
+	Name       string `json:"name"`
+	Version    string `json:"version"`
+	Repository string `json:"repository"`
 }
 
 type ImageView struct {

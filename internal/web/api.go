@@ -252,29 +252,28 @@ func writeJSON(w http.ResponseWriter, status int, v any) {
 	}
 }
 
-func (h *handler) helmValues(w http.ResponseWriter, r *http.Request) {
-	chart, status, errMsg := h.resolveHelmChart(r)
-	if errMsg != "" {
-		writeJSON(w, status, map[string]string{"error": errMsg})
-		return
-	}
-	writeJSON(w, http.StatusOK, map[string]string{"content": chart.Values})
-}
-
 func (h *handler) helmFiles(w http.ResponseWriter, r *http.Request) {
 	chart, status, errMsg := h.resolveHelmChart(r)
 	if errMsg != "" {
 		writeJSON(w, status, map[string]string{"error": errMsg})
 		return
 	}
-	files := make([]map[string]string, 0, len(chart.Files))
-	for _, f := range chart.Files {
-		files = append(files, map[string]string{"path": f.Path, "content": f.Content})
+	writeJSON(w, http.StatusOK, map[string]any{"files": chart.Listing()})
+}
+
+func (h *handler) helmFile(w http.ResponseWriter, r *http.Request) {
+	chart, status, errMsg := h.resolveHelmChart(r)
+	if errMsg != "" {
+		writeJSON(w, status, map[string]string{"error": errMsg})
+		return
 	}
-	writeJSON(w, http.StatusOK, map[string]any{
-		"files":     files,
-		"chartYaml": chart.ChartYAML,
-	})
+	name := r.URL.Query().Get("path")
+	content, ok := chart.File(name)
+	if !ok {
+		writeJSON(w, http.StatusNotFound, map[string]string{"error": "File not found in chart"})
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]string{"path": name, "content": content})
 }
 
 func (h *handler) resolveHelmChart(r *http.Request) (*helm.Chart, int, string) {

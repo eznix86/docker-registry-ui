@@ -109,8 +109,10 @@ func New(opts Options) (*Server, error) {
 		group.Delete("/r/{registry}/{repository}/tags", h.deleteTags)
 		group.Delete("/r/{registry}/{namespace}/{repository}/tags", h.deleteTags)
 
-		group.Get("/r/{registry}/{namespace}/{repository}/helm/{tag}/values", h.helmValues)
+		group.Get("/r/{registry}/{repository}/helm/{tag}/files", h.helmFiles)
 		group.Get("/r/{registry}/{namespace}/{repository}/helm/{tag}/files", h.helmFiles)
+		group.Get("/r/{registry}/{repository}/helm/{tag}/file", h.helmFile)
+		group.Get("/r/{registry}/{namespace}/{repository}/helm/{tag}/file", h.helmFile)
 
 		group.Group(func(group chi.Router) {
 			group.Use(opts.Inertia.CSPMiddleware(gonertia.WithCSPPolicy(cspPolicy())))

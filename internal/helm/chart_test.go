@@ -51,7 +51,7 @@ func TestExtractChart(t *testing.T) {
 		chartValuesFile:          testValuesYAML,
 		testDeploymentPath:       testDeploymentYAML,
 		"templates/_helpers.tpl": "{{ define \"x\" }}",
-		"README.md":              "ignore me",
+		chartReadmeFile:          "ignore me",
 	}
 	chart, err := extractChart(makeChartTarball(t, files, ""))
 	if err != nil {
