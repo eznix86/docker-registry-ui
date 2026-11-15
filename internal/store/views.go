@@ -549,17 +549,30 @@ func (s *Store) GetStorageUsageByRegistry(ctx context.Context) ([]RegistryStorag
 
 func (s *Store) GetRegistryArchitectureCoverage(ctx context.Context, host string) ([]ArchitectureCoverageView, error) {
 	rows, err := s.query(ctx,
-		`SELECT m.architecture,
-		 CASE WHEN m.variant != '' THEN m.architecture || '/' || m.variant ELSE m.architecture END,
-		 COUNT(DISTINCT t.id)
-		 FROM tags t
-		 JOIN manifest_platforms mp ON t.digest = mp.index_digest
-		 JOIN manifests m ON m.digest = mp.platform_digest
-		 JOIN repositories r ON r.id = t.repo_id
+		`WITH raw_platforms AS (
+			SELECT t.repo_id, m.architecture, m.variant
+			FROM tags t
+			JOIN manifest_platforms mp ON t.digest = mp.index_digest
+			JOIN manifests m ON m.digest = mp.platform_digest
+			UNION ALL
+			SELECT t.repo_id, m.architecture, m.variant
+			FROM tags t
+			JOIN manifests m ON m.digest = t.digest
+		 ),
+		 tag_platforms AS (
+			SELECT repo_id, architecture,
+			CASE WHEN architecture = 'arm64' AND variant = 'v8' THEN '' ELSE variant END AS variant
+			FROM raw_platforms
+		 )
+		 SELECT tp.architecture,
+		 CASE WHEN tp.variant != '' THEN tp.architecture || '/' || tp.variant ELSE tp.architecture END,
+		 COUNT(DISTINCT tp.repo_id)
+		 FROM tag_platforms tp
+		 JOIN repositories r ON r.id = tp.repo_id
 		 JOIN registries reg ON reg.id = r.registry_id
-		 WHERE reg.host = ?
-		 GROUP BY m.architecture, m.variant
-		 ORDER BY COUNT(DISTINCT t.id) DESC`, host)
+		 WHERE reg.host = ? AND tp.architecture IS NOT NULL AND tp.architecture != ''
+		 GROUP BY tp.architecture, tp.variant
+		 ORDER BY COUNT(DISTINCT tp.repo_id) DESC, 2`, host)
 	if err != nil {
 		return nil, fmt.Errorf("get architecture coverage: %w", err)
 	}

@@ -50,11 +50,11 @@ func mustManifest(
 	t *testing.T,
 	s *store.Store,
 	ctx context.Context,
-	digest, mediaType, kind, rawJSON, configDigest, osName, arch string,
+	digest, mediaType, kind, configDigest, osName, arch string,
 	size int64,
 ) *store.Manifest {
 	t.Helper()
-	manifest, err := s.UpsertManifestByFields(ctx, digest, mediaType, kind, rawJSON, configDigest, osName, arch, "", size, nil)
+	manifest, err := s.UpsertManifestByFields(ctx, digest, mediaType, kind, `{}`, configDigest, osName, arch, "", size, nil)
 	if err != nil {
 		t.Fatalf("UpsertManifestByFields: %v", err)
 	}
@@ -232,8 +232,8 @@ func TestUpsertManifestWithCreated(t *testing.T) {
 func TestLinkManifestPlatform(t *testing.T) {
 	s, ctx := setupStore(t)
 
-	m1 := mustManifest(t, s, ctx, "sha256:index1", "application/vnd.oci.image.index.v1+json", "index", `{}`, "", "", "", 0)
-	m2 := mustManifest(t, s, ctx, "sha256:platform1", "application/vnd.docker.distribution.manifest.v2+json", "image", `{}`, "sha256:cfg1", "linux", "amd64", 5000)
+	m1 := mustManifest(t, s, ctx, "sha256:index1", "application/vnd.oci.image.index.v1+json", "index", "", "", "", 0)
+	m2 := mustManifest(t, s, ctx, "sha256:platform1", "application/vnd.docker.distribution.manifest.v2+json", "image", "sha256:cfg1", "linux", "amd64", 5000)
 
 	if err := s.LinkManifestPlatform(ctx, m1.Digest, m2.Digest, "linux", "amd64", "", 0, 5000); err != nil {
 		t.Fatalf("LinkManifestPlatform: %v", err)
