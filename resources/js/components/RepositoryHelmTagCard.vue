@@ -15,12 +15,7 @@
 						:title="`Delete chart version ${tag.name}`"
 						@click="emit('deleteTag', tag)"
 					>
-						<svg
-							class="h-5 w-5 text-destructive"
-							fill="currentColor"
-							viewBox="0 0 24 24"
-							aria-hidden="true"
-						>
+						<svg class="h-5 w-5 text-destructive" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
 							<path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z" />
 						</svg>
 					</button>
@@ -50,25 +45,17 @@
 		</div>
 
 		<div class="mt-5 grid min-w-0 gap-4 lg:grid-cols-2">
-			<div class="min-w-0 overflow-hidden rounded-md bg-background/40 p-2 shadow-[inset_0_0_0_1px_var(--color-outline)]">
-				<div class="mb-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-					Install chart
-				</div>
-				<CopyCommand
-					full-width
-					:command="installCommand"
-					:aria-label="`Copy install command for ${tag.name}`"
-				/>
+			<div
+				class="min-w-0 overflow-hidden rounded-md bg-background/40 p-2 shadow-[inset_0_0_0_1px_var(--color-outline)]"
+			>
+				<div class="mb-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Install chart</div>
+				<CopyCommand full-width :command="installCommand" :aria-label="`Copy install command for ${tag.name}`" />
 			</div>
-			<div class="min-w-0 overflow-hidden rounded-md bg-background/40 p-2 shadow-[inset_0_0_0_1px_var(--color-outline)]">
-				<div class="mb-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-					Pull chart
-				</div>
-				<CopyCommand
-					full-width
-					:command="pullCommand"
-					:aria-label="`Copy pull command for ${tag.name}`"
-				/>
+			<div
+				class="min-w-0 overflow-hidden rounded-md bg-background/40 p-2 shadow-[inset_0_0_0_1px_var(--color-outline)]"
+			>
+				<div class="mb-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Pull chart</div>
+				<CopyCommand full-width :command="pullCommand" :aria-label="`Copy pull command for ${tag.name}`" />
 			</div>
 		</div>
 
@@ -77,12 +64,13 @@
 </template>
 
 <script setup lang="ts">
-import type { Repository, Tag } from "~/types"
 import { useTimeAgo } from "@vueuse/core"
 import { computed, ref } from "vue"
+
 import HelmChartViewerDialog from "~/components/HelmChartViewerDialog.vue"
 import { Button, CopyCommand } from "~/components/ui"
 import { useRepositoryName } from "~/composables/useRepositoryName"
+import type { Repository, Tag } from "~/types"
 
 interface RepositoryHelmTagCardProps {
 	tag: Tag
@@ -100,12 +88,8 @@ const chartVersion = computed(() => props.tag.chartVersion || props.tag.name)
 const registryHost = computed(() => props.repository.registryPublicHost ?? props.repository.registryHost)
 const chartRef = computed(() => `oci://${registryHost.value}/${repositoryName.value}`)
 
-const installCommand = computed(
-	() => `helm install <release-name> ${chartRef.value} --version ${chartVersion.value}`,
-)
-const pullCommand = computed(
-	() => `helm pull ${chartRef.value} --version ${chartVersion.value}`,
-)
+const installCommand = computed(() => `helm install <release-name> ${chartRef.value} --version ${chartVersion.value}`)
+const pullCommand = computed(() => `helm pull ${chartRef.value} --version ${chartVersion.value}`)
 
 const lastUpdated = computed(() => {
 	if (!props.tag.createdAt || props.tag.createdAt.startsWith("0001-01-01")) {

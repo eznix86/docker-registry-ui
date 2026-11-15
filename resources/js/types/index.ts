@@ -77,17 +77,18 @@ interface ExploreFilters {
 	search: string
 }
 
-export type ExploreProps = PageProps & SharedProps & {
-	repositories: Repository[]
-	registries: Registry[]
-	totalRepositories: number
-	architectures: string[]
-	filters: ExploreFilters
-	showUsageBar?: boolean
-	charts?: {
-		storageByRegistry: RegistryStorageUsage[]
+export type ExploreProps = PageProps &
+	SharedProps & {
+		repositories: Repository[]
+		registries: Registry[]
+		totalRepositories: number
+		architectures: string[]
+		filters: ExploreFilters
+		showUsageBar?: boolean
+		charts?: {
+			storageByRegistry: RegistryStorageUsage[]
+		}
 	}
-}
 
 interface Image {
 	digest: string
@@ -123,20 +124,22 @@ interface TagScroll {
 	data: Tag[]
 }
 
-export type RepositoryProps = PageProps & SharedProps & {
-	repository: Repository
-	tags: TagScroll
-	bulkDeleteTags?: Tag[]
-	filters: RepositoryFilters
-}
-
-export type RegistryPageProps = PageProps & SharedProps & {
-	registry: Registry
-	registries: Registry[]
-	stats: RegistryStats
-	charts?: {
-		storageByNamespace: NamespaceStorage[]
-		architectureCoverage: ArchitectureCoverage[]
+export type RepositoryProps = PageProps &
+	SharedProps & {
+		repository: Repository
+		tags: TagScroll
+		bulkDeleteTags?: Tag[]
+		filters: RepositoryFilters
 	}
-	repositories: RegistryRepositoryRow[]
-}
+
+export type RegistryPageProps = PageProps &
+	SharedProps & {
+		registry: Registry
+		registries: Registry[]
+		stats: RegistryStats
+		charts?: {
+			storageByNamespace: NamespaceStorage[]
+			architectureCoverage: ArchitectureCoverage[]
+		}
+		repositories: RegistryRepositoryRow[]
+	}

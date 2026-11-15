@@ -1,10 +1,10 @@
-import type { DefineComponent } from "vue"
 import { autoAnimatePlugin } from "@formkit/auto-animate/vue"
 import { createInertiaApp } from "@inertiajs/vue3"
 import { resolvePageComponent } from "laravel-vite-plugin/inertia-helpers"
-
 import { createPinia } from "pinia"
+import type { DefineComponent } from "vue"
 import { createApp, h } from "vue"
+
 import { vRipple } from "~/directives/ripple"
 import { useSyncProgressStore } from "~/stores/useSyncProgressStore"
 
@@ -14,18 +14,14 @@ declare global {
 	}
 }
 
-createInertiaApp({
+void createInertiaApp({
 	title: () => "ContainerHub",
 	defaults: {
 		prefetch: {
 			cacheFor: "10s",
 		},
 	},
-	resolve: name =>
-		resolvePageComponent(
-			`./Pages/${name}.vue`,
-			import.meta.glob<DefineComponent>("./Pages/**/*.vue"),
-		),
+	resolve: name => resolvePageComponent(`./Pages/${name}.vue`, import.meta.glob<DefineComponent>("./Pages/**/*.vue")),
 	setup({ el, App, props, plugin }) {
 		const app = createApp({
 			render: () => h(App, props),
@@ -53,12 +49,11 @@ function contentSecurityPolicy() {
 		return
 	}
 
-	document.querySelectorAll("style").forEach((el) => {
-		if (!el.hasAttribute("nonce"))
-			el.setAttribute("nonce", nonce)
+	document.querySelectorAll("style").forEach(el => {
+		if (!el.hasAttribute("nonce")) el.setAttribute("nonce", nonce)
 	})
 
-	const observer = new MutationObserver((mutations) => {
+	const observer = new MutationObserver(mutations => {
 		for (const mutation of mutations) {
 			for (const node of mutation.addedNodes) {
 				if (node instanceof HTMLStyleElement && !node.hasAttribute("nonce")) {

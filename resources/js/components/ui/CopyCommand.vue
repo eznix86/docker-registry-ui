@@ -10,11 +10,13 @@
 		<span class="min-w-0 truncate text-xs md:text-sm font-mono text-foreground">{{ command }}</span>
 		<span
 			class="absolute right-2 top-1/2 -translate-y-1/2 px-2 py-1 text-xs rounded transition-all duration-200 pointer-events-none whitespace-nowrap z-10"
-			:class="copied
-				? 'bg-success text-success-foreground opacity-100'
-				: 'bg-primary text-primary-foreground opacity-0 group-hover:opacity-100'"
+			:class="
+				copied
+					? 'bg-success text-success-foreground opacity-100'
+					: 'bg-primary text-primary-foreground opacity-0 group-hover:opacity-100'
+			"
 		>
-			{{ copied ? 'Copied' : 'Copy' }}
+			{{ copied ? "Copied" : "Copy" }}
 		</span>
 	</button>
 </template>

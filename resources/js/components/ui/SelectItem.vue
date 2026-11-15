@@ -1,9 +1,5 @@
 <template>
-	<ListboxOption
-		v-slot="{ active, selected }"
-		:value="value"
-		as="template"
-	>
+	<ListboxOption v-slot="{ active, selected }" :value="value" as="template">
 		<li
 			class="relative cursor-default py-2 pr-9 pl-3 select-none outline-hidden transition-colors"
 			:class="{

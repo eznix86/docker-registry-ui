@@ -5,15 +5,8 @@
 		</div>
 
 		<div class="flex flex-wrap gap-x-3 gap-y-1.5">
-			<div
-				v-for="(item, index) in normalizedItems"
-				:key="item.label"
-				class="flex items-center gap-1.5 text-xs"
-			>
-				<span
-					class="h-2 w-2 rounded-full"
-					:style="{ backgroundColor: colorAt(index) }"
-				/>
+			<div v-for="(item, index) in normalizedItems" :key="item.label" class="flex items-center gap-1.5 text-xs">
+				<span class="h-2 w-2 rounded-full" :style="{ backgroundColor: colorAt(index) }" />
 				<span class="text-foreground font-medium">{{ item.label }}</span>
 				<span class="text-muted-foreground">{{ formatter(item.value) }}</span>
 			</div>
@@ -23,21 +16,18 @@
 
 <script setup lang="ts">
 import type { BarSeriesOption } from "echarts/charts"
-import type { GridComponentOption, TooltipComponentOption } from "echarts/components"
-import type { ComposeOption } from "echarts/core"
 import { BarChart } from "echarts/charts"
+import type { GridComponentOption, TooltipComponentOption } from "echarts/components"
 import { GridComponent, TooltipComponent } from "echarts/components"
+import type { ComposeOption } from "echarts/core"
 import { use } from "echarts/core"
 import { CanvasRenderer } from "echarts/renderers"
 import { computed } from "vue"
 import VChart from "vue-echarts"
+
 import { useChartTheme } from "~/composables/useChartTheme"
 
-type EChartsOption = ComposeOption<
-	BarSeriesOption
-	| GridComponentOption
-	| TooltipComponentOption
->
+type EChartsOption = ComposeOption<BarSeriesOption | GridComponentOption | TooltipComponentOption>
 
 interface ChartItem {
 	label: string
@@ -55,22 +45,13 @@ interface SegmentedHorizontalBarChartProps {
 
 const props = defineProps<SegmentedHorizontalBarChartProps>()
 
-use([
-	BarChart,
-	GridComponent,
-	TooltipComponent,
-	CanvasRenderer,
-])
+use([BarChart, GridComponent, TooltipComponent, CanvasRenderer])
 
 const chartTheme = useChartTheme()
 
-const normalizedItems = computed(() =>
-	normalizeItems(props.items, props.maxItems, props.aggregateLabel),
-)
+const normalizedItems = computed(() => normalizeItems(props.items, props.maxItems, props.aggregateLabel))
 
-const total = computed(() =>
-	normalizedItems.value.reduce((sum, item) => sum + item.value, 0),
-)
+const total = computed(() => normalizedItems.value.reduce((sum, item) => sum + item.value, 0))
 
 const option = computed<EChartsOption>(() => ({
 	animationDuration: 300,
@@ -85,19 +66,15 @@ const option = computed<EChartsOption>(() => ({
 		backgroundColor: "rgba(15, 23, 42, 0.92)",
 		borderWidth: 0,
 		textStyle: { color: "#f8fafc" },
-		formatter: (params) => {
+		formatter: params => {
 			if (Array.isArray(params)) {
 				return ""
 			}
 
 			const value = Number(params.value ?? 0)
-			const percent = total.value > 0
-				? Math.round((value / total.value) * 100)
-				: 0
+			const percent = total.value > 0 ? Math.round((value / total.value) * 100) : 0
 			const item = normalizedItems.value[params.seriesIndex ?? -1]
-			const hint = item?.hint
-				? `<br/><span style=\"opacity:0.75\">${item.hint}</span>`
-				: ""
+			const hint = item?.hint ? `<br/><span style="opacity:0.75">${item.hint}</span>` : ""
 
 			return `<strong>${params.seriesName}</strong><br/>${props.formatter(value)} (${percent}%)${hint}`
 		},
@@ -137,7 +114,7 @@ function segmentRadius(): number[] {
 	return [0, 0, 0, 0]
 }
 
-function handleChartClick(params: { componentType?: string, seriesIndex?: number }) {
+function handleChartClick(params: { componentType?: string; seriesIndex?: number }) {
 	if (params.componentType !== "series" || params.seriesIndex == null) {
 		return
 	}
@@ -160,9 +137,6 @@ function normalizeItems(items: ChartItem[], maxItems = items.length, aggregateLa
 	const remainder = sorted.slice(maxItems - 1)
 	const remainderValue = remainder.reduce((sum, item) => sum + item.value, 0)
 
-	return [
-		...visible,
-		{ label: aggregateLabel, value: remainderValue },
-	]
+	return [...visible, { label: aggregateLabel, value: remainderValue }]
 }
 </script>

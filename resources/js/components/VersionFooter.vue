@@ -1,5 +1,7 @@
 <template>
-	<footer class="fixed bottom-4 right-6 text-sm text-muted-foreground backdrop-blur-sm bg-muted/50 px-3 py-1.5 rounded-lg shadow-sm">
+	<footer
+		class="fixed bottom-4 right-6 text-sm text-muted-foreground backdrop-blur-sm bg-muted/50 px-3 py-1.5 rounded-lg shadow-sm"
+	>
 		<span class="text-muted-foreground">{{ displayCurrentVersion }}</span>
 		<template v-if="resolvedLatestVersion && hasNewerRelease">
 			<span class="mx-1 text-muted-foreground">•</span>
@@ -11,9 +13,10 @@
 </template>
 
 <script setup lang="ts">
-import type { SharedProps } from "~/types"
 import { gt, valid } from "semver"
 import { computed, onMounted, ref } from "vue"
+
+import type { SharedProps } from "~/types"
 
 interface VersionFooterProps {
 	currentVersion?: string
@@ -99,7 +102,7 @@ async function fetchLatestRelease(): Promise<ReleaseInfo | null> {
 			return null
 		}
 
-		const data = await response.json() as { tag_name?: string, html_url?: string }
+		const data = (await response.json()) as { tag_name?: string; html_url?: string }
 		if (!data.tag_name) {
 			return null
 		}
@@ -108,11 +111,9 @@ async function fetchLatestRelease(): Promise<ReleaseInfo | null> {
 			version: data.tag_name,
 			url: data.html_url || defaultUpdateURL,
 		}
-	}
-	catch {
+	} catch {
 		return null
-	}
-	finally {
+	} finally {
 		releaseRequest = null
 	}
 }
@@ -122,9 +123,7 @@ function normalizeSemver(version: string | undefined): string | null {
 		return null
 	}
 
-	const normalizedVersion = version.startsWith("v")
-		? version.slice(1)
-		: version
+	const normalizedVersion = version.startsWith("v") ? version.slice(1) : version
 	return valid(normalizedVersion)
 }
 
@@ -137,8 +136,6 @@ function formatVersion(version: string | undefined): string {
 		return version
 	}
 
-	return version.startsWith("v")
-		? version
-		: `v${version}`
+	return version.startsWith("v") ? version : `v${version}`
 }
 </script>

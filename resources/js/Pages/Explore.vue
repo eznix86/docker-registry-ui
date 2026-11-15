@@ -13,12 +13,13 @@
 				</div>
 
 				<main v-auto-animate class="flex-1 lg:p-8 p-4 overflow-y-auto">
-					<section v-if="showUsageBar && registryUsageChart.length > 0" class="mb-4 rounded-lg border border-outline bg-card px-5 py-4 shadow-[0_1px_3px_0_rgba(0,0,0,0.05)]">
+					<section
+						v-if="showUsageBar && registryUsageChart.length > 0"
+						class="mb-4 rounded-lg border border-outline bg-card px-5 py-4 shadow-[0_1px_3px_0_rgba(0,0,0,0.05)]"
+					>
 						<div class="space-y-2">
 							<div>
-								<h2 class="text-sm font-semibold tracking-wide text-foreground">
-									Registry Usage
-								</h2>
+								<h2 class="text-sm font-semibold tracking-wide text-foreground">Registry Usage</h2>
 							</div>
 
 							<SegmentedHorizontalBarChart
@@ -30,7 +31,11 @@
 						</div>
 					</section>
 
-					<ExploreResultsHeader :displayed-count="repositories.length" :total-count="totalRepos" @toggle-sidebar="sidebarOpen = true" />
+					<ExploreResultsHeader
+						:displayed-count="repositories.length"
+						:total-count="totalRepos"
+						@toggle-sidebar="sidebarOpen = true"
+					/>
 					<SyncProgress />
 
 					<div v-auto-animate class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-4 mt-4">
@@ -51,9 +56,9 @@
 </template>
 
 <script setup lang="ts">
-import type { ExploreProps, Repository } from "~/types"
 import { usePage } from "@inertiajs/vue3"
 import { computed, defineAsyncComponent, ref } from "vue"
+
 import ExploreResultsHeader from "~/components/ExploreResultsHeader.vue"
 import HeaderComponent from "~/components/HeaderComponent.vue"
 import RepositoryCard from "~/components/RepositoryCard.vue"
@@ -65,6 +70,7 @@ import AppLayout from "~/layouts/AppLayout.vue"
 import { normalizeArray } from "~/lib/normalize"
 import { registryPath } from "~/lib/routes"
 import { formatBytes, formatRegistryName } from "~/lib/utils"
+import type { ExploreProps, Repository } from "~/types"
 
 const SegmentedHorizontalBarChart = defineAsyncComponent(() => import("~/components/SegmentedHorizontalBarChart.vue"))
 const UntaggedDialog = defineAsyncComponent(() => import("~/components/UntaggedDialog.vue"))
@@ -78,12 +84,14 @@ const storageByRegistry = computed(() => normalizeArray(page.props.charts?.stora
 const sidebarOpen = ref(false)
 const registryList = computed(() => page.props.registries || [])
 const untaggedRef = ref<InstanceType<typeof UntaggedDialog> | null>(null)
-const registryUsageChart = computed(() => storageByRegistry.value.map(item => ({
-	label: formatRegistryName(item.displayName),
-	value: item.totalSizeBytes,
-	href: registryPath(item.registryHost),
-	hint: "Click for details",
-})))
+const registryUsageChart = computed(() =>
+	storageByRegistry.value.map(item => ({
+		label: formatRegistryName(item.displayName),
+		value: item.totalSizeBytes,
+		href: registryPath(item.registryHost),
+		hint: "Click for details",
+	})),
+)
 
 function openUntagged(repo: Repository) {
 	untaggedRef.value?.open(repo)

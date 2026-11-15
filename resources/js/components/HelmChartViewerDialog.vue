@@ -13,7 +13,10 @@
 			Loading chart…
 		</div>
 
-		<div v-else-if="error" class="rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive">
+		<div
+			v-else-if="error"
+			class="rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive"
+		>
 			{{ error }}
 		</div>
 
@@ -32,20 +35,22 @@
 		</template>
 
 		<template v-else>
-			<div v-if="!files || files.length === 0" class="rounded-lg border border-outline bg-muted/30 p-4 text-sm text-muted-foreground">
+			<div
+				v-if="!files || files.length === 0"
+				class="rounded-lg border border-outline bg-muted/30 p-4 text-sm text-muted-foreground"
+			>
 				This chart has no template files.
 			</div>
 			<div v-else class="grid grid-cols-1 gap-3 sm:grid-cols-[14rem_1fr]">
 				<nav class="max-h-[60vh] overflow-auto rounded-lg border border-outline bg-background">
 					<ul class="divide-y divide-outline">
-						<li
-							v-for="file in files"
-							:key="file.path"
-						>
+						<li v-for="file in files" :key="file.path">
 							<button
 								type="button"
 								class="flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-xs font-mono transition-colors"
-								:class="selectedFile?.path === file.path ? 'bg-primary/10 text-primary' : 'text-foreground hover:bg-muted'"
+								:class="
+									selectedFile?.path === file.path ? 'bg-primary/10 text-primary' : 'text-foreground hover:bg-muted'
+								"
 								:aria-label="`View ${file.path}`"
 								@click="selectedFile = file"
 							>
@@ -69,19 +74,18 @@
 		</template>
 
 		<div class="mt-6 flex justify-end">
-			<Button @click="close">
-				CLOSE
-			</Button>
+			<Button @click="close"> CLOSE </Button>
 		</div>
 	</Dialog>
 </template>
 
 <script setup lang="ts">
-import type { HelmFile } from "~/composables/useHelmChart"
-import type { Repository } from "~/types"
 import { computed, ref, watch } from "vue"
+
 import { Button, CodeBlock, Dialog, DialogTitle } from "~/components/ui"
+import type { HelmFile } from "~/composables/useHelmChart"
 import { useHelmChart } from "~/composables/useHelmChart"
+import type { Repository } from "~/types"
 
 type Mode = "values" | "files"
 
@@ -107,16 +111,12 @@ const error = helm.error
 const loading = helm.loading
 
 const title = computed(() => {
-	if (!repo.value)
-		return "Chart"
-	return mode.value === "values"
-		? "Default values"
-		: "Templates"
+	if (!repo.value) return "Chart"
+	return mode.value === "values" ? "Default values" : "Templates"
 })
 
 const subtitle = computed(() => {
-	if (!repo.value)
-		return ""
+	if (!repo.value) return ""
 	return `${repo.value.name} · ${tagName.value}`
 })
 
@@ -124,13 +124,11 @@ async function load() {
 	valuesContent.value = null
 	files.value = []
 	selectedFile.value = null
-	if (!repo.value)
-		return
+	if (!repo.value) return
 
 	if (mode.value === "values") {
 		valuesContent.value = await helm.fetchValues()
-	}
-	else {
+	} else {
 		const data = await helm.fetchFiles()
 		if (data) {
 			files.value = data.files
@@ -139,8 +137,8 @@ async function load() {
 	}
 }
 
-function getRepoMeta(r: Repository): { registryHost: string, namespace: string } {
-	const rAny = r as unknown as { registryHost?: string, registry?: string }
+function getRepoMeta(r: Repository): { registryHost: string; namespace: string } {
+	const rAny = r as unknown as { registryHost?: string; registry?: string }
 	const reg = rAny.registryHost ?? rAny.registry ?? ""
 	return { registryHost: reg, namespace: r.namespace ?? "" }
 }
@@ -162,8 +160,7 @@ function close() {
 }
 
 watch(mode, () => {
-	if (isOpen.value)
-		load()
+	if (isOpen.value) load()
 })
 
 defineExpose({ open, close })

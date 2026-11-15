@@ -1,6 +1,7 @@
 import type { MaybeRefOrGetter, Ref } from "vue"
-import type { Repository } from "~/types"
 import { computed, ref, toValue } from "vue"
+
+import type { Repository } from "~/types"
 
 export interface HelmFile {
 	path: string
@@ -29,9 +30,7 @@ export function useHelmChart(opts: UseHelmChartOptions) {
 
 	const url = computed(() => {
 		const repo = toValue(opts.repository)
-		const repoPath = repo.namespace
-			? `${repo.namespace}/${repo.name}`
-			: repo.name
+		const repoPath = repo.namespace ? `${repo.namespace}/${repo.name}` : repo.name
 		const reg = toValue(opts.registryHost).replaceAll(":", "~")
 		const tag = encodeURIComponent(toValue(opts.tagName))
 		return {
@@ -52,14 +51,10 @@ export function useHelmChart(opts: UseHelmChartOptions) {
 				throw new Error(body.error || `Request failed (${resp.status})`)
 			}
 			return (await resp.json()) as T
-		}
-		catch (e) {
-			error.value = e instanceof Error
-				? e.message
-				: String(e)
+		} catch (e) {
+			error.value = e instanceof Error ? e.message : String(e)
 			return null
-		}
-		finally {
+		} finally {
 			loading.value = false
 		}
 	}

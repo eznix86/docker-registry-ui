@@ -35,12 +35,7 @@
 </template>
 
 <script setup lang="ts">
-import {
-	DialogPanel,
-	Dialog as HeadlessDialog,
-	TransitionChild,
-	TransitionRoot,
-} from "@headlessui/vue"
+import { DialogPanel, Dialog as HeadlessDialog, TransitionChild, TransitionRoot } from "@headlessui/vue"
 
 const modelValue = defineModel<boolean>({ required: true })
 </script>

@@ -12,19 +12,14 @@ export function registryPath(host: string): string {
 	return `/r/${encodeRouteSegment(host)}`
 }
 
-export function repositoryPath(
-	repository: RepositoryPathInput,
-	fallbackHost = "",
-): string {
+export function repositoryPath(repository: RepositoryPathInput, fallbackHost = ""): string {
 	const host = repository.registryHost || fallbackHost
 
 	if (!host.trim()) {
 		return "#"
 	}
 
-	const segments = [
-		registryPath(host),
-	]
+	const segments = [registryPath(host)]
 
 	if (repository.namespace.trim()) {
 		segments.push(repository.namespace)

@@ -1,6 +1,14 @@
 <template>
-	<!-- eslint-disable-next-line vue-a11y/no-static-element-interactions -->
-	<div v-if="statusCode && !isHealthy" role="group" class="relative py-1 rounded group/status-row cursor-help" @mouseenter="isHovered = true" @mouseleave="isHovered = false" @focusin="isHovered = true" @focusout="isHovered = false">
+	<!-- eslint-disable-next-line vuejs-accessibility/no-static-element-interactions -->
+	<div
+		v-if="statusCode && !isHealthy"
+		role="group"
+		class="relative py-1 rounded group/status-row cursor-help"
+		@mouseenter="isHovered = true"
+		@mouseleave="isHovered = false"
+		@focusin="isHovered = true"
+		@focusout="isHovered = false"
+	>
 		<label :for="id" class="flex items-start gap-2">
 			<div class="flex h-6 shrink-0 items-center">
 				<div class="group grid size-4 grid-cols-1 effect-hover-accent effect-ripple-accent">
@@ -14,9 +22,19 @@
 						class="col-start-1 row-start-1 appearance-none rounded border-2 border-muted-foreground bg-background checked:border-primary checked:bg-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus cursor-pointer"
 						v-bind="$attrs"
 						@change="handleChange"
+					/>
+					<svg
+						class="pointer-events-none col-start-1 row-start-1 size-3.5 self-center justify-self-center stroke-white"
+						viewBox="0 0 14 14"
+						fill="none"
 					>
-					<svg class="pointer-events-none col-start-1 row-start-1 size-3.5 self-center justify-self-center stroke-white" viewBox="0 0 14 14" fill="none">
-						<path class="opacity-0 group-has-[:checked]:opacity-100" d="M3 8L6 11L11 3.5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+						<path
+							class="opacity-0 group-has-[:checked]:opacity-100"
+							d="M3 8L6 11L11 3.5"
+							stroke-width="2"
+							stroke-linecap="round"
+							stroke-linejoin="round"
+						/>
 					</svg>
 				</div>
 			</div>
@@ -25,11 +43,7 @@
 			</span>
 
 			<!-- Status Code Chip (always visible if error) -->
-			<Chip
-				variant="warning"
-				size="small"
-				class="ml-auto shrink-0"
-			>
+			<Chip variant="warning" size="small" class="ml-auto shrink-0">
 				{{ statusInfo.code }}
 			</Chip>
 		</label>
@@ -43,7 +57,10 @@
 			leave-from-class="opacity-100 scale-100"
 			leave-to-class="opacity-0 scale-95"
 		>
-			<div v-show="isHovered" class="absolute left-0 right-0 top-full mt-1 md:left-full md:right-auto md:top-1/2 md:-translate-y-1/2 md:mt-0 md:ml-2 z-10 pointer-events-none">
+			<div
+				v-show="isHovered"
+				class="absolute left-0 right-0 top-full mt-1 md:left-full md:right-auto md:top-1/2 md:-translate-y-1/2 md:mt-0 md:ml-2 z-10 pointer-events-none"
+			>
 				<div class="bg-background border border-outline rounded shadow-lg w-full md:w-72 p-3">
 					<div class="flex items-start gap-2 mb-2">
 						<Chip variant="warning" size="small" class="shrink-0">
@@ -74,9 +91,19 @@
 					class="col-start-1 row-start-1 appearance-none rounded border-2 border-muted-foreground bg-background checked:border-primary checked:bg-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus cursor-pointer"
 					v-bind="$attrs"
 					@change="handleChange"
+				/>
+				<svg
+					class="pointer-events-none col-start-1 row-start-1 size-3.5 self-center justify-self-center stroke-white"
+					viewBox="0 0 14 14"
+					fill="none"
 				>
-				<svg class="pointer-events-none col-start-1 row-start-1 size-3.5 self-center justify-self-center stroke-white" viewBox="0 0 14 14" fill="none">
-					<path class="opacity-0 group-has-[:checked]:opacity-100" d="M3 8L6 11L11 3.5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+					<path
+						class="opacity-0 group-has-[:checked]:opacity-100"
+						d="M3 8L6 11L11 3.5"
+						stroke-width="2"
+						stroke-linecap="round"
+						stroke-linejoin="round"
+					/>
 				</svg>
 			</div>
 		</div>
@@ -87,10 +114,11 @@
 </template>
 
 <script setup lang="ts">
-import type { RegistryStatusInfo } from "~/types/registry"
 import { computed, ref } from "vue"
+
 import Chip from "~/components/ui/Chip.vue"
 import { tv } from "~/lib/utils"
+import type { RegistryStatusInfo } from "~/types/registry"
 import { getRegistryStatus, isRegistryHealthy } from "~/types/registry"
 
 interface CheckboxProps {
@@ -129,15 +157,11 @@ const checkboxLabel = tv({
 })
 
 const statusInfo = computed<RegistryStatusInfo>(() => {
-	return props.statusCode
-		? getRegistryStatus(props.statusCode)
-		: ({} as RegistryStatusInfo)
+	return props.statusCode ? getRegistryStatus(props.statusCode) : ({} as RegistryStatusInfo)
 })
 
 const isHealthy = computed(() => {
-	return props.statusCode
-		? isRegistryHealthy(props.statusCode)
-		: true
+	return props.statusCode ? isRegistryHealthy(props.statusCode) : true
 })
 
 // Hover state for popover
@@ -147,11 +171,9 @@ const isChecked = computed(() => {
 	if (Array.isArray(model.value)) {
 		if (typeof props.value === "string") {
 			return (model.value as string[]).includes(props.value)
-		}
-		else if (typeof props.value === "number") {
+		} else if (typeof props.value === "number") {
 			return (model.value as number[]).includes(props.value)
-		}
-		else if (typeof props.value === "object" && props.value !== null) {
+		} else if (typeof props.value === "object" && props.value !== null) {
 			return (model.value as object[]).includes(props.value)
 		}
 		return false
@@ -167,34 +189,29 @@ function handleChange(event: Event) {
 			const newValue = [...(model.value as string[])]
 			if (target.checked) {
 				newValue.push(props.value)
-			}
-			else {
+			} else {
 				const index = newValue.indexOf(props.value)
 				if (index > -1) {
 					newValue.splice(index, 1)
 				}
 			}
 			model.value = newValue
-		}
-		else if (typeof props.value === "number") {
+		} else if (typeof props.value === "number") {
 			const newValue = [...(model.value as number[])]
 			if (target.checked) {
 				newValue.push(props.value)
-			}
-			else {
+			} else {
 				const index = newValue.indexOf(props.value)
 				if (index > -1) {
 					newValue.splice(index, 1)
 				}
 			}
 			model.value = newValue
-		}
-		else if (typeof props.value === "object" && props.value !== null) {
+		} else if (typeof props.value === "object" && props.value !== null) {
 			const newValue = [...(model.value as object[])]
 			if (target.checked) {
 				newValue.push(props.value)
-			}
-			else {
+			} else {
 				const index = newValue.findIndex(item => item === props.value)
 				if (index > -1) {
 					newValue.splice(index, 1)
@@ -202,8 +219,7 @@ function handleChange(event: Event) {
 			}
 			model.value = newValue
 		}
-	}
-	else {
+	} else {
 		model.value = target.checked
 	}
 }

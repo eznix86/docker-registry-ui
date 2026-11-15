@@ -25,8 +25,7 @@ export const useSyncProgressStore = defineStore("syncProgress", () => {
 	let reconnectTimer: ReturnType<typeof setTimeout> | null = null
 
 	const percent = computed(() => {
-		if (total.value === 0)
-			return 0
+		if (total.value === 0) return 0
 		return (completed.value / total.value) * 100
 	})
 
@@ -40,9 +39,7 @@ export const useSyncProgressStore = defineStore("syncProgress", () => {
 			return
 		}
 
-		const protocol = window.location.protocol === "https:"
-			? "wss:"
-			: "ws:"
+		const protocol = window.location.protocol === "https:" ? "wss:" : "ws:"
 		const wsUrl = `${protocol}//${window.location.host}/ws/sync/progress`
 
 		ws = new WebSocket(wsUrl)
@@ -51,7 +48,7 @@ export const useSyncProgressStore = defineStore("syncProgress", () => {
 			connected.value = true
 		}
 
-		ws.onmessage = (event) => {
+		ws.onmessage = event => {
 			try {
 				const update: SyncProgressUpdate = JSON.parse(event.data)
 				completed.value = update.completed
@@ -59,13 +56,12 @@ export const useSyncProgressStore = defineStore("syncProgress", () => {
 				message.value = update.message
 				step.value = update.step
 				done.value = update.done
-			}
-			catch (error) {
+			} catch (error) {
 				console.error("Failed to parse sync progress update:", error)
 			}
 		}
 
-		ws.onerror = (error) => {
+		ws.onerror = error => {
 			console.error("WebSocket error:", error)
 		}
 
@@ -83,9 +79,13 @@ export const useSyncProgressStore = defineStore("syncProgress", () => {
 		isRefreshing.value = false
 	}, 1000)
 
-	const { start: startHideTimer, stop: stopHideTimer } = useTimeoutFn(() => {
-		hideAfterComplete.value = true
-	}, 1500, { immediate: false })
+	const { start: startHideTimer, stop: stopHideTimer } = useTimeoutFn(
+		() => {
+			hideAfterComplete.value = true
+		},
+		1500,
+		{ immediate: false },
+	)
 
 	watch(done, (newValue, oldValue) => {
 		if (newValue) {
@@ -93,8 +93,7 @@ export const useSyncProgressStore = defineStore("syncProgress", () => {
 		}
 		if (newValue && !oldValue) {
 			startHideTimer()
-		}
-		else if (!newValue && oldValue) {
+		} else if (!newValue && oldValue) {
 			stopHideTimer()
 			hideAfterComplete.value = false
 		}
@@ -106,7 +105,7 @@ export const useSyncProgressStore = defineStore("syncProgress", () => {
 		router.reload({
 			only: [],
 			onFinish: () => {
-				resetRefreshing()
+				void resetRefreshing()
 			},
 		})
 	}

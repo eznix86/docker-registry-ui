@@ -34,8 +34,7 @@ const button = tv({
 			default: "bg-primary text-primary-foreground hover:bg-accent",
 			ghost: "hover:opacity-80 text-muted-foreground",
 			icon: "hover:bg-white/10 rounded-full",
-			destructive:
-				"bg-destructive text-destructive-foreground hover:opacity-90",
+			destructive: "bg-destructive text-destructive-foreground hover:opacity-90",
 		},
 		size: {
 			sm: "h-8 px-3 text-xs",

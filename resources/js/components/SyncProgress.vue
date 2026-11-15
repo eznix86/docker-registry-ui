@@ -26,6 +26,7 @@
 import { refDebounced } from "@vueuse/core"
 import { storeToRefs } from "pinia"
 import { computed } from "vue"
+
 import { useSyncProgressStore } from "~/stores/useSyncProgressStore"
 
 const store = useSyncProgressStore()
@@ -35,8 +36,7 @@ const { total, message, step, connected, done, percent, hideAfterComplete } = st
 const smoothPercent = refDebounced(percent, 50)
 
 const shouldShow = computed(() => {
-	if (hideAfterComplete.value)
-		return false
+	if (hideAfterComplete.value) return false
 	return connected.value || total.value > 0 || done.value
 })
 </script>

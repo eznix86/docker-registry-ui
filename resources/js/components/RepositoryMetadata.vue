@@ -44,8 +44,12 @@
 								{{ arch }}
 							</Chip>
 						</div>
-						<div class="absolute bottom-0 left-0 top-0 w-8 bg-gradient-to-r from-background to-transparent pointer-events-none" />
-						<div class="absolute bottom-0 right-0 top-0 w-8 bg-gradient-to-l from-background to-transparent pointer-events-none" />
+						<div
+							class="absolute bottom-0 left-0 top-0 w-8 bg-gradient-to-r from-background to-transparent pointer-events-none"
+						/>
+						<div
+							class="absolute bottom-0 right-0 top-0 w-8 bg-gradient-to-l from-background to-transparent pointer-events-none"
+						/>
 					</div>
 				</div>
 			</div>
@@ -67,11 +71,12 @@
 </template>
 
 <script setup lang="ts">
-import type { Repository } from "~/types"
 import { computed } from "vue"
+
 import { Chip } from "~/components/ui"
 import { normalizeArray } from "~/lib/normalize"
 import { formatBytes, repositoryName as formatRepositoryName } from "~/lib/utils"
+import type { Repository } from "~/types"
 
 interface RepositoryMetadataProps {
 	repository: Repository

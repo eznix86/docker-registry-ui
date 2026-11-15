@@ -1,30 +1,26 @@
-import antfu from "@antfu/eslint-config"
+import tsParser from "@typescript-eslint/parser"
+import vue from "eslint-plugin-vue"
+import vueA11y from "eslint-plugin-vuejs-accessibility"
 
-export default antfu(
+export default [
+	...vue.configs["flat/essential"],
+	...vueA11y.configs["flat/recommended"],
 	{
-		prettier: true,
-		vue: {
-			a11y: true,
+		files: ["**/*.vue"],
+		languageOptions: {
+			parserOptions: {
+				parser: tsParser,
+			},
 		},
-		stylistic: {
-			indent: "tab",
-			quotes: "double",
-		},
-		ignores: [
-			"build",
-			"node_modules",
-			"charts",
-			".github",
-			"public",
-		],
 		rules: {
+			"vue/multi-word-component-names": "off",
 			"vue/block-order": [
 				"error",
 				{
 					order: ["template", "script", "style"],
 				},
 			],
-			"vue-a11y/label-has-for": [
+			"vuejs-accessibility/label-has-for": [
 				"error",
 				{
 					required: {
@@ -34,12 +30,8 @@ export default antfu(
 				},
 			],
 		},
-		extends: ["plugin:perfectionist/recommended-natural"],
 	},
 	{
-		files: ["vite.config.ts"],
-		rules: {
-			"node/prefer-global/process": "off",
-		},
+		ignores: ["**/*", "!resources/", "!resources/**/", "!resources/**/*.vue"],
 	},
-)
+]

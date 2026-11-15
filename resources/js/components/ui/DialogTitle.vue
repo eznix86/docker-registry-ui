@@ -1,8 +1,5 @@
 <template>
-	<DialogTitle
-		as="h2"
-		class="text-lg font-semibold leading-6 text-popover-foreground mb-4"
-	>
+	<DialogTitle as="h2" class="text-lg font-semibold leading-6 text-popover-foreground mb-4">
 		<slot />
 	</DialogTitle>
 </template>

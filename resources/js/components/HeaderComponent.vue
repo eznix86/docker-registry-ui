@@ -9,7 +9,12 @@
 				title="Go to home"
 			>
 				<svg class="w-6 h-6 text-primary-foreground" viewBox="0 0 240 130" aria-hidden="true">
-					<path fill="currentColor" stroke="currentColor" stroke-width="38" d="m198 111h42m-92 0h42m-91 0h42m-91 0h41m-91 0h42m8-46h41m8 0h42m7 0h42m-42-46h42" />
+					<path
+						fill="currentColor"
+						stroke="currentColor"
+						stroke-width="38"
+						d="m198 111h42m-92 0h42m-91 0h42m-91 0h41m-91 0h42m8-46h41m8 0h42m7 0h42m-42-46h42"
+					/>
 				</svg>
 			</a>
 
@@ -17,8 +22,19 @@
 
 			<div class="flex-1 max-w-xl relative mx-auto" role="search">
 				<div class="relative flex items-center">
-					<svg class="absolute left-4 w-4 h-4 text-primary-foreground/50" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+					<svg
+						class="absolute left-4 w-4 h-4 text-primary-foreground/50"
+						fill="none"
+						stroke="currentColor"
+						viewBox="0 0 24 24"
+						aria-hidden="true"
+					>
+						<path
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							stroke-width="2"
+							d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+						/>
 					</svg>
 					<input
 						ref="searchInput"
@@ -27,8 +43,11 @@
 						placeholder="Search repositories..."
 						aria-label="Search repositories"
 						class="w-full bg-primary-foreground/10 text-primary-foreground placeholder-primary-foreground/50 pl-12 pr-3 sm:pr-14 py-2 text-sm sm:text-base rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-foreground/30 focus:bg-primary-foreground/15 transition-colors [&::-webkit-search-cancel-button]:hidden [&::-webkit-search-decoration]:hidden"
+					/>
+					<span
+						class="absolute right-3 text-xs bg-primary-foreground/15 px-2 py-1 rounded text-primary-foreground/50 hidden sm:inline"
+						>⌘K</span
 					>
-					<span class="absolute right-3 text-xs bg-primary-foreground/15 px-2 py-1 rounded text-primary-foreground/50 hidden sm:inline">⌘K</span>
 				</div>
 			</div>
 		</div>
@@ -42,30 +61,38 @@
 import { router, usePage } from "@inertiajs/vue3"
 import { useDebounceFn } from "@vueuse/core"
 import { onMounted, onUnmounted, ref, watch } from "vue"
+
 import RefreshButton from "~/components/RefreshButton.vue"
 import UserMenu from "~/components/UserMenu.vue"
 import { buildFilterParams } from "~/lib/filterParams"
 
 const page = usePage<{ props: { filters?: { search?: string } } }>()
-const searchValue = ref(((page.props.filters as any)?.search) || "")
+const searchValue = ref((page.props.filters as any)?.search || "")
 const searchInput = ref<HTMLInputElement | null>(null)
 
 const doSearch = useDebounceFn(() => {
 	const params = buildFilterParams({ search: searchValue.value || undefined })
-	router.get(`/?${params.toString()}`, {}, {
-		preserveScroll: true,
-		preserveState: true,
-		replace: true,
-		only: ["repositories", "totalRepositories", "filters"],
-	})
+	router.get(
+		`/?${params.toString()}`,
+		{},
+		{
+			preserveScroll: true,
+			preserveState: true,
+			replace: true,
+			only: ["repositories", "totalRepositories", "filters"],
+		},
+	)
 }, 300)
 
-watch(() => (page.props.filters as any)?.search, (v) => {
-	searchValue.value = v || ""
-})
+watch(
+	() => (page.props.filters as any)?.search,
+	v => {
+		searchValue.value = v || ""
+	},
+)
 
-watch(searchValue, (v) => {
-	if (v === (((page.props.filters as any)?.search) || "")) {
+watch(searchValue, v => {
+	if (v === ((page.props.filters as any)?.search || "")) {
 		return
 	}
 

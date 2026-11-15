@@ -13,8 +13,8 @@ export const vRipple: Directive = {
 			const clickX = event.clientX - rect.left
 			const clickY = event.clientY - rect.top
 
-			const size
-				= Math.max(
+			const size =
+				Math.max(
 					Math.sqrt(clickX ** 2 + clickY ** 2),
 					Math.sqrt((rect.width - clickX) ** 2 + clickY ** 2),
 					Math.sqrt(clickX ** 2 + (rect.height - clickY) ** 2),
