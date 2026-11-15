@@ -60,7 +60,14 @@ const page = usePage<{ props: { tags?: any } }>()
 const tags = computed(() => normalizeArray((page.props.tags as any)?.data) as Tag[])
 
 const sortByDisplay = computed(() => {
-	const m: Record<string, string> = { "newest": "Newest", "oldest": "Oldest", "name-asc": "Name (A-Z)", "name-desc": "Name (Z-A)", "size-asc": "Size (Smallest)", "size-desc": "Size (Largest)" }
+	const m: Record<string, string> = {
+		"newest": "Newest",
+		"oldest": "Oldest",
+		"name-asc": "Name (A-Z)",
+		"name-desc": "Name (Z-A)",
+		"size-asc": "Size (Smallest)",
+		"size-desc": "Size (Largest)",
+	}
 	return m[props.sortBy] || "Newest"
 })
 </script>

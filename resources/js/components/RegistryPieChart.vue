@@ -21,7 +21,12 @@ import { useChartTheme } from "~/composables/useChartTheme"
 
 const props = defineProps<RegistryPieChartProps>()
 
-use([PieChart, LegendComponent, TooltipComponent, CanvasRenderer])
+use([
+	PieChart,
+	LegendComponent,
+	TooltipComponent,
+	CanvasRenderer,
+])
 
 type EChartsOption = ComposeOption<
 	PieSeriesOption
@@ -78,58 +83,64 @@ const option = computed<EChartsOption>(() => {
 				fontSize: isMobile.value ? 11 : 12,
 			},
 		},
-		series: [{
-			type: "pie",
-			radius: isMobile.value ? ["36%", "54%"] : ["40%", "58%"],
-			center: isMobile.value ? ["50%", "46%"] : ["50%", "48%"],
-			avoidLabelOverlap: true,
-			minAngle: 4,
-			itemStyle: {
-				borderColor: chartTheme.value.background,
-				borderWidth: 3,
-			},
-			label: {
-				show: showLabels,
-				position: "outside",
-				alignTo: "edge",
-				edgeDistance: isMobile.value ? 10 : 18,
-				bleedMargin: 6,
-				formatter: (params) => {
-					if (Array.isArray(params)) {
-						return ""
-					}
-
-					return `${params.name}
-${props.formatter(Number(params.value ?? 0))} (${Math.round(params.percent ?? 0)}%)`
-				},
-				color: chartTheme.value.foreground,
-				fontSize: isMobile.value ? 11 : 12,
-				fontWeight: 600,
-			},
-			labelLine: {
-				show: showLabels,
-				length: isMobile.value ? 10 : 14,
-				length2: isMobile.value ? 6 : 10,
-				lineStyle: {
-					color: chartTheme.value.mutedForeground,
-				},
-			},
-			labelLayout: {
-				hideOverlap: true,
-				moveOverlap: "shiftY",
-			},
-			emphasis: {
-				scale: true,
-				scaleSize: 6,
-			},
-			data: normalized.map((item, idx) => ({
-				name: item.label,
-				value: item.value,
+		series: [
+			{
+				type: "pie",
+				radius: isMobile.value
+					? ["36%", "54%"]
+					: ["40%", "58%"],
+				center: isMobile.value
+					? ["50%", "46%"]
+					: ["50%", "48%"],
+				avoidLabelOverlap: true,
+				minAngle: 4,
 				itemStyle: {
-					color: chartTheme.value.palette[idx % chartTheme.value.palette.length],
+					borderColor: chartTheme.value.background,
+					borderWidth: 3,
 				},
-			})),
-		}],
+				label: {
+					show: showLabels,
+					position: "outside",
+					alignTo: "edge",
+					edgeDistance: isMobile.value ? 10 : 18,
+					bleedMargin: 6,
+					formatter: (params) => {
+						if (Array.isArray(params)) {
+							return ""
+						}
+
+						return `${params.name}
+${props.formatter(Number(params.value ?? 0))} (${Math.round(params.percent ?? 0)}%)`
+					},
+					color: chartTheme.value.foreground,
+					fontSize: isMobile.value ? 11 : 12,
+					fontWeight: 600,
+				},
+				labelLine: {
+					show: showLabels,
+					length: isMobile.value ? 10 : 14,
+					length2: isMobile.value ? 6 : 10,
+					lineStyle: {
+						color: chartTheme.value.mutedForeground,
+					},
+				},
+				labelLayout: {
+					hideOverlap: true,
+					moveOverlap: "shiftY",
+				},
+				emphasis: {
+					scale: true,
+					scaleSize: 6,
+				},
+				data: normalized.map((item, idx) => ({
+					name: item.label,
+					value: item.value,
+					itemStyle: {
+						color: chartTheme.value.palette[idx % chartTheme.value.palette.length],
+					},
+				})),
+			},
+		],
 	}
 })
 

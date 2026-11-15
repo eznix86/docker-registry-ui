@@ -109,7 +109,9 @@ const loading = helm.loading
 const title = computed(() => {
 	if (!repo.value)
 		return "Chart"
-	return mode.value === "values" ? "Default values" : "Templates"
+	return mode.value === "values"
+		? "Default values"
+		: "Templates"
 })
 
 const subtitle = computed(() => {

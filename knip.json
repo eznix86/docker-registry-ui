@@ -1,10 +1,6 @@
 {
-	"$schema": "https://unpkg.com/knip@5/schema.json",
-	"entry": ["resources/js/app.ts"],
+	"$schema": "https://unpkg.com/knip@6/schema.json",
 	"project": ["resources/js/**/*.{ts,vue}", "resources/css/**/*.css"],
-	"ignoreBinaries": ["sleep", "air", "go", "golangci-lint"],
-	"ignoreDependencies": ["@inertiajs/core"],
-	"ignore": [
-		"resources/css/app.css"
-	]
+	"ignoreBinaries": ["air", "go", "golangci-lint"],
+	"ignoreDependencies": ["@inertiajs/core"]
 }

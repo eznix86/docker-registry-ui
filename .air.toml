@@ -4,23 +4,23 @@ tmp_dir = "bin"
 
 [build]
 args_bin = [
-  "start",
-  "-vv",
-  "--sync-interval=30s"
+	"start",
+	"-vv",
+	"--sync-interval=30s"
 ]
 bin = "./bin/container-hub"
 cmd = 'go build -ldflags "-X github.com/eznix86/docker-registry-ui/internal/version.Version=dev" -o ./bin/container-hub ./cmd/container-hub'
 delay = 1000
 exclude_dir = [
-  "assets",
-  "tmp",
-  "vendor",
-  "node_modules",
-  "testdata",
-  "resources",
-  "public",
-  "build",
-  "dist"
+	"assets",
+	"tmp",
+	"vendor",
+	"node_modules",
+	"testdata",
+	"resources",
+	"public",
+	"build",
+	"dist"
 ]
 exclude_file = []
 exclude_regex = [ "_test.go" ]

@@ -204,7 +204,9 @@ const repositories = computed(() => normalizeArray(page.props.repositories))
 const storageByNamespace = computed(() => normalizeArray(page.props.charts?.storageByNamespace))
 const architectureCoverage = computed(() => normalizeArray(page.props.charts?.architectureCoverage))
 
-const statusChipVariant = computed(() => (registry.value?.status === 200 ? "primary" : "warning"))
+const statusChipVariant = computed(() => (registry.value?.status === 200
+	? "primary"
+	: "warning"))
 
 const registryTitle = computed(() => {
 	const name = registry.value?.name?.trim()

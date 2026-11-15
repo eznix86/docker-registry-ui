@@ -135,7 +135,9 @@ const statusInfo = computed<RegistryStatusInfo>(() => {
 })
 
 const isHealthy = computed(() => {
-	return props.statusCode ? isRegistryHealthy(props.statusCode) : true
+	return props.statusCode
+		? isRegistryHealthy(props.statusCode)
+		: true
 })
 
 // Hover state for popover

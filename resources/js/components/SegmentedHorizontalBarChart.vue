@@ -55,7 +55,12 @@ interface SegmentedHorizontalBarChartProps {
 
 const props = defineProps<SegmentedHorizontalBarChartProps>()
 
-use([BarChart, GridComponent, TooltipComponent, CanvasRenderer])
+use([
+	BarChart,
+	GridComponent,
+	TooltipComponent,
+	CanvasRenderer,
+])
 
 const chartTheme = useChartTheme()
 
@@ -86,9 +91,13 @@ const option = computed<EChartsOption>(() => ({
 			}
 
 			const value = Number(params.value ?? 0)
-			const percent = total.value > 0 ? Math.round((value / total.value) * 100) : 0
+			const percent = total.value > 0
+				? Math.round((value / total.value) * 100)
+				: 0
 			const item = normalizedItems.value[params.seriesIndex ?? -1]
-			const hint = item?.hint ? `<br/><span style=\"opacity:0.75\">${item.hint}</span>` : ""
+			const hint = item?.hint
+				? `<br/><span style=\"opacity:0.75\">${item.hint}</span>`
+				: ""
 
 			return `<strong>${params.seriesName}</strong><br/>${props.formatter(value)} (${percent}%)${hint}`
 		},

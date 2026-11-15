@@ -18,7 +18,13 @@ const props = withDefaults(defineProps<{
 
 hljs.registerLanguage("yaml", yaml)
 
-const builtInObjects = [".Release", ".Chart", ".Files", ".Capabilities", ".Template"]
+const builtInObjects = [
+	".Release",
+	".Chart",
+	".Files",
+	".Capabilities",
+	".Template",
+]
 const flowControls = new Set([
 	"if",
 	"else",
