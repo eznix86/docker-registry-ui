@@ -169,8 +169,15 @@ func (h *handler) repositoryPage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	chartVersions, err := h.store.GetChartVersions(ctx, repo.ID)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
 	props := gonertia.Props{
-		"repository": repo,
+		"repository":    repo,
+		"chartVersions": chartVersions,
 		"tags": gonertia.Scroll(
 			result.Tags,
 			gonertia.WithMetadata(gonertia.ScrollMetadata{

@@ -1,3 +1,4 @@
+import { formatTimeAgo } from "@vueuse/core"
 import { tv } from "tailwind-variants"
 
 import type { Repository } from "~/types"
@@ -38,4 +39,9 @@ export function formatRegistryName(label: string): string {
 		.filter(Boolean)
 		.map(part => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
 		.join(" ")
+}
+
+export function pushedAgo(createdAt: string): string {
+	if (!createdAt || createdAt.startsWith("0001-01-01")) return ""
+	return formatTimeAgo(new Date(createdAt))
 }

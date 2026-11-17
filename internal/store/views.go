@@ -679,3 +679,21 @@ func parseTime(value string) (time.Time, error) {
 	}
 	return t, err
 }
+
+func (s *Store) GetChartVersions(ctx context.Context, repositoryID uint) ([]TagView, error) {
+	var otherKinds int
+	if err := s.queryRow(ctx, "SELECT COUNT(*) FROM tags_view WHERE repository_id = ? AND kind != 'helm'", repositoryID).Scan(&otherKinds); err != nil {
+		return nil, fmt.Errorf("count non-chart tags: %w", err)
+	}
+	if otherKinds > 0 {
+		return nil, nil
+	}
+
+	rows, err := s.queryTagData(ctx, repositoryID, "", "created_at DESC", 0, 0)
+	if err != nil {
+		return nil, err
+	}
+	versions := s.buildTagViews(rows)
+	s.sortTagViewsByVersion(versions, false)
+	return versions, nil
+}
