@@ -85,7 +85,7 @@ import { computed, ref } from "vue"
 
 import HelmChartViewerDialog from "~/components/HelmChartViewerDialog.vue"
 import { Button, Chip, CopyCommand } from "~/components/ui"
-import { useRepositoryName } from "~/composables/useRepositoryName"
+import { useHelmCommands } from "~/composables/useHelmCommands"
 import type { Repository, Tag } from "~/types"
 
 interface RepositoryHelmTagCardProps {
@@ -97,17 +97,15 @@ interface RepositoryHelmTagCardProps {
 const props = defineProps<RepositoryHelmTagCardProps>()
 const emit = defineEmits<{ deleteTag: [tag: Tag] }>()
 
-const repositoryName = useRepositoryName(() => props.repository)
 const viewerDialog = ref<InstanceType<typeof HelmChartViewerDialog> | null>(null)
 
-const chartVersion = computed(() => props.tag.chartVersion || props.tag.name)
-const registryHost = computed(() => props.repository.registryPublicHost ?? props.repository.registryHost)
-const chartRef = computed(() => `oci://${registryHost.value}/${repositoryName.value}`)
-
-const installCommand = computed(() => `helm install <release-name> ${chartRef.value} --version ${chartVersion.value}`)
-const pullCommand = computed(() => `helm pull ${chartRef.value} --version ${chartVersion.value}`)
-const showValuesCommand = computed(
-	() => `helm show values ${chartRef.value} --version ${chartVersion.value} > values.yaml`,
+const {
+	install: installCommand,
+	pull: pullCommand,
+	showValues: showValuesCommand,
+} = useHelmCommands(
+	() => props.repository,
+	() => props.tag.chartVersion || props.tag.name,
 )
 
 const dependencies = computed(() => props.tag.chartDependencies ?? [])

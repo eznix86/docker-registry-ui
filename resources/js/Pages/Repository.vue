@@ -18,32 +18,42 @@
 					:helm-chart-name="helmChartName"
 				/>
 
-				<RepositorySortFilter
-					:sort-by="currentSortBy"
-					:filter="currentFilter"
-					:total-count="repository.tagsCount"
-					@update:sort-by="setSortBy"
-					@update:filter="setFilter"
+				<HelmChartRepository
+					v-if="chartVersions.length > 0"
+					:repository="repository"
+					:versions="chartVersions"
+					:disable-tag-deletion="page.props.disableTagDeletion"
+					@delete-tag="openDeleteTag"
 				/>
 
-				<InfiniteScroll data="tags" class="space-y-6">
-					<template v-for="tag in tags" :key="tag.name">
-						<RepositoryHelmTagCard
-							v-if="tag.kind === 'helm'"
-							:tag="tag"
-							:repository="repository"
-							:disable-tag-deletion="page.props.disableTagDeletion"
-							@delete-tag="openDeleteTag"
-						/>
-						<RepositoryTagCard
-							v-else
-							:tag="tag"
-							:repository="repository"
-							:disable-tag-deletion="page.props.disableTagDeletion"
-							@delete-tag="openDeleteTag"
-						/>
-					</template>
-				</InfiniteScroll>
+				<template v-else>
+					<RepositorySortFilter
+						:sort-by="currentSortBy"
+						:filter="currentFilter"
+						:total-count="repository.tagsCount"
+						@update:sort-by="setSortBy"
+						@update:filter="setFilter"
+					/>
+
+					<InfiniteScroll data="tags" class="space-y-6">
+						<template v-for="tag in tags" :key="tag.name">
+							<RepositoryHelmTagCard
+								v-if="tag.kind === 'helm'"
+								:tag="tag"
+								:repository="repository"
+								:disable-tag-deletion="page.props.disableTagDeletion"
+								@delete-tag="openDeleteTag"
+							/>
+							<RepositoryTagCard
+								v-else
+								:tag="tag"
+								:repository="repository"
+								:disable-tag-deletion="page.props.disableTagDeletion"
+								@delete-tag="openDeleteTag"
+							/>
+						</template>
+					</InfiniteScroll>
+				</template>
 			</main>
 
 			<BulkDeleteTagsDialog ref="bulkDeleteRef" :tags="bulkDeleteTags" :total-tags-count="repository.tagsCount" />
@@ -60,6 +70,7 @@ import { computed, ref } from "vue"
 import BulkDeleteTagsDialog from "~/components/BulkDeleteTagsDialog.vue"
 import DeleteTagDialog from "~/components/DeleteTagDialog.vue"
 import HeaderComponent from "~/components/HeaderComponent.vue"
+import HelmChartRepository from "~/components/helm/HelmChartRepository.vue"
 import RepositoryBreadcrumb from "~/components/RepositoryBreadcrumb.vue"
 import RepositoryHeader from "~/components/RepositoryHeader.vue"
 import RepositoryHelmTagCard from "~/components/RepositoryHelmTagCard.vue"
@@ -76,6 +87,7 @@ import type { RepositoryFilters, RepositoryProps, Tag } from "~/types"
 const page = usePage<RepositoryProps>()
 const repository = computed(() => page.props.repository)
 const tags = computed(() => normalizeArray(page.props.tags?.data) as Tag[])
+const chartVersions = computed(() => page.props.chartVersions ?? [])
 const bulkDeleteTags = computed(() => (page.props as any).bulkDeleteTags ?? [])
 const isHelmRepository = computed(() => tags.value.some(tag => tag.kind === "helm"))
 const helmChartName = computed(() => tags.value.find(tag => tag.kind === "helm")?.chartName || "")

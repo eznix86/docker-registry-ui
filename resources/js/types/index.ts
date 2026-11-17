@@ -138,6 +138,7 @@ export type RepositoryProps = PageProps &
 	SharedProps & {
 		repository: Repository
 		tags: TagScroll
+		chartVersions: Tag[] | null
 		bulkDeleteTags?: Tag[]
 		filters: RepositoryFilters
 	}
